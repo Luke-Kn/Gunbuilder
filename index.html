@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Airsoft Build Picker</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="http://localhost/part-selector/css/styles.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Airsoft Build Picker</h1>
+      <p class="sub">
+        Choose a platform, then pick parts for each slot. Parts and prices are
+        sample data.
+      </p>
+      <div class="top" id="top">
+        <span>Platform</span><span class="grow"></span>
+        <button id="AEG_btn" class="chip" aria-pressed="false">
+          AEG (electric)
+        </button>
+        <button id="GBB_btn" class="chip" aria-pressed="false">
+          GBB (gas blowback)
+        </button>
+        <button
+          class="ghost"
+          id="open3d"
+          aria-expanded="false"
+          aria-controls="oc"
+        >
+          View in 3D
+        </button>
+      </div>
+      <div class="list" id="list">
+        <div class="row head" bis_skin_checked="1">
+          <span>Component</span>
+          <span>Selection</span>
+          <span style="text-align: right">Price</span>
+          <span></span>
+        </div>
+      </div>
+
+      <div id="modal-js-example" class="modal">
+        <div class="modal-background"></div>
+
+        <div id="modal-content" class="modal-content">
+
+        </div>
+
+        <button class="modal-close is-large" aria-label="close"></button>
+      </div>
+
+      <div class="notes" id="notes"></div>
+    </div>
+    <div class="bar">
+      <div>
+        <span
+          >Build total <span class="total price" id="total">$0.00</span></span
+        >
+        <span
+          ><button class="ghost" id="copy">Copy build list</button>
+          <button class="ghost" id="reset">Clear build</button></span
+        >
+      </div>
+    </div>
+
+    <aside class="oc" id="oc" aria-label="3D view of your build">
+      <div class="och">
+        <h2>3D view</h2>
+        <button class="x" id="close3d" aria-label="Close 3D view">
+          &times;
+        </button>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="cv" aria-label="3D model of your airsoft build"></canvas>
+        <div class="hint">Drag to rotate, click a part to change it</div>
+        <div class="tools">
+          <button class="ghost" id="explode" aria-pressed="false">
+            Exploded view</button
+          ><button class="ghost" id="reset3d">Reset view</button>
+        </div>
+        <div class="msg" id="msg">
+          The 3D view needs WebGL, which this browser isn’t providing. You can
+          still build from the list.
+        </div>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <dialog id="dlg">
+      <div class="dh">
+        <h2 id="dt"></h2>
+        <input
+          id="q"
+          type="search"
+          placeholder="Search parts or brands"
+          aria-label="Search parts"
+        /><button class="x" id="close" aria-label="Close">&times;</button>
+      </div>
+      <div class="opts" id="opts"></div>
+    </dialog>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="http://localhost/part-selector/js/app.js"></script>
+    <script src="http://localhost/part-selector/js/modal.js"></script>
+  </body>
+</html>
+
