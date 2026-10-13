@@ -1,52 +1,38 @@
+# Taktik Airsoft Gun Builder (Part Selector Rebuild)
 
+**Current Status:** Stage 1 — Safe Plugin Foundation & Legacy Isolation
+**Plugin Slug:** `part-selector`
+**Primary Shortcode:** `[part_selector]`
 
-CustomTShirt
-============
+---
 
-Simple Custom t-shirt editor using Fabric.js. 
+## Overview
 
-Forked from: http://tshirts.imomin.com/
+This plugin transforms the legacy Taktik Airsoft "Part Selector" into a modular, modern 2D Airsoft Gun Builder. The project is being developed local-first on the Local WordPress environment before staging/production deployment.
 
-MIT License
+## Key Requirements & Principles
 
-Copyright (c) 2018 Kumar Priyansh
+1. **WordPress & WooCommerce Core Integration:** WooCommerce remains the single source of truth for products, pricing, stock, cart, and checkout.
+2. **Canonical Physical Scale:** 1 cm = 10 logical pixels (1 mm = 1 logical pixel) across all weapon bases and accessories.
+3. **Admin-Managed Part Types:** Dynamic category drawers and mounting rules (no hardcoded category names in application logic).
+4. **Mobile-First Responsive Design:** Clean layout, touch/pointer interaction, and whole-scene viewport scaling.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Project Documentation
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+- [`GUN-BUILDER-PLAN.md`](GUN-BUILDER-PLAN.md): Detailed development roadmap and architectural requirements.
+- [`GUN-BUILDER-STATUS.md`](GUN-BUILDER-STATUS.md): Current implementation progress and completed stages.
+- [`/AGENTS.md`](../../../AGENTS.md): Local development rules and coding agent boundaries.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## Architecture (Stage 1 Foundation)
 
-Demo:
-
-![demo gif](https://raw.githubusercontent.com/luciferreeves/CustomTShirt/master/demo.gif)
-
-
-
-
-
-
-
-
-
-**What's Different from Imomin's Version?**
-
-There are changes made in the **index.html** file.
-
-This script now only works for Customizing T-Shirts and not Phone Cases.
-
-**For Some Reasons This Code is not working from Github Pages but works Locally.**
-
-**To Use this code please clone the repository ot download the .zip file**
+- `part-selector.php`: Primary plugin entry point and bootstrap.
+- `includes/`:
+  - `class-tgb-core.php`: Core plugin orchestrator.
+  - `class-tgb-assets.php`: Scoped CSS/JS asset registration and on-demand enqueue.
+  - `class-tgb-shortcode.php`: Safe output-buffered shortcode rendering for `[part_selector]`.
+  - `class-tgb-product-integration.php`: WooCommerce single product page integration hooks (safely isolated).
+- `templates/`:
+  - `gun-builder.php`: Semantic HTML structural container scoped to `#taktik-gun-builder`.
+- `assets/`:
+  - `css/gun-builder.css`: Scoped modern stylesheet (dark mode / tactical styling).
+  - `js/gun-builder.js`: Lightweight initialization script (zero external dependencies).

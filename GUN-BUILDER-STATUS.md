@@ -2,50 +2,30 @@
 
 ## Current Phase
 
-Pre-development setup.
+Stage 1 completed. Ready for Stage 2.
 
 ## Current Branch
 
-gun-builder
+`gun-builder`
 
 ## Completed
 
 - Development requirements confirmed.
-- Existing Part Selector identified as the starting codebase.
-- Git baseline preparation started.
+- Existing Part Selector analyzed and documented (comprehensive architectural audit).
+- Git baseline confirmed clean on `gun-builder`.
+- **Stage 1 Complete: Safe Plugin Foundation & Legacy Isolation**
+  - Refactored `part-selector.php` into modular OOP loader.
+  - Isolated legacy `index.html`, Fabric.js v1, Bootstrap 2, and external HTTP jQuery.
+  - Created `includes/class-tgb-core.php`, `class-tgb-assets.php`, `class-tgb-shortcode.php`, `class-tgb-product-integration.php`.
+  - Built clean semantic shell in `templates/gun-builder.php` scoped to `#taktik-gun-builder`.
+  - Built scoped modern CSS foundation in `assets/css/gun-builder.css`.
+  - Built lightweight JS initialization foundation in `assets/js/gun-builder.js`.
+  - Maintained backward compatibility for shortcode `[part_selector]`.
 
 ## Current Task
 
-Analyze the existing Part Selector before changing any source code.
-
-## Required Analysis
-
-Identify all Part Selector files.
-
-For each major component classify it as:
-
-- KEEP
-- MODIFY
-- REPLACE
-- REMOVE
-
-Pay particular attention to:
-
-- WooCommerce integration
-- product retrieval
-- frontend rendering
-- product selection
-- shortcode/page integration
-- AJAX/API logic
-- cart functionality
-- admin functionality
-
-## Known Problems
-
-None documented yet.
+Review Stage 1 foundation and prepare for Stage 2.
 
 ## Next Step
 
-Complete the existing Part Selector audit.
-
-Do not rewrite the plugin before the audit is complete.
+Stage 2: Admin Product Configuration & Part Types (Builder-Ready toggle, physical reference measurements, dynamic categories).
