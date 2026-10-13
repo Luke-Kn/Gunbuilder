@@ -57,6 +57,8 @@ class TGB_Core {
 		TGB_Assets::init();
 		TGB_Shortcode::init();
 		TGB_Product_Integration::init();
+		TGB_Part_Types::init();
+		TGB_Product_Config::init();
 	}
 
 	/**

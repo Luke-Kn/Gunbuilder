@@ -1,0 +1,26 @@
+/**
+ * Taktik Gun Builder - Admin Product Data Styles
+ *
+ * Scoped styling for WooCommerce product data tab.
+ */
+
+#woocommerce-product-data ul.wc-tabs li.tgb_gun_builder_options a::before {
+	content: "\f147"; /* Dashicons hammer */
+	font-family: dashicons;
+}
+
+#tgb_gun_builder_data .form-field strong {
+	font-size: 13px;
+	color: #1d2327;
+}
+
+#tgb_gun_builder_data p.form-field {
+	padding: 10px 20px 10px 162px !important;
+	margin: 0 !important;
+}
+
+#tgb_gun_builder_data p.form-field label {
+	width: 150px !important;
+	margin-left: -162px !important;
+	float: left;
+}
