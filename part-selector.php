@@ -1,18 +1,21 @@
 <?php
+
+
 /*
-Plugin Name: Part Selector
-Description: A plugin to display index.html
+Plugin Name: Gunbuilder
+Description: A plugin to display index.php
 Version: 1.0
-Author: MTL New Media
+
 */
 
 // Hook for adding admin menus
-add_action('admin_menu', 'part_selector_menu');
+ //var_dump($products); 
+  add_action('admin_menu', 'part_selector_menu');
 
 // Action function for the above hook
 function part_selector_menu() {
     add_menu_page('Part Selector', 'Part Selector', 'manage_options', 'part-selector', 'part_selector_display_page');
-}
+    }
 
 // Add a Customize Button next to the Add to Cart Button
 add_action('woocommerce_after_add_to_cart_button', 'add_customize_button');
@@ -46,14 +49,14 @@ add_action('admin_enqueue_scripts', 'part_selector_enqueue_assets_admin');
 // Function to display the plugin page
 function part_selector_display_page() {
     $plugin_url = plugin_dir_url(__FILE__);
-    $index_html = file_get_contents(plugin_dir_path(__FILE__) . 'index.html');
+    $index_php = file_get_contents(plugin_dir_path(__FILE__) . 'index.php');
     
-    // Update the paths in index.html for CSS, JS, and image resources
-    $index_html = str_replace('href="css/', 'href="' . $plugin_url . 'css/', $index_html);
-    $index_html = str_replace('src="js/', 'src="' . $plugin_url . 'js/', $index_html);
-    $index_html = str_replace('src="img/', 'src="' . $plugin_url . 'img/', $index_html);
+    // Update the paths in index.php for CSS, JS, and image resources
+    $index_php = str_replace('href="css/', 'href="' . $plugin_url . 'css/', $index_php);
+    $index_php = str_replace('src="js/', 'src="' . $plugin_url . 'js/', $index_php);
+    $index_php = str_replace('src="img/', 'src="' . $plugin_url . 'img/', $index_php);
 
-    echo $index_html;
+    echo $index_php;
 }
 
 
@@ -70,38 +73,36 @@ function part_selector_enqueue_assets_frontend() {
 
 add_action('wp_enqueue_scripts', 'part_selector_enqueue_assets_frontend');
 
-// Shortcode function to display the index.html content on frontend
+// Shortcode function to display the index.php content on frontend
 function part_selector_shortcode() {
     $plugin_url = plugin_dir_url(__FILE__);
-    $index_html = file_get_contents(plugin_dir_path(__FILE__) . 'index.html');
-    
-    // Update the paths in index.html for CSS, JS, and image resources
-    $index_html = str_replace('href="css/', 'href="' . $plugin_url . 'css/', $index_html);
-    $index_html = str_replace('src="js/', 'src="' . $plugin_url . 'js/', $index_html);
-    $index_html = str_replace('src="img/', 'src="' . $plugin_url . 'img/', $index_html);
+    $index_php = file_get_contents(plugin_dir_path(__FILE__) . 'template.php');
+    // Update the paths in index.php for CSS, JS, and image resources
+    $index_php = str_replace('href="css/', 'href="' . $plugin_url . 'css/', $index_php);
+    $index_php = str_replace('src="js/', 'src="' . $plugin_url . 'js/', $index_php);
+    $index_php = str_replace('src="img/', 'src="' . $plugin_url . 'img/', $index_php);
 
     // Retrieve product URLs from WooCommerce for Scopes
-    $scopes_urls = get_product_urls(0, 100, 'Scopes');
+    $scopes_urls = get_product_urls(0, 100, 'Dots, Scopes, Sights, Flashlights');
     // Retrieve product URLs from WooCommerce for Silencers
-    $silencers_urls = get_product_urls(0, 100, 'Flash hider, Silencers');
-
-    // Inject product URLs into the index.html content
-    $index_html = str_replace('<!-- MEDIA_IMAGES_PLACEHOLDER for Scopes -->', $scopes_urls, $index_html);
-    $index_html = str_replace('<!-- MEDIA_IMAGES_PLACEHOLDER for Silencers -->', $silencers_urls, $index_html);
+    //$silencers_urls = get_product_urls(0, 100, ' Flash hider, Silencers');
+    // Inject product URLs into the index.php content
+    $index_php = str_replace('<!-- MEDIA_IMAGES_PLACEHOLDER for Scopes -->', $scopes_urls, $index_php);
+   // $index_php = str_replace('<!-- MEDIA_IMAGES_PLACEHOLDER for Silencers -->', $silencers_urls, $index_php);
 
     // Retrieve product_id from URL query parameters
     if (isset($_GET['product_id'])) {
         $product_id = intval($_GET['product_id']);
         $product_image_url = get_product_image_url($product_id);
-
-        // Inject the product image URL into the index.html content
-        $index_html = str_replace('<!-- PRODUCT_IMAGE_PLACEHOLDER -->', $product_image_url, $index_html);
-        $index_html = str_replace('<!-- PRODUCT_ID -->', $product_id, $index_html);
+        // Inject the product image URL into the index.php content
+        $index_php = str_replace('<!-- PRODUCT_IMAGE_PLACEHOLDER -->', $product_image_url, $index_php);
+        $index_php = str_replace('<!-- PRODUCT_ID -->', $product_id, $index_php);
 
     }
 
-    return $index_html;
+    return $index_php;
 }
+
 add_shortcode('part_selector', 'part_selector_shortcode');
 
 // Function to get product image URL by product ID
@@ -127,10 +128,11 @@ function get_product_urls($offset, $limit, $category) {
         'category' => array($category)
     );
 
-    $products = wc_get_products($args);
+    $products = wc_get_products( $args );
 
     if (!empty($products)) {
         foreach ($products as $product) {
+            
             $image_url = wp_get_attachment_url($product->get_image_id());
             $title = $product->get_name();
             $stock = $product->get_stock_quantity();
@@ -149,9 +151,11 @@ function get_product_urls($offset, $limit, $category) {
         $product_urls .= 'No products found.';
     }
 
+    
     return $product_urls;
 }
 
+//
 add_shortcode('part_selector', 'part_selector_shortcode');
 
 add_action('wp_ajax_add_to_cart', 'handle_add_to_cart');
