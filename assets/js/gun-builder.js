@@ -1159,8 +1159,830 @@
 	}
 
 	// =========================================================================
-	// 4. API EXPORTS & NAMESPACE (Section 41)
+	// 4. CATALOG CLIENT & PRODUCT REGISTRY (Part 6)
 	// =========================================================================
+
+	/**
+	 * Client service for interacting with the public Gun Builder catalog REST API.
+	 */
+	class TGB_CatalogClient {
+		/**
+		 * @param {string} [baseUrl] Base URL for the Gun Builder REST API endpoints.
+		 */
+		constructor(baseUrl) {
+			let url = baseUrl || (window.taktikGunBuilder && window.taktikGunBuilder.restUrl) || '/wp-json/tgb/v1/';
+			if (!url.endsWith('/')) {
+				url += '/';
+			}
+			this.baseUrl = url;
+		}
+
+		/**
+		 * Fetches paginated Base Guns.
+		 *
+		 * @param {number} [limit=20]
+		 * @param {string} [cursor='']
+		 * @param {AbortSignal} [signal]
+		 * @return {Promise<{items: Array, limit: number, has_more: boolean, next_cursor: string|null}>}
+		 */
+		async getBaseGuns(limit = 20, cursor = '', signal = null) {
+			const endpoint = new URL('base-guns', this.baseUrl);
+			endpoint.searchParams.set('limit', limit);
+			if (cursor) {
+				endpoint.searchParams.set('cursor', cursor);
+			}
+
+			const res = await fetch(endpoint.toString(), {
+				method: 'GET',
+				headers: { 'Accept': 'application/json' },
+				signal: signal || undefined,
+			});
+
+			if (!res.ok) {
+				throw new Error(`Catalog API error: HTTP ${res.status}`);
+			}
+			return await res.json();
+		}
+
+		/**
+		 * Fetches dynamic Part Type taxonomy terms.
+		 *
+		 * @param {AbortSignal} [signal]
+		 * @return {Promise<Array<{id: number, name: string, slug: string}>>}
+		 */
+		async getPartTypes(signal = null) {
+			const endpoint = new URL('part-types', this.baseUrl);
+			const res = await fetch(endpoint.toString(), {
+				method: 'GET',
+				headers: { 'Accept': 'application/json' },
+				signal: signal || undefined,
+			});
+
+			if (!res.ok) {
+				throw new Error(`Catalog API error: HTTP ${res.status}`);
+			}
+			return await res.json();
+		}
+
+		/**
+		 * Fetches paginated Parts for a specific Part Type.
+		 *
+		 * @param {number} typeId
+		 * @param {number} [limit=20]
+		 * @param {string} [cursor='']
+		 * @param {AbortSignal} [signal]
+		 * @return {Promise<{items: Array, limit: number, has_more: boolean, next_cursor: string|null}>}
+		 */
+		async getPartsByType(typeId, limit = 20, cursor = '', signal = null) {
+			const endpoint = new URL('parts', this.baseUrl);
+			endpoint.searchParams.set('type_id', typeId);
+			endpoint.searchParams.set('limit', limit);
+			if (cursor) {
+				endpoint.searchParams.set('cursor', cursor);
+			}
+
+			const res = await fetch(endpoint.toString(), {
+				method: 'GET',
+				headers: { 'Accept': 'application/json' },
+				signal: signal || undefined,
+			});
+
+			if (!res.ok) {
+				throw new Error(`Catalog API error: HTTP ${res.status}`);
+			}
+			return await res.json();
+		}
+	}
+
+	// =========================================================================
+	// 5. PRODUCT SELECTION CONTROLLER (Part 6)
+	// =========================================================================
+
+	/**
+	 * Manages the Category Navigation, Product Grid, Load More continuation,
+	 * in-memory cache, Base Gun selection, and Part spawn integration.
+	 */
+	class TGB_ProductSelection {
+		/**
+		 * @param {HTMLElement} root Builder root element.
+		 * @param {TGB_CatalogClient} catalogClient
+		 * @param {TGB_BuildState} buildState
+		 * @param {TGB_Renderer} renderer
+		 * @param {Map} productRegistry
+		 */
+		constructor(root, catalogClient, buildState, renderer, productRegistry) {
+			this.root = root;
+			this.catalog = catalogClient;
+			this.buildState = buildState;
+			this.renderer = renderer;
+			this.productRegistry = productRegistry;
+
+			this.navEl = root.querySelector('#tgb-category-nav');
+			this.statusEl = root.querySelector('#tgb-tray-status');
+			this.loadingEl = root.querySelector('#tgb-catalog-loading');
+			this.gridEl = root.querySelector('#tgb-catalog-grid');
+			this.actionsEl = root.querySelector('#tgb-catalog-actions');
+			this.loadMoreBtn = root.querySelector('#tgb-load-more-btn');
+
+			// Sidebar elements
+			this.sidebarCountEl = root.querySelector('#tgb-sidebar-build-count');
+			this.sidebarBodyEl = root.querySelector('#tgb-sidebar-build-body');
+
+			this.categories = []; // [{ id: 'base_gun', name: 'Base Platform' }, ...]
+			this.activeCategoryKey = 'base_gun';
+			this.categoryCache = new Map(); // key => { items: [], has_more: false, next_cursor: null, loaded: false }
+
+			this.activeAbortController = null;
+			this.requestId = 0;
+
+			this.boundHandleTabClick = this.handleTabClick.bind(this);
+			this.boundHandleGridClick = this.handleGridClick.bind(this);
+			this.boundHandleLoadMore = this.handleLoadMore.bind(this);
+			this.boundStateChange = this.handleStateChange.bind(this);
+		}
+
+		/**
+		 * Initializes Product Selection UI.
+		 */
+		async init() {
+			if (!this.navEl || !this.gridEl) {
+				return;
+			}
+
+			// 1. Setup Base Platform tab
+			this.categories = [
+				{ id: 'base_gun', name: 'Base Platform', slug: 'base-platform' }
+			];
+
+			// 2. Fetch dynamic part types from API
+			try {
+				const partTypes = await this.catalog.getPartTypes();
+				if (Array.isArray(partTypes)) {
+					// Dynamic terms from taxonomy
+					partTypes.forEach(t => {
+						this.categories.push({
+							id: t.id,
+							name: t.name,
+							slug: t.slug,
+						});
+					});
+				}
+			} catch (err) {
+				console.warn('[TGB] Failed to fetch part types, proceeding with base platform:', err);
+			}
+
+			// 3. Render Navigation Tabs
+			this.renderCategoryNav();
+
+			// 4. Attach Event Listeners
+			this.navEl.addEventListener('click', this.boundHandleTabClick);
+			this.gridEl.addEventListener('click', this.boundHandleGridClick);
+			if (this.loadMoreBtn) {
+				this.loadMoreBtn.addEventListener('click', this.boundHandleLoadMore);
+			}
+
+			// 5. Subscribe to Build State
+			this.buildState.subscribe(this.boundStateChange);
+
+			// 6. Pre-seed registry from initial render Base Gun if present
+			const currentBase = this.buildState.getBaseGun();
+			if (currentBase && currentBase.productId) {
+				this.productRegistry.set(currentBase.productId, {
+					id: currentBase.productId,
+					name: currentBase.name,
+					role: 'base_gun',
+					reference_mm: currentBase.reference_mm,
+					builder_image: currentBase.builder_image,
+				});
+			}
+
+			// 7. Load default category (Base Platform)
+			await this.switchCategory('base_gun');
+
+			// 8. Initial sync with current build state
+			this.syncSidebar();
+		}
+
+		/**
+		 * Renders the category navigation tab buttons.
+		 */
+		renderCategoryNav() {
+			this.navEl.textContent = '';
+			this.categories.forEach(cat => {
+				const btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'tgb-category-btn' + (cat.id === this.activeCategoryKey ? ' is-active' : '');
+				btn.setAttribute('role', 'tab');
+				btn.setAttribute('aria-selected', cat.id === this.activeCategoryKey ? 'true' : 'false');
+				btn.setAttribute('data-category-key', String(cat.id));
+				btn.textContent = cat.name;
+				this.navEl.appendChild(btn);
+			});
+		}
+
+		/**
+		 * Switches to a category (with in-memory cache and request cancellation).
+		 *
+		 * @param {string|number} categoryKey
+		 * @param {boolean} [forceRefresh=false]
+		 */
+		async switchCategory(categoryKey, forceRefresh = false) {
+			// Cancel any pending in-flight request
+			if (this.activeAbortController) {
+				this.activeAbortController.abort();
+				this.activeAbortController = null;
+			}
+
+			this.activeCategoryKey = categoryKey;
+
+			// Update Tab UI
+			const tabs = this.navEl.querySelectorAll('.tgb-category-btn');
+			tabs.forEach(tab => {
+				const isCurrent = tab.getAttribute('data-category-key') === String(categoryKey);
+				tab.classList.toggle('is-active', isCurrent);
+				tab.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
+			});
+
+			this.hideStatus();
+
+			// Check in-memory cache
+			if (!forceRefresh && this.categoryCache.has(categoryKey)) {
+				const cached = this.categoryCache.get(categoryKey);
+				if (cached.loaded) {
+					this.hideLoading();
+					this.renderProducts(cached.items);
+					this.updateLoadMoreAction(cached.has_more);
+					return;
+				}
+			}
+
+			// Fresh fetch
+			const controller = new AbortController();
+			this.activeAbortController = controller;
+			const currentToken = ++this.requestId;
+
+			this.showLoading();
+			this.gridEl.textContent = '';
+			if (this.actionsEl) {
+				this.actionsEl.style.display = 'none';
+			}
+
+			try {
+				let res;
+				if (categoryKey === 'base_gun') {
+					res = await this.catalog.getBaseGuns(20, '', controller.signal);
+				} else {
+					res = await this.catalog.getPartsByType(Number(categoryKey), 20, '', controller.signal);
+				}
+
+				// If another category request started in the meantime, discard
+				if (this.requestId !== currentToken) {
+					return;
+				}
+
+				const items = Array.isArray(res.items) ? res.items : [];
+				const hasMore = Boolean(res.has_more);
+				const nextCursor = res.next_cursor || null;
+
+				// Store in registry
+				items.forEach(p => {
+					this.productRegistry.set(p.id, p);
+				});
+
+				// Save in cache
+				this.categoryCache.set(categoryKey, {
+					items: items,
+					has_more: hasMore,
+					next_cursor: nextCursor,
+					loaded: true,
+				});
+
+				this.hideLoading();
+				this.renderProducts(items);
+				this.updateLoadMoreAction(hasMore);
+
+			} catch (err) {
+				if (err.name === 'AbortError') {
+					// Intentionally cancelled by rapid switching
+					return;
+				}
+				if (this.requestId !== currentToken) {
+					return;
+				}
+				this.hideLoading();
+				this.showStatus('Products could not be loaded. Please try again.', true);
+			} finally {
+				if (this.activeAbortController === controller) {
+					this.activeAbortController = null;
+				}
+			}
+		}
+
+		/**
+		 * Loads next batch for active category.
+		 */
+		async handleLoadMore() {
+			const cache = this.categoryCache.get(this.activeCategoryKey);
+			if (!cache || !cache.has_more || !cache.next_cursor) {
+				return;
+			}
+
+			if (this.loadMoreBtn) {
+				this.loadMoreBtn.disabled = true;
+				this.loadMoreBtn.textContent = 'Loading...';
+			}
+
+			const controller = new AbortController();
+			this.activeAbortController = controller;
+			const currentToken = ++this.requestId;
+
+			try {
+				let res;
+				if (this.activeCategoryKey === 'base_gun') {
+					res = await this.catalog.getBaseGuns(20, cache.next_cursor, controller.signal);
+				} else {
+					res = await this.catalog.getPartsByType(Number(this.activeCategoryKey), 20, cache.next_cursor, controller.signal);
+				}
+
+				if (this.requestId !== currentToken) {
+					return;
+				}
+
+				const newItems = Array.isArray(res.items) ? res.items : [];
+				const hasMore = Boolean(res.has_more);
+				const nextCursor = res.next_cursor || null;
+
+				newItems.forEach(p => {
+					this.productRegistry.set(p.id, p);
+					cache.items.push(p);
+				});
+				cache.has_more = hasMore;
+				cache.next_cursor = nextCursor;
+
+				this.appendProducts(newItems);
+				this.updateLoadMoreAction(hasMore);
+
+			} catch (err) {
+				if (err.name === 'AbortError') return;
+				this.showStatus('Unable to load additional products.', false);
+			} finally {
+				if (this.loadMoreBtn) {
+					this.loadMoreBtn.disabled = false;
+					this.loadMoreBtn.textContent = 'Load More';
+				}
+			}
+		}
+
+		/**
+		 * Renders a full list of product cards.
+		 *
+		 * @param {Array} items
+		 */
+		renderProducts(items) {
+			this.gridEl.textContent = '';
+			if (!items || items.length === 0) {
+				this.showStatus('No builder-ready products are available in this category.', false);
+				return;
+			}
+
+			items.forEach(product => {
+				const card = this.createProductCard(product);
+				this.gridEl.appendChild(card);
+			});
+		}
+
+		/**
+		 * Appends new product cards to existing grid.
+		 *
+		 * @param {Array} items
+		 */
+		appendProducts(items) {
+			if (!items || items.length === 0) return;
+			items.forEach(product => {
+				const card = this.createProductCard(product);
+				this.gridEl.appendChild(card);
+			});
+		}
+
+		/**
+		 * Creates an accessible, modern dark product card using safe DOM methods.
+		 *
+		 * @param {Object} product
+		 * @return {HTMLElement}
+		 */
+		createProductCard(product) {
+			const card = document.createElement('div');
+			card.className = 'tgb-product-card';
+			card.setAttribute('data-product-id', String(product.id));
+
+			const isBaseGun = product.role === 'base_gun';
+			const currentBase = this.buildState.getBaseGun();
+			const isCurrentBaseSelected = isBaseGun && currentBase && currentBase.productId === product.id;
+
+			if (isCurrentBaseSelected) {
+				card.classList.add('is-selected');
+			}
+
+			// Thumbnail Container
+			const thumbContainer = document.createElement('div');
+			thumbContainer.className = 'tgb-card-thumb';
+
+			if (product.builder_image && product.builder_image.url) {
+				const img = document.createElement('img');
+				img.src = product.builder_image.url;
+				img.alt = product.builder_image.alt || product.name || 'Component';
+				img.loading = 'lazy';
+				thumbContainer.appendChild(img);
+			} else {
+				const placeholder = document.createElement('div');
+				placeholder.className = 'tgb-card-no-img';
+				placeholder.textContent = 'No image';
+				thumbContainer.appendChild(placeholder);
+			}
+			card.appendChild(thumbContainer);
+
+			// Body Container
+			const bodyContainer = document.createElement('div');
+			bodyContainer.className = 'tgb-card-body';
+
+			// In-Build Count Badge
+			const inBuildCount = this.getInBuildCount(product.id);
+			const inBuildBadge = document.createElement('span');
+			inBuildBadge.className = 'tgb-card-in-build';
+			inBuildBadge.setAttribute('data-in-build-product', String(product.id));
+			if (inBuildCount > 0) {
+				inBuildBadge.textContent = `In build: ${inBuildCount}`;
+				inBuildBadge.style.display = 'inline-block';
+			} else {
+				inBuildBadge.style.display = 'none';
+			}
+			bodyContainer.appendChild(inBuildBadge);
+
+			// Title (Safe DOM textContent)
+			const titleEl = document.createElement('h4');
+			titleEl.className = 'tgb-card-title';
+			titleEl.textContent = product.name;
+			bodyContainer.appendChild(titleEl);
+
+			// Price
+			const priceEl = document.createElement('div');
+			priceEl.className = 'tgb-card-price';
+			if (product.price && product.price.display) {
+				priceEl.textContent = product.price.display;
+			} else if (product.price && product.price.raw) {
+				priceEl.textContent = '$' + parseFloat(product.price.raw).toFixed(2);
+			}
+			bodyContainer.appendChild(priceEl);
+
+			// Action Button
+			const btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'tgb-btn';
+			btn.setAttribute('data-action', isBaseGun ? 'select-base' : 'add-part');
+			btn.setAttribute('data-product-id', String(product.id));
+
+			if (isBaseGun) {
+				if (isCurrentBaseSelected) {
+					btn.className += ' tgb-btn--selected is-selected';
+					btn.textContent = 'Selected';
+					btn.disabled = true;
+				} else {
+					btn.className += ' tgb-btn--select';
+					btn.textContent = 'Select';
+				}
+			} else {
+				// Part Button
+				const hasBase = Boolean(currentBase);
+				const inStock = !product.stock || product.stock.in_stock !== false;
+
+				if (!inStock) {
+					btn.className += ' tgb-btn--unavailable is-unavailable';
+					btn.textContent = 'Unavailable';
+					btn.disabled = true;
+				} else if (!hasBase) {
+					btn.className += ' tgb-btn--add';
+					btn.textContent = 'Add';
+					btn.disabled = true;
+					btn.title = 'Choose a base platform first.';
+				} else {
+					btn.className += ' tgb-btn--add';
+					btn.textContent = 'Add';
+				}
+			}
+			bodyContainer.appendChild(btn);
+
+			card.appendChild(bodyContainer);
+			return card;
+		}
+
+		/**
+		 * Returns how many instances of this product exist in the current build.
+		 *
+		 * @param {number} productId
+		 * @return {number}
+		 */
+		getInBuildCount(productId) {
+			const parts = this.buildState.parts || [];
+			return parts.filter(p => p.productId === productId).length;
+		}
+
+		/**
+		 * Handles category tab clicks.
+		 */
+		handleTabClick(e) {
+			const btn = e.target.closest('.tgb-category-btn');
+			if (!btn) return;
+			const key = btn.getAttribute('data-category-key');
+			if (key && key !== this.activeCategoryKey) {
+				this.switchCategory(key);
+			}
+		}
+
+		/**
+		 * Handles card action clicks (Select Base Gun or Add Part).
+		 */
+		handleGridClick(e) {
+			const btn = e.target.closest('button[data-action]');
+			if (!btn || btn.disabled) return;
+
+			const action = btn.getAttribute('data-action');
+			const productId = parseInt(btn.getAttribute('data-product-id'), 10);
+			const product = this.productRegistry.get(productId);
+
+			if (!product) {
+				console.warn('[TGB] Product not found in registry:', productId);
+				return;
+			}
+
+			if (action === 'select-base') {
+				this.selectBaseGun(product);
+			} else if (action === 'add-part') {
+				this.addPartToBuild(product);
+			}
+		}
+
+		/**
+		 * Selects a Base Gun, recovering the builder if empty or invalid,
+		 * and clearing existing parts if replacing an already-mounted weapon.
+		 *
+		 * @param {Object} product Normalized Base Gun product.
+		 */
+		selectBaseGun(product) {
+			if (!product || product.role !== 'base_gun') {
+				return;
+			}
+
+			const currentBase = this.buildState.getBaseGun();
+
+			// If same Base Gun already selected, no-op
+			if (currentBase && currentBase.productId === product.id) {
+				return;
+			}
+
+			// Base Gun Replacement Policy (Requirement 22 & 68):
+			// If replacing an existing weapon, CLEAR all existing parts.
+			if (currentBase && this.buildState.parts.length > 0) {
+				this.buildState.reset();
+			}
+
+			// Store in registry
+			this.productRegistry.set(product.id, product);
+
+			// Preload and mount
+			this.renderer.loadAndRenderBaseGun(product);
+
+			// Synchronize UI
+			this.syncAllCardButtons();
+			this.syncSidebar();
+		}
+
+		/**
+		 * Adds a Part to the build at a neutral centered position.
+		 *
+		 * @param {Object} product Normalized Part product.
+		 */
+		addPartToBuild(product) {
+			const currentBase = this.buildState.getBaseGun();
+			if (!currentBase) {
+				this.showStatus('Choose a base platform first.', false);
+				return;
+			}
+
+			if (product.stock && product.stock.in_stock === false) {
+				return;
+			}
+
+			// Store in registry
+			this.productRegistry.set(product.id, product);
+
+			// Neutral Center Placement (Requirement 28):
+			// x = (stageWidth - partWidth) / 2, y = (stageHeight - partHeight) / 2
+			const stage = this.renderer.currentStageGeometry || { stageWidth: 1000, stageHeight: 600 };
+			const geo = calculateProductGeometry(product);
+
+			let spawnX = Math.round((stage.stageWidth - geo.logicalWidth) / 2);
+			let spawnY = Math.round((stage.stageHeight - geo.logicalHeight) / 2);
+
+			// Boundary Clamping
+			spawnX = Math.max(0, Math.min(spawnX, Math.round(stage.stageWidth - geo.logicalWidth)));
+			spawnY = Math.max(0, Math.min(spawnY, Math.round(stage.stageHeight - geo.logicalHeight)));
+
+			// Add to authoritative Build State (Part 5)
+			const partInstance = this.buildState.addPart(product, spawnX, spawnY);
+
+			// Sync in-build count badges
+			this.syncAllCardButtons();
+			this.syncSidebar();
+
+			return partInstance;
+		}
+
+		/**
+		 * Synchronizes card action buttons and in-build counts across the active grid.
+		 */
+		syncAllCardButtons() {
+			const currentBase = this.buildState.getBaseGun();
+			const hasBase = Boolean(currentBase);
+
+			const cards = this.gridEl.querySelectorAll('.tgb-product-card');
+			cards.forEach(card => {
+				const productId = parseInt(card.getAttribute('data-product-id'), 10);
+				const product = this.productRegistry.get(productId);
+				if (!product) return;
+
+				const isBaseGun = product.role === 'base_gun';
+				const btn = card.querySelector('button[data-action]');
+				const badge = card.querySelector('.tgb-card-in-build');
+
+				// In-build count badge
+				if (badge) {
+					const count = this.getInBuildCount(productId);
+					if (count > 0) {
+						badge.textContent = `In build: ${count}`;
+						badge.style.display = 'inline-block';
+					} else {
+						badge.style.display = 'none';
+					}
+				}
+
+				if (!btn) return;
+
+				if (isBaseGun) {
+					const isSelected = hasBase && currentBase.productId === productId;
+					card.classList.toggle('is-selected', isSelected);
+					if (isSelected) {
+						btn.className = 'tgb-btn tgb-btn--selected is-selected';
+						btn.textContent = 'Selected';
+						btn.disabled = true;
+					} else {
+						btn.className = 'tgb-btn tgb-btn--select';
+						btn.textContent = 'Select';
+						btn.disabled = false;
+					}
+				} else {
+					// Part button
+					const inStock = !product.stock || product.stock.in_stock !== false;
+					if (!inStock) {
+						btn.className = 'tgb-btn tgb-btn--unavailable is-unavailable';
+						btn.textContent = 'Unavailable';
+						btn.disabled = true;
+					} else if (!hasBase) {
+						btn.className = 'tgb-btn tgb-btn--add';
+						btn.textContent = 'Add';
+						btn.disabled = true;
+						btn.title = 'Choose a base platform first.';
+					} else {
+						btn.className = 'tgb-btn tgb-btn--add';
+						btn.textContent = 'Add';
+						btn.disabled = false;
+						btn.removeAttribute('title');
+					}
+				}
+			});
+		}
+
+		/**
+		 * Updates sidebar Current Build summary panel.
+		 */
+		syncSidebar() {
+			if (!this.sidebarCountEl || !this.sidebarBodyEl) return;
+
+			const currentBase = this.buildState.getBaseGun();
+			const partsCount = (this.buildState.parts || []).length;
+
+			if (!currentBase) {
+				this.sidebarCountEl.textContent = '0 Items';
+				this.sidebarBodyEl.textContent = '';
+				const notice = document.createElement('div');
+				notice.className = 'tgb-placeholder-notice';
+				const p = document.createElement('p');
+				p.textContent = 'Select a base platform below to begin customizing your build.';
+				notice.appendChild(p);
+				this.sidebarBodyEl.appendChild(notice);
+			} else {
+				if (partsCount === 0) {
+					this.sidebarCountEl.textContent = '1 Weapon';
+				} else if (partsCount === 1) {
+					this.sidebarCountEl.textContent = '1 Weapon • 1 Component';
+				} else {
+					this.sidebarCountEl.textContent = `1 Weapon • ${partsCount} Components`;
+				}
+
+				this.sidebarBodyEl.textContent = '';
+				const card = document.createElement('div');
+				card.className = 'tgb-current-base-card';
+
+				const tag = document.createElement('div');
+				tag.className = 'tgb-card-tag';
+				tag.textContent = 'Base Platform';
+				card.appendChild(tag);
+
+				const title = document.createElement('h3');
+				title.className = 'tgb-card-title';
+				title.textContent = currentBase.name;
+				card.appendChild(title);
+
+				const specs = document.createElement('div');
+				specs.className = 'tgb-card-specs';
+				const specItem = document.createElement('span');
+				specItem.className = 'tgb-spec-item';
+
+				const specLabel = document.createElement('span');
+				specLabel.className = 'tgb-spec-label';
+				specLabel.textContent = 'Length: ';
+				specItem.appendChild(specLabel);
+
+				const specVal = document.createElement('span');
+				specVal.className = 'tgb-spec-value';
+				specVal.textContent = `${currentBase.reference_mm} mm`;
+				specItem.appendChild(specVal);
+
+				specs.appendChild(specItem);
+				card.appendChild(specs);
+
+				this.sidebarBodyEl.appendChild(card);
+			}
+		}
+
+		/**
+		 * Handles Build State notifications.
+		 */
+		handleStateChange() {
+			this.syncAllCardButtons();
+			this.syncSidebar();
+		}
+
+		/**
+		 * Shows message in tray status banner.
+		 */
+		showStatus(msg, allowRetry = false) {
+			if (!this.statusEl) return;
+			this.statusEl.textContent = '';
+			const p = document.createElement('p');
+			p.textContent = msg;
+			this.statusEl.appendChild(p);
+
+			if (allowRetry) {
+				const retryBtn = document.createElement('button');
+				retryBtn.type = 'button';
+				retryBtn.className = 'tgb-btn tgb-btn--secondary';
+				retryBtn.textContent = 'Retry';
+				retryBtn.style.marginLeft = '12px';
+				retryBtn.addEventListener('click', () => {
+					this.switchCategory(this.activeCategoryKey, true);
+				});
+				this.statusEl.appendChild(retryBtn);
+			}
+
+			this.statusEl.style.display = 'block';
+		}
+
+		hideStatus() {
+			if (this.statusEl) {
+				this.statusEl.textContent = '';
+				this.statusEl.style.display = 'none';
+			}
+		}
+
+		showLoading() {
+			if (this.loadingEl) this.loadingEl.style.display = 'grid';
+		}
+
+		hideLoading() {
+			if (this.loadingEl) this.loadingEl.style.display = 'none';
+		}
+
+		updateLoadMoreAction(hasMore) {
+			if (!this.actionsEl) return;
+			this.actionsEl.style.display = hasMore ? 'block' : 'none';
+		}
+	}
+
+	// =========================================================================
+	// 6. API EXPORTS & NAMESPACE (Section 41 & Part 6)
+	// =========================================================================
+
+	const productRegistry = new Map();
 
 	window.TGB_BuildState = {
 		Class: TGB_BuildState,
@@ -1189,17 +2011,38 @@
 		instance: null,
 	};
 
-	// Unified TGB namespace for future modules (Part 6+)
+	window.TGB_Catalog = {
+		Client: TGB_CatalogClient,
+		Selection: TGB_ProductSelection,
+		Registry: productRegistry,
+		client: null,
+		selection: null,
+	};
+
+	// Unified TGB namespace for all builder subsystems
 	window.TGB = {
 		BuildState: TGB_BuildState,
 		Renderer: TGB_Renderer,
 		Interactions: TGB_Interactions,
+		Catalog: window.TGB_Catalog,
 		state: null,
 		renderer: null,
 		interactions: null,
+		catalog: null,
+		selection: null,
+		registry: productRegistry,
 		addPart: function(product, x, y, zIndex) {
+			if (window.TGB.selection && (!x && !y)) {
+				return window.TGB.selection.addPartToBuild(product);
+			}
 			if (window.TGB.state) {
 				return window.TGB.state.addPart(product, x, y, zIndex);
+			}
+			return null;
+		},
+		selectBaseGun: function(product) {
+			if (window.TGB.selection) {
+				return window.TGB.selection.selectBaseGun(product);
 			}
 			return null;
 		},
@@ -1223,7 +2066,7 @@
 	};
 
 	/**
-	 * Bootstraps the Gun Builder frontend shell, Build State, Renderer, and Interactions.
+	 * Bootstraps the Gun Builder frontend shell, Build State, Renderer, Interactions, and Catalog.
 	 */
 	function initGunBuilder() {
 		const root = document.getElementById('taktik-gun-builder');
@@ -1245,15 +2088,22 @@
 		interactions.init();
 		renderer.setInteractions(interactions);
 
+		const catalogClient = new TGB_CatalogClient();
+		const productSelection = new TGB_ProductSelection(root, catalogClient, buildState, renderer, productRegistry);
+		productSelection.init();
+
 		// Wire up global references
 		window.TGB_BuildState.instance = buildState;
 		window.TGB_Renderer.instance = renderer;
 		window.TGB_Interactions.instance = interactions;
+		window.TGB_Catalog.client = catalogClient;
+		window.TGB_Catalog.selection = productSelection;
 
 		window.TGB.state = buildState;
 		window.TGB.renderer = renderer;
 		window.TGB.interactions = interactions;
-
+		window.TGB.catalog = catalogClient;
+		window.TGB.selection = productSelection;
 	}
 
 	if (document.readyState === 'loading') {

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Stage 4 completed. Ready for Stage 5.
+Stage 6 completed. Ready for Stage 7.
 
 ## Current Branch
 
@@ -76,11 +76,38 @@ Stage 4 completed. Ready for Stage 5.
   - Memory-only state architecture without database, localStorage, or cookie persistence.
   - Extended diagnostic HUD (`?tgb_debug=1`) to display active dragging instance ID, logical X/Y coordinates, and live display scale.
   - Strictly preserved scope boundaries: no Product Selection UI, category tabs, catalog endpoints, mounting points, snap logic, compatibility rules, pricing/weight totals, or cart integration implemented.
+- **Stage 6 Complete: Dynamic Product Selection + Nine-Product Prototype**
+  - Built dedicated public read-only catalog REST API (`tgb/v1`) in `includes/class-tgb-catalog-api.php`:
+    - `GET /wp-json/tgb/v1/base-guns`
+    - `GET /wp-json/tgb/v1/part-types`
+    - `GET /wp-json/tgb/v1/parts?type_id=...`
+  - Validated continuation cursors as untrusted input: base64 + json decode validating integer `offset >= 0`, cleanly returning HTTP 400 on malformed values without PHP warnings or database errors.
+  - Implemented public product serializer using an explicit whitelist returning only safe, normalized product data without leaking internal meta keys or database paths.
+  - Implemented vanilla JavaScript `TGB_CatalogClient` and in-memory `TGB_ProductRegistry` Map separating active build instances from browseable store data.
+  - Built modern dynamic Product Selection UI (`TGB_ProductSelection`) in `templates/gun-builder.php`, `assets/js/gun-builder.js`, and `assets/css/gun-builder.css`:
+    - Base Platform tab + fully dynamic Part Type tabs derived from taxonomy (zero hardcoded category names).
+    - Polished horizontally scrollable category strip with touch momentum scrolling.
+    - Category-specific in-memory caching and request race safety using `AbortController` and request version tokens.
+    - Loading skeleton cards, empty state, customer-safe error state with Retry action, and Load More continuation.
+    - Accessible product cards with safe DOM rendering (`textContent`), contained imagery, price display, and in-build count badges.
+  - Implemented `selectBaseGun(product)`: preloads imagery, sets canonical stage geometry, mounts Base Gun layer, clears invalid/empty stage states, updates sidebar summary, and recovers the builder from empty `/test/` or invalid `?product_id=`.
+  - Implemented Base Gun replacement policy: selecting a different Base Gun cleanly resets existing parts from Build State and DOM layers.
+  - Implemented Part Add behavior: checks Base Gun presence (prompts "Choose a base platform first" if missing), calculates neutral center spawn location ($x = (W-w)/2, y = (H-h)/2$) clamped to boundary, mounts into DOM, and enables immediate pointer dragging.
+  - Supported multiple simultaneous instances of the same product with distinct instance IDs and live "In build: X" badges.
+  - Fully established exact nine-product prototype with defensible reference lengths and clean, transparent, tightly-cropped, side-profile prepared builder assets in Gallery Image #1:
+    - 1 Base Gun: VFC BCM MK2 MCMR 11.5 EVO Deluxe GBBR Gray (ID 91635, 780mm)
+    - 2 Silencers: Taktik MCX Style (ID 77721, 183mm), Taktik HUXWRX Style (ID 80030, 136mm)
+    - 2 Grips: Taktik M-LOK SI Curved HandStop (ID 85057, 120mm), RGW Anchor HandStop (ID 89535, 60mm)
+    - 2 Optics: RHAM EXPS3 Holographic Sight (ID 89499, 97mm), G&P Retro 4x20 Scope (ID 87467, 150mm)
+    - 2 Accessories: SF M600 Flashlight (ID 55097, 140mm), RGW ARI Finger Stop (ID 91093, 35mm)
+  - Verified mobile responsive layouts at 430px, 390px, 375px, and 320px with zero horizontal page overflow.
+  - Documented complete prototype in `GUN-BUILDER-PROTOTYPE.md`.
+  - Maintained strict scope boundaries: zero compatibility rules, mounting points, snapping, price totals, or cart integration implemented.
 
 ## Current Task
 
-Stage 5 completed, thoroughly tested, and verified. Awaiting supervisor review.
+Stage 6 completed, thoroughly tested, and verified. Awaiting supervisor review.
 
 ## Next Step
 
-Stage 6: Product Selection UI & Dynamic Part Drawer (drawer tabs, product cards, category switching, and adding parts to build state).
+Stage 7: Default Mounting + Compatibility (mounting interfaces, weapon-specific allowed/denied parts, attachment mounting logic, and snap anchors).

@@ -69,7 +69,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 							</svg>
 						</div>
 						<h3 class="tgb-state-title"><?php esc_html_e( 'Select a base gun to start your build', 'part-selector' ); ?></h3>
-						<p class="tgb-state-desc"><?php esc_html_e( 'Choose a compatible airsoft platform to enter the 2D visual builder and configure components.', 'part-selector' ); ?></p>
+						<p class="tgb-state-desc"><?php esc_html_e( 'Choose a base platform below to start customizing your build.', 'part-selector' ); ?></p>
 					</div>
 
 					<!-- Invalid Product State (Ineligible / Part ID / Missing) -->
@@ -82,7 +82,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 							</svg>
 						</div>
 						<h3 class="tgb-state-title"><?php esc_html_e( 'Product Unavailable', 'part-selector' ); ?></h3>
-						<p class="tgb-state-desc"><?php esc_html_e( 'This product is not currently available in the Gun Builder.', 'part-selector' ); ?></p>
+						<p class="tgb-state-desc"><?php esc_html_e( 'This product is not currently available in the Gun Builder. Choose a base platform below to start.', 'part-selector' ); ?></p>
 					</div>
 
 					<!-- Physical Display Frame & Canonical Logical Stage (Section 15) -->
@@ -106,13 +106,13 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 			<div class="tgb-panel tgb-current-build-panel">
 				<div class="tgb-panel-header">
 					<h2 class="tgb-panel-title"><?php esc_html_e( 'Current Build', 'part-selector' ); ?></h2>
-					<span class="tgb-build-count">
+					<span class="tgb-build-count" id="tgb-sidebar-build-count">
 						<?php echo ( 'ready' === $initial_render_data['status'] ) ? esc_html__( '1 Weapon', 'part-selector' ) : esc_html__( '0 Items', 'part-selector' ); ?>
 					</span>
 				</div>
-				<div class="tgb-panel-body">
+				<div class="tgb-panel-body" id="tgb-sidebar-build-body">
 					<?php if ( 'ready' === $initial_render_data['status'] && ! empty( $initial_render_data['product'] ) ) : ?>
-						<div class="tgb-current-base-card">
+						<div class="tgb-current-base-card" id="tgb-sidebar-base-card">
 							<div class="tgb-card-tag"><?php esc_html_e( 'Base Platform', 'part-selector' ); ?></div>
 							<h3 class="tgb-card-title"><?php echo esc_html( $initial_render_data['product']['name'] ); ?></h3>
 							<div class="tgb-card-specs">
@@ -123,8 +123,8 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 							</div>
 						</div>
 					<?php else : ?>
-						<div class="tgb-placeholder-notice">
-							<p><?php esc_html_e( 'Select a weapon base to begin customizing your build.', 'part-selector' ); ?></p>
+						<div class="tgb-placeholder-notice" id="tgb-sidebar-placeholder">
+							<p><?php esc_html_e( 'Select a base platform below to begin customizing your build.', 'part-selector' ); ?></p>
 						</div>
 					<?php endif; ?>
 				</div>
@@ -133,15 +133,57 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 
 	</div>
 
-	<!-- Component Selection Tray / Drawer Region (Non-functional placeholder for Part 4) -->
-	<section class="tgb-tray-section" aria-label="<?php esc_attr_e( 'Component Selection Tray', 'part-selector' ); ?>">
+	<!-- Product Selection Region (Part 6) -->
+	<section class="tgb-tray-section" aria-label="<?php esc_attr_e( 'Product Selection', 'part-selector' ); ?>">
 		<div class="tgb-panel tgb-tray-panel">
 			<div class="tgb-panel-header">
-				<h2 class="tgb-panel-title"><?php esc_html_e( 'Components & Accessories', 'part-selector' ); ?></h2>
+				<h2 class="tgb-panel-title"><?php esc_html_e( 'Choose components for your build', 'part-selector' ); ?></h2>
 			</div>
-			<div class="tgb-panel-body">
-				<div class="tgb-placeholder-notice">
-					<p><?php esc_html_e( 'Choose a base platform above to browse and configure compatible components.', 'part-selector' ); ?></p>
+			<div class="tgb-panel-body tgb-selection-body">
+				<!-- Category Navigation Strip -->
+				<nav class="tgb-category-nav" id="tgb-category-nav" aria-label="<?php esc_attr_e( 'Product Categories', 'part-selector' ); ?>" role="tablist">
+					<!-- Dynamically populated: Base Platform + taxonomy terms -->
+				</nav>
+
+				<!-- Tray Status Notification (e.g. empty or error) -->
+				<div class="tgb-tray-status" id="tgb-tray-status" style="display: none;"></div>
+
+				<!-- Catalog Loading Skeletons -->
+				<div class="tgb-catalog-loading" id="tgb-catalog-loading" style="display: none;" aria-live="polite">
+					<div class="tgb-skeleton-card">
+						<div class="tgb-skeleton-thumb"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--title"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--price"></div>
+						<div class="tgb-skeleton-btn"></div>
+					</div>
+					<div class="tgb-skeleton-card">
+						<div class="tgb-skeleton-thumb"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--title"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--price"></div>
+						<div class="tgb-skeleton-btn"></div>
+					</div>
+					<div class="tgb-skeleton-card">
+						<div class="tgb-skeleton-thumb"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--title"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--price"></div>
+						<div class="tgb-skeleton-btn"></div>
+					</div>
+					<div class="tgb-skeleton-card">
+						<div class="tgb-skeleton-thumb"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--title"></div>
+						<div class="tgb-skeleton-line tgb-skeleton-line--price"></div>
+						<div class="tgb-skeleton-btn"></div>
+					</div>
+				</div>
+
+				<!-- Products Grid -->
+				<div class="tgb-catalog-grid" id="tgb-catalog-grid" role="tabpanel" aria-live="polite"></div>
+
+				<!-- Catalog Continuation Actions -->
+				<div class="tgb-catalog-actions" id="tgb-catalog-actions" style="display: none;">
+					<button type="button" class="tgb-btn tgb-btn--secondary tgb-load-more-btn" id="tgb-load-more-btn">
+						<?php esc_html_e( 'Load More', 'part-selector' ); ?>
+					</button>
 				</div>
 			</div>
 		</div>

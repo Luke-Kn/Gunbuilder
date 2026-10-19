@@ -60,6 +60,7 @@ class TGB_Core {
 		TGB_Part_Types::init();
 		TGB_Product_Config::init();
 		TGB_Product_Data::init();
+		TGB_Catalog_API::init();
 	}
 
 	/**

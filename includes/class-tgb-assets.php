@@ -53,13 +53,14 @@ class TGB_Assets {
 			true
 		);
 
-		// Localize parameters for future AJAX / API integration.
+		// Localize parameters for AJAX / REST API integration.
 		wp_localize_script(
 			'tgb-gun-builder-js',
 			'taktikGunBuilder',
 			array(
 				'version' => TGB_VERSION,
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'restUrl' => esc_url_raw( rest_url( 'tgb/v1/' ) ),
 				'siteUrl' => home_url(),
 			)
 		);
