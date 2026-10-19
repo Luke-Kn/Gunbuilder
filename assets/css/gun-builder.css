@@ -176,13 +176,31 @@
 	max-width: none;
 	max-height: none;
 	height: auto;
-	pointer-events: none;
 	user-select: none;
 	-webkit-user-select: none;
 	-webkit-user-drag: none;
+	transition: filter 0.15s ease, opacity 0.2s ease-in;
+}
+
+/* Base Gun Layer: Fixed (Section 7 & 49) */
+#taktik-gun-builder .tgb-layer--base {
+	pointer-events: none;
 	cursor: default;
 	filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5));
-	transition: opacity 0.2s ease-in;
+}
+
+/* Part Layers: Draggable via Pointer Events (Section 12, 26, 29, 30) */
+#taktik-gun-builder .tgb-layer--part {
+	pointer-events: auto;
+	cursor: grab;
+	touch-action: none; /* Prevents mobile scroll while dragging part */
+	filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
+}
+
+#taktik-gun-builder .tgb-layer--part.is-dragging {
+	cursor: grabbing;
+	filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 8px rgba(230, 126, 34, 0.45));
+	z-index: 999 !important;
 }
 
 /* Stage Loading State (Section 33) */

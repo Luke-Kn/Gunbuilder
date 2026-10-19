@@ -60,11 +60,27 @@ Stage 4 completed. Ready for Stage 5.
   - Retained internal debug/measurement HUD (toggled via `?tgb_debug=1` or `TGB_Renderer.toggleDebug()`) while keeping it hidden by default from customer presentation.
   - Documented Gallery asset quality limitation: current test product image (ID 91639) contains a solid white background, watermark branding, and substantial outer padding; final prototype assets require tightly-cropped, side-profile transparent PNGs.
   - Explicitly preserved boundary: no dragging, pointer events, custom repositioning, coordinate persistence, state store, REST/AJAX endpoints, or cart functionality implemented.
+- **Stage 5 Complete: Unified Build State + Pointer Dragging**
+  - Built centralized in-memory client-side Build State store (`TGB_BuildState`) as single source of truth for all build components.
+  - Implemented generic Part instance representations using unique, collision-resistant instance IDs (`part-...` via `crypto.randomUUID()` with fallback), supporting multiple simultaneous instances of the same WooCommerce product ID.
+  - Represented Base Gun in Build State with canonical logical coordinates and dimensions ($1\text{ mm} = 1\text{ logical px}$); Base Gun remains strictly fixed (non-draggable).
+  - Implemented unified Pointer Events dragging (`pointerdown`, `pointermove`, `pointerup`, `pointercancel`) with pointer capture (`setPointerCapture()`) supporting mouse, touch, and stylus uniformly.
+  - Implemented exact screen-to-logical coordinate delta conversion: `logicalDelta = physicalDelta / displayScale`, ensuring stored positions reflect physical millimeter geometry regardless of screen scale.
+  - Enforced logical stage boundary clamping: $X \in [0, \text{stageWidth} - \text{partWidth}]$, $Y \in [0, \text{stageHeight} - \text{partHeight}]$, preventing parts from being lost outside the builder workspace.
+  - Preserved logical coordinates and visual positioning across viewport resize cycles (desktop $\leftrightarrow$ 390px $\leftrightarrow$ 320px) without coordinate drift.
+  - Scoped `touch-action: none` strictly to `.tgb-layer--part` elements; normal page scrolling outside draggable parts remains unaffected.
+  - Implemented single active pointer policy to ensure multi-touch gestures do not corrupt drag state.
+  - Optimized DOM synchronization using `requestAnimationFrame` queueing on pointer movement, preventing unnecessary style reflows.
+  - Maintained modern visual presentation with subtle elevation styling (`is-dragging`), `cursor: grab`/`grabbing`, without resize handles, rotation controls, or color modifications.
+  - Clean state mutation API: `setBaseGun`, `addPart`, `removePart`, `updatePartPosition`, `getPart`, `getBaseGun`, `getState`, `reset`, `subscribe`.
+  - Memory-only state architecture without database, localStorage, or cookie persistence.
+  - Extended diagnostic HUD (`?tgb_debug=1`) to display active dragging instance ID, logical X/Y coordinates, and live display scale.
+  - Strictly preserved scope boundaries: no Product Selection UI, category tabs, catalog endpoints, mounting points, snap logic, compatibility rules, pricing/weight totals, or cart integration implemented.
 
 ## Current Task
 
-Stage 4 completed, thoroughly tested, and verified. Awaiting supervisor review.
+Stage 5 completed, thoroughly tested, and verified. Awaiting supervisor review.
 
 ## Next Step
 
-Stage 5: Dragging, Pointer Events, and Mounting Points (drag-and-drop Part positioning, snap points, and customer interaction).
+Stage 6: Product Selection UI & Dynamic Part Drawer (drawer tabs, product cards, category switching, and adding parts to build state).
