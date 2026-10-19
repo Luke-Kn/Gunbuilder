@@ -9,18 +9,26 @@ Version: 1.0
 */
 
 // Hook for adding admin menus
- //var_dump($products); 
-  add_action('admin_menu', 'part_selector_menu');
+//var_dump($products); 
+add_action('admin_menu', 'part_selector_menu');
 
 // Action function for the above hook
-function part_selector_menu() {
-    add_menu_page('Part Selector', 'Part Selector', 'manage_options', 'part-selector', 'part_selector_display_page');
-    }
+function part_selector_menu()
+{
+    add_menu_page(
+        'Part Selector',
+        'Part Selector',
+        'manage_options',
+        'part-selector',
+        'part_selector_display_page'
+    );
+}
 
 // Add a Customize Button next to the Add to Cart Button
 add_action('woocommerce_after_add_to_cart_button', 'add_customize_button');
 
-function add_customize_button() {
+function add_customize_button()
+{
     global $product;
     $product_id = $product->get_id();
     echo '<button type="button" class="customize-button button alt" style="background-color: #f39c12; border-color: #e67e22; color: #fff; margin-left: 10px;" data-product-id="' . $product_id . '" onmouseover="this.style.backgroundColor=\'#e67e22\'; this.style.borderColor=\'#d35400\';" onmouseout="this.style.backgroundColor=\'#f39c12\'; this.style.borderColor=\'#e67e22\';">Customize</button>';
@@ -29,14 +37,16 @@ function add_customize_button() {
 // Enqueue Custom Scripts
 add_action('wp_enqueue_scripts', 'enqueue_customize_button_script');
 
-function enqueue_customize_button_script() {
+function enqueue_customize_button_script()
+{
     // Enqueue the script from the plugin's folder
     wp_enqueue_script('customize-button-script', plugin_dir_url(__FILE__) . 'js/customize-button.js', array('jquery'), null, true);
 }
 
 
 // Function to enqueue scripts and styles in admin
-function part_selector_enqueue_assets_admin() {
+function part_selector_enqueue_assets_admin()
+{
     $plugin_url = plugin_dir_url(__FILE__);
 
     // Uncomment if you have specific admin styles or scripts
@@ -46,22 +56,12 @@ function part_selector_enqueue_assets_admin() {
 add_action('admin_enqueue_scripts', 'part_selector_enqueue_assets_admin');
 
 
-// Function to display the plugin page
-function part_selector_display_page() {
-    $plugin_url = plugin_dir_url(__FILE__);
-    $index_php = file_get_contents(plugin_dir_path(__FILE__) . 'index.php');
-    
-    // Update the paths in index.php for CSS, JS, and image resources
-    $index_php = str_replace('href="css/', 'href="' . $plugin_url . 'css/', $index_php);
-    $index_php = str_replace('src="js/', 'src="' . $plugin_url . 'js/', $index_php);
-    $index_php = str_replace('src="img/', 'src="' . $plugin_url . 'img/', $index_php);
 
-    echo $index_php;
-}
 
 
 // Function to enqueue scripts and styles in frontend
-function part_selector_enqueue_assets_frontend() {
+function part_selector_enqueue_assets_frontend()
+{
     $plugin_url = plugin_dir_url(__FILE__);
 
     //wp_enqueue_style('part-selector-css', $plugin_url . 'css/style.css');
@@ -74,7 +74,8 @@ function part_selector_enqueue_assets_frontend() {
 add_action('wp_enqueue_scripts', 'part_selector_enqueue_assets_frontend');
 
 // Shortcode function to display the index.php content on frontend
-function part_selector_shortcode() {
+function part_selector_shortcode()
+{
     $plugin_url = plugin_dir_url(__FILE__);
     $index_php = file_get_contents(plugin_dir_path(__FILE__) . 'template.php');
     // Update the paths in index.php for CSS, JS, and image resources
@@ -88,7 +89,7 @@ function part_selector_shortcode() {
     //$silencers_urls = get_product_urls(0, 100, ' Flash hider, Silencers');
     // Inject product URLs into the index.php content
     $index_php = str_replace('<!-- MEDIA_IMAGES_PLACEHOLDER for Scopes -->', $scopes_urls, $index_php);
-   // $index_php = str_replace('<!-- MEDIA_IMAGES_PLACEHOLDER for Silencers -->', $silencers_urls, $index_php);
+    // $index_php = str_replace('<!-- MEDIA_IMAGES_PLACEHOLDER for Silencers -->', $silencers_urls, $index_php);
 
     // Retrieve product_id from URL query parameters
     if (isset($_GET['product_id'])) {
@@ -97,7 +98,6 @@ function part_selector_shortcode() {
         // Inject the product image URL into the index.php content
         $index_php = str_replace('<!-- PRODUCT_IMAGE_PLACEHOLDER -->', $product_image_url, $index_php);
         $index_php = str_replace('<!-- PRODUCT_ID -->', $product_id, $index_php);
-
     }
 
     return $index_php;
@@ -106,7 +106,8 @@ function part_selector_shortcode() {
 add_shortcode('part_selector', 'part_selector_shortcode');
 
 // Function to get product image URL by product ID
-function get_product_image_url($product_id) {
+function get_product_image_url($product_id)
+{
     $product = wc_get_product($product_id);
     if ($product) {
         $image_id = $product->get_image_id();
@@ -118,7 +119,8 @@ function get_product_image_url($product_id) {
 }
 
 
-function get_product_urls($offset, $limit, $category) {
+function get_product_urls($offset, $limit, $category)
+{
     $product_urls = '';
 
     $args = array(
@@ -128,11 +130,11 @@ function get_product_urls($offset, $limit, $category) {
         'category' => array($category)
     );
 
-    $products = wc_get_products( $args );
+    $products = wc_get_products($args);
 
     if (!empty($products)) {
         foreach ($products as $product) {
-            
+
             $image_url = wp_get_attachment_url($product->get_image_id());
             $title = $product->get_name();
             $stock = $product->get_stock_quantity();
@@ -151,7 +153,7 @@ function get_product_urls($offset, $limit, $category) {
         $product_urls .= 'No products found.';
     }
 
-    
+
     return $product_urls;
 }
 
@@ -161,7 +163,8 @@ add_shortcode('part_selector', 'part_selector_shortcode');
 add_action('wp_ajax_add_to_cart', 'handle_add_to_cart');
 //add_action('wp_ajax_nopriv_add_to_cart', 'handle_add_to_cart');
 
-function handle_add_to_cart() {
+function handle_add_to_cart()
+{
     // Check if WooCommerce is active
     if (!class_exists('WooCommerce')) {
         wp_send_json_error('WooCommerce is not active');
@@ -197,7 +200,8 @@ function handle_add_to_cart() {
 }
 
 
-function enqueue_custom_script() {
+function enqueue_custom_script()
+{
     // Enqueue a dummy script
     wp_enqueue_script('custom-script', plugin_dir_url(__FILE__) . 'js/add-to-cart.js', array('jquery'), null, true);
 
@@ -207,6 +211,181 @@ function enqueue_custom_script() {
     ));
 }
 add_action('wp_enqueue_scripts', 'enqueue_custom_script');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function part_selector_display_page()
+{
+    // $plugin_url = plugin_dir_url(__FILE__);
+    // $index_php = file_get_contents(plugin_dir_path(__FILE__) . 'index.php');
+
+    // // Update the paths in index.php for CSS, JS, and image resources
+    // $index_php = str_replace('href="css/', 'href="' . $plugin_url . 'css/', $index_php);
+    // $index_php = str_replace('src="js/', 'src="' . $plugin_url . 'js/', $index_php);
+    // $index_php = str_replace('src="img/', 'src="' . $plugin_url . 'img/', $index_php);
+    $scopes = get_product_urls(0, 100, 'Dots, Scopes, Sights, Flashlights');
+  ?>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Rifle Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="stylesheet" href="https://localhost/wordpress/wp-content/plugins/gunbuilder/css\styles.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="js/fabric.js"></script>
+    
+    <!-- Le styles -->
+    <link href="https://localhost/wordpress/wp-content/plugins/gunbuilder/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://localhost/wordpress/wp-content/plugins/gunbuilder/css/bootstrap-responsive.min.css" rel="stylesheet">
+    <style type="text/css">
+        .footer {
+            padding: 70px 0;
+            margin-top: 70px;
+            border-top: 1px solid #E5E5E5;
+            background-color: whiteSmoke;
+        }            
+        body {
+            padding-top: 60px;            
+        }
+
+        .rotate {  
+            -webkit-transform:rotate(90deg);
+            -moz-transform:rotate(90deg);
+            -o-transform:rotate(90deg);
+            -ms-transform:rotate(90deg);           
+        }   
+
+        .container {
+            max-width: 1200px;
+        }
+
+        .span3 {
+            width: 100%;
+        }
+
+        .canvas-section {
+            width: 100%;
+        }
+
+        #shirtDiv {
+            width: 100%;
+            height: auto;
+        }
+
+        .avatar-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        #avatarlist {
+            display: flex;
+            gap: 10px; /* Optional: adds space between the images */
+        }
+    </style>
+</head>
+
+<body class="preview" data-spy="scroll" data-target=".subnav" data-offset="80">
+
+<div class="container">
+
+        <!--<div class="page-header">
+            <h1>Customize Your Rifle 2</h1>
+        </div>-->
+    
+        <!-- Headings & Paragraph Copy -->
+    
+            <div class="span3">
+                <div class="tabbable"> <!-- Only required for left/right tabs -->
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a href="#tab1" data-toggle="tab">Dots, Scopes, Sights, Flashlights</a></li>
+                        <li><a href="#tab2" data-toggle="tab">Flash hider, Silencers</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="tab1">
+                            <div class="well">
+                                <div class="avatar-container">
+                                    <div id="avatarlist" class="scopes">
+                                         <?= $scopes  ?>
+                                         </div>
+                                    </div>
+                                </div>    
+                            </div>                      
+                        </div>
+                        <div class="tab-pane" id="tab2">
+                            <div class="well">
+                                <div class="avatar-container">
+                                    <div id="avatarlist" class="flashes">
+                                        <!-- MEDIA_IMAGES_PLACEHOLDER for Silencers -->
+                                    </div>
+                                </div>    
+                            </div>                      
+                        </div>
+                    </div>
+                </div>
+            </div>  
+                  
+            <!--  Canvas and buttons -->
+            <div class="canvas-section span12">            
+                <div align="center" style="min-height: 32px;">
+                    <div class="clearfix">                      
+                        <div class="pull-right" align="" id="imageeditor" style="display:none">
+                            <div class="btn-group">                                            
+                                <button class="btn" id="bring-to-front" title="Bring to Front"><i class="icon-fast-backward rotate" style="height:19px;"></i></button>
+                                <button class="btn" id="send-to-back" title="Send to Back"><i class="icon-fast-forward rotate" style="height:19px;"></i></button>
+                                <button id="remove-selected" class="btn" title="Delete selected item"><i class="icon-trash" style="height:19px;"></i></button>
+                            </div>
+                        </div>              
+                    </div>
+                </div>                        
+
+                <!-- Removed View Switching Button --> 
+                <div id="shirtDiv" class="page" style="position: relative; background-color: rgb(255, 255, 255);">
+                    <!--<img name="tshirtview" id="tshirtFacing" src="img/EMG_Helios_Sniper.png" style="width: 80%;">-->
+                    <div id="drawingArea" class="canvas-container" style="width: 100%; height: 300px;">
+                        <canvas id="tcanvas" class="hover" style="-webkit-user-select: none;"></canvas>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Add to shopping cart -->
+            <div class="span3" style="margin-top: 20px;">
+                <button id="save-canvas" class="btn btn-large btn-block btn-primary">Save as PNG</button>
+                <button type="button" class="btn btn-large btn-block btn-success" name="addToTheBag" id="addToTheBag">Add to bag <i class="icon-briefcase icon-white"></i></button>
+            </div>
+
+</div>
+
+<script src="js/bootstrap.min.js"></script>  
+<script type="text/javascript" src="https://localhost/wordpress/wp-content/plugins/gunbuilder/js/tshirtEditor.js"></script>
+<script type="text/javascript" src="https://localhost/wordpress/wp-content/plugins/gunbuilder/js/jquery.miniColors.min.js"></script>
+
+<script>
+</script>
+
+</body>
+</html>
+
+<?php
+}
 
 
 
