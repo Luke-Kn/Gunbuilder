@@ -36,6 +36,7 @@ require_once TGB_PLUGIN_DIR . 'includes/class-tgb-shortcode.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-integration.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-part-types.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-config.php';
+require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-data.php';
 
 // =============================================================================
 // Bootstrap

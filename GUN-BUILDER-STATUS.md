@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Stage 2 completed. Ready for Stage 3.
+Stage 3 completed. Ready for Stage 4.
 
 ## Current Branch
 
@@ -35,11 +35,19 @@ Stage 2 completed. Ready for Stage 3.
   - Handled zero-term empty taxonomy state cleanly with informative guidance in the product editor.
   - Verified safe taxonomy deletion behavior (products remain intact, structural validity becomes false).
   - Admin assets scoped strictly to WooCommerce product editor screens.
+- **Stage 3 Complete: Product Data Service + WooCommerce Gallery Image Pipeline**
+  - Built centralized, authoritative backend product data layer in `includes/class-tgb-product-data.php`.
+  - Implemented strict builder gallery image resolver (`get_builder_image_data()`): resolves the FIRST valid attachment from the WooCommerce Product Gallery, preserving original dimensions and aspect ratio, with ZERO fallback to featured images.
+  - Established standardized, JSON-serializable product data contract containing product identity, role, dynamic part type, reference length in mm, builder image metadata, WooCommerce storefront pricing, stock status, weight in store unit and normalized grams, and WooCommerce status.
+  - Implemented clean catalog eligibility evaluation (`is_catalog_eligible()`) enforcing 7 strict criteria without mutating database state.
+  - Implemented continuation cursor streaming Base Gun catalog query (`get_base_guns()`) using supported WordPress/WooCommerce `WP_Query` with deterministic ordering and bounded candidate batching.
+  - Implemented continuation cursor streaming Part catalog query by dynamic taxonomy term (`get_parts_by_type()`), verifying seamless term renaming support without hardcoded category names.
+  - Verified safe handling of missing weights (explicit `null`, never `0g`), out-of-stock products, unpurchasable products, and broken gallery attachments.
 
 ## Current Task
 
-Stage 2 completed and verified. Awaiting supervisor review.
+Stage 3 completed and verified. Awaiting supervisor review.
 
 ## Next Step
 
-Stage 3: Customer-Facing Product Data Service & Image Pipeline (retrieval, gallery image resolution, API endpoints).
+Stage 4: Canonical 2D Layered DOM Renderer + Responsive Scale System (layered image elements, 1 mm = 1 logical px, stage coordinate positioning, responsive scene scaling).
