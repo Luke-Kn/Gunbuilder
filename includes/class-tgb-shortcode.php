@@ -43,6 +43,9 @@ class TGB_Shortcode {
 			'part_selector'
 		);
 
+		$raw_product_id      = absint( $atts['product_id'] );
+		$initial_render_data = self::resolve_initial_render_data( $raw_product_id );
+
 		// Locate clean template.
 		$template_path = TGB_PLUGIN_DIR . 'templates/gun-builder.php';
 
@@ -53,5 +56,63 @@ class TGB_Shortcode {
 		ob_start();
 		include $template_path;
 		return ob_get_clean();
+	}
+
+	/**
+	 * Resolves initial Base Gun render data safely.
+	 *
+	 * Evaluates catalog eligibility and Base Gun role. Never fatals on invalid IDs.
+	 * Returns sanitized structure for frontend consumption.
+	 *
+	 * @param int $product_id Raw product ID.
+	 * @return array Initial render data { status, message, product }.
+	 */
+	public static function resolve_initial_render_data( $product_id ) {
+		$product_id = absint( $product_id );
+
+		if ( $product_id <= 0 ) {
+			return array(
+				'status'  => 'empty',
+				'message' => __( 'Select a base gun to start your build.', 'part-selector' ),
+				'product' => null,
+			);
+		}
+
+		$product_data = TGB_Product_Data::get_product_data( $product_id );
+
+		// Product must exist, be catalog eligible, and have role = base_gun.
+		if (
+			! $product_data ||
+			true !== $product_data['catalog_eligible'] ||
+			TGB_Product_Config::ROLE_BASE_GUN !== $product_data['role'] ||
+			empty( $product_data['builder_image'] )
+		) {
+			return array(
+				'status'  => 'invalid',
+				'message' => __( 'This product is not currently available in the Gun Builder.', 'part-selector' ),
+				'product' => null,
+			);
+		}
+
+		// Prepare strictly scoped rendering payload (Section 11).
+		$render_product = array(
+			'id'            => (int) $product_data['id'],
+			'name'          => (string) $product_data['name'],
+			'role'          => (string) $product_data['role'],
+			'reference_mm'  => (float) $product_data['reference_mm'],
+			'builder_image' => array(
+				'url'          => (string) $product_data['builder_image']['url'],
+				'width'        => (int) $product_data['builder_image']['width'],
+				'height'       => (int) $product_data['builder_image']['height'],
+				'aspect_ratio' => (float) $product_data['builder_image']['aspect_ratio'],
+				'alt'          => (string) $product_data['builder_image']['alt'],
+			),
+		);
+
+		return array(
+			'status'  => 'ready',
+			'message' => '',
+			'product' => $render_product,
+		);
 	}
 }
