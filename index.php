@@ -1,188 +1,98 @@
-<?php
-//$scopes = get_product_urls(0, 100, 'Dots, Scopes, Sights, Flashlights');
-?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="utf-8">
-    <title>Rifle Editor</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/custom.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <title>Gunbuilder index</title>
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script type="text/javascript" src="js/fabric.js"></script>
-    
-    <!-- Le styles -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/bootstrap-responsive.min.css" rel="stylesheet">
-    <style type="text/css">
-        .footer {
-            padding: 70px 0;
-            margin-top: 70px;
-            border-top: 1px solid #E5E5E5;
-            background-color: whiteSmoke;
-        }            
-        body {
-            padding-top: 60px;            
-        }
 
-        .rotate {  
-            -webkit-transform:rotate(90deg);
-            -moz-transform:rotate(90deg);
-            -o-transform:rotate(90deg);
-            -ms-transform:rotate(90deg);           
-        }   
 
-        .container {
-            max-width: 1200px;
-        }
-
-        .span3 {
-            width: 100%;
-        }
-
-        .canvas-section {
-            width: 100%;
-        }
-
-        #shirtDiv {
-            width: 100%;
-            height: auto;
-        }
-
-        .avatar-container {
-            overflow-x: auto;
-            white-space: nowrap;
-            width: 100%;
-        }
-
-        #avatarlist {
-            display: flex;
-            gap: 10px; /* Optional: adds space between the images */
-        }
-    </style>
 </head>
 
-<body class="preview" data-spy="scroll" data-target=".subnav" data-offset="80">
+<body>
+    <header>
+        <div class="mx-auto" style="width: 200px;">
+            <h1 class="mx-auto">Gunbuilder</h1>
+        </div>
+    </header>
 
-<div class="container">
-
-        <!--<div class="page-header">
-            <h1>Customize Your Rifle 2</h1>
-        </div>-->
-    
-        <!-- Headings & Paragraph Copy -->
-    
-            <div class="span3">
-                <div class="tabbable"> <!-- Only required for left/right tabs -->
-                    <ul class="nav nav-tabs">
-                        <li class="active"><a href="#tab1" data-toggle="tab">Dots, Scopes, Sights, Flashlights</a></li>
-                        <li><a href="#tab2" data-toggle="tab">Flash hider, Silencers</a></li>
-                    </ul>
-                    <div class="tab-content">
-                        <div class="tab-pane active" id="tab1">
-                            <div class="well">
-                                <div class="avatar-container">
-                                    <div id="avatarlist" class="scopes">
-                                      <!-- MEDIA_IMAGES_PLACEHOLDER for Scopes -->
-                                    </div>
-                                </div>    
-                            </div>                      
-                        </div>
-                        <div class="tab-pane" id="tab2">
-                            <div class="well">
-                                <div class="avatar-container">
-                                    <div id="avatarlist" class="flashes">
-                                        <!-- MEDIA_IMAGES_PLACEHOLDER for Silencers -->
-                                    </div>
-                                </div>    
-                            </div>                      
-                        </div>
-                    </div>
-                </div>
-            </div>  
-                  
-            <!--  Canvas and buttons -->
-            <div class="canvas-section span12">            
-                <div align="center" style="min-height: 32px;">
-                    <div class="clearfix">                      
-                        <div class="pull-right" align="" id="imageeditor" style="display:none">
-                            <div class="btn-group">                                            
-                                <button class="btn" id="bring-to-front" title="Bring to Front"><i class="icon-fast-backward rotate" style="height:19px;"></i></button>
-                                <button class="btn" id="send-to-back" title="Send to Back"><i class="icon-fast-forward rotate" style="height:19px;"></i></button>
-                                <button id="remove-selected" class="btn" title="Delete selected item"><i class="icon-trash" style="height:19px;"></i></button>
-                            </div>
-                        </div>              
-                    </div>
-                </div>                        
-
-                <!-- Removed View Switching Button --> 
-                <div id="shirtDiv" class="page" style="position: relative; background-color: rgb(255, 255, 255);">
-                    <!--<img name="tshirtview" id="tshirtFacing" src="img/EMG_Helios_Sniper.png" style="width: 80%;">-->
-                    <div id="drawingArea" class="canvas-container" style="width: 100%; height: 300px;">
-                        <canvas id="tcanvas" class="hover" style="-webkit-user-select: none;"></canvas>
-                    </div>
+    <div id="category-selector" class="ms-2 row row-cols-auto">
+       <div class="col-12"> <h2> Category</h2></div>
+        <div class="col">
+            <div class="selector card mb-3">
+                <div class="card-body">
+                <img src="https://taktikairsoft.com/wp-content/uploads/2019/09/placeholder_taktik.jpg" class="card-icon"> <h4 class="card-title">PlaceHolder</h4>
                 </div>
             </div>
-    
-            <!-- Add to shopping cart -->
-            <div class="span3" style="margin-top: 20px;">
-                <button id="save-canvas" class="btn btn-large btn-block btn-primary">Save as PNG</button>
-                <button type="button" class="btn btn-large btn-block btn-success" name="addToTheBag" id="addToTheBag">Add to bag <i class="icon-briefcase icon-white"></i></button>
+        </div>
+        <div class="col">
+            <div class="selector card mb-3">
+                <div class="card-body">
+                <img src="https://taktikairsoft.com/wp-content/uploads/2019/09/placeholder_taktik.jpg" class="card-icon"> <h4 class="card-title">PlaceHolder</h4>
+                </div>
             </div>
+        </div>
+        <div class="col">
+            <div class="selector card mb-3">
+                <div class="card-body">
+                <img src="https://taktikairsoft.com/wp-content/uploads/2019/09/placeholder_taktik.jpg" class="card-icon"> <h4 class="card-title">PlaceHolder</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+<div id="component-selector" class="ms-2 row row-cols-auto ">
+    <canvas class="main-canvas ms-2 col-8 me-3">
 
-</div>
 
-<script src="js/bootstrap.min.js"></script>  
-<script type="text/javascript" src="js/tshirtEditor.js"></script>
-<script type="text/javascript" src="js/jquery.miniColors.min.js"></script>
+    </canvas>
+    <div class="component-details mt-2 ms-2">
+
+        <div id="component-details" class="me-2 position-absolute " >
+
+    </div>
+    </div>
+    </div>
+    
+    <div id="component-selector" class="ms-2 row row-cols-auto component-selector">
+    <div class="col-12"> <h2>Components</h2></div>   
+        <div class="col component">
+            <div class="selector card mb-3">
+                <div class="card-body">
+                <img src="https://taktikairsoft.com/wp-content/uploads/2019/09/placeholder_taktik.jpg" class="card-icon"> <h4 class="card-title">PlaceHolder</h4>
+                </div>
+            </div>
+        </div>
+        <div class=" component">
+            <div class="selector card mb-3">
+                <div class="card-body">
+                <img src="https://taktikairsoft.com/wp-content/uploads/2019/09/placeholder_taktik.jpg" class="card-icon"> <h4 class="card-title">PlaceHolder</h4>
+                </div>
+            </div>
+        </div>
+        <div class=" component">
+            <div class="selector card mb-3">
+                <div class="card-body">
+                <img src="https://taktikairsoft.com/wp-content/uploads/2019/09/placeholder_taktik.jpg" class="card-icon"> <h4 class="card-title">PlaceHolder</h4>
+                </div>
+            </div>
+        </div>
+           
+        </div>
+    </div>
+
+
+
+
+    <footer></footer>
+</body>
 
 <script>
-async function getScopes(){
-let scopes_list = document.querySelector('.scopes');
-
-let data = await fetch(`https://taktikairsoft.com/wp-json/site/v1/parts/?category=74`)
-            .then(async (response)=>{
-
-                return await response.json()
-            })
-
-data.forEach(element => {
-   scopes_list.innerHTML+= renderProduct(element)
-});
-
-}
-async function getFlashes(){
-let flashes_list = document.querySelector('.flashes');
-
-let data = await fetch(`https://taktikairsoft.com/wp-json/site/v1/parts/?category=70`)
-            .then(async (response)=>{
-
-                return await response.json()
-            })
-
-data.forEach(element => {
-   flashes_list.innerHTML+= renderProduct(element)
-});
-
-}
 
 
-function renderProduct(scope){
-    if(!scope.image){
-       scope.image = '/wp-content/uploads/2019/09/placeholder_taktik.jpg'
-    }
-                return `<div class="image-container">
-                <img data-product-id="${scope.id}" style="cursor:pointer;" class="img-polaroid" src="https://taktikairsoft.com${scope.image}" alt="${scope.name}" />
-                <div class="caption" style="word-wrap: break-word; white-space: normal; text-align: center;">${scope.name}</div>
-                </div>`;
-
-}
-getScopes();
-getFlashes();
 </script>
 
-
-</body>
 </html>

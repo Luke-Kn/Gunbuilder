@@ -1,0 +1,55 @@
+header{
+background: #01638a;
+background: linear-gradient(180deg, rgba(1, 99, 138, 1) 0%, white 90%);
+padding-top: 2vw;
+padding-bottom: 5vw;
+}
+.selector{
+    width: 12vw;
+    min-width: 40px;
+}
+.selector > .card-body > .card-title{
+    font-size: 110%;
+    
+}
+
+
+
+.main-canvas{
+    background-color: lightblue;
+    height: 60vh; 
+    border-radius: 15px;
+}
+
+.card-icon{
+    
+    width: 6vw;
+     height: 5vw;
+}
+
+.component-details{
+        background-color: lightblue;
+    height: 60vh;
+    width: 30vw;
+    border-radius: 15px;
+
+}
+
+/* mobile */
+@media screen and (max-width: 767px) {
+  .selector > .card-body > .card-title {
+    display: none;
+  }
+
+
+.component-details{
+    width: 80vw;
+    height: 20vh;
+}
+.main-canvas{
+    height: 40vh;
+     width: 90vw;
+}
+
+
+}
