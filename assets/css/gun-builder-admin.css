@@ -1,0 +1,46 @@
+/**
+ * Taktik Gun Builder - Admin Product Data Styles
+ *
+ * Scoped styling for WooCommerce product data tab.
+ */
+
+#woocommerce-product-data ul.wc-tabs li.tgb_gun_builder_options a::before {
+	content: "\f147"; /* Dashicons hammer */
+	font-family: dashicons;
+}
+
+#tgb_gun_builder_data .form-field strong {
+	font-size: 13px;
+	color: #1d2327;
+}
+
+#tgb_gun_builder_data p.form-field {
+	padding: 10px 20px 10px 162px !important;
+	margin: 0 !important;
+}
+
+#tgb_gun_builder_data p.form-field label {
+	width: 150px !important;
+	margin-left: -162px !important;
+	float: left;
+}
+
+#tgb_gun_builder_data .tgb-mount-points-table th,
+#tgb_gun_builder_data .tgb-mount-points-table td {
+	padding: 8px 10px;
+	vertical-align: middle;
+}
+
+#tgb_gun_builder_data .tgb-remove-mount-point {
+	color: #b32d2e;
+	border-color: #b32d2e;
+	font-weight: bold;
+	line-height: 1;
+	padding: 0 6px;
+	height: 26px;
+}
+
+#tgb_gun_builder_data .tgb-remove-mount-point:hover {
+	background: #b32d2e;
+	color: #fff;
+}

@@ -1,6 +1,3 @@
-<?php
-//$scopes = get_product_urls(0, 100, 'Dots, Scopes, Sights, Flashlights');
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,7 +7,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>  
     <script type="text/javascript" src="js/fabric.js"></script>
     
     <!-- Le styles -->
@@ -85,7 +82,7 @@
                             <div class="well">
                                 <div class="avatar-container">
                                     <div id="avatarlist">
-                                      <!-- MEDIA_IMAGES_PLACEHOLDER for Scopes -->
+                                        <!-- MEDIA_IMAGES_PLACEHOLDER for Scopes -->
                                     </div>
                                 </div>    
                             </div>                      
@@ -139,11 +136,9 @@
 <script type="text/javascript" src="js/jquery.miniColors.min.js"></script>
 
 <script>
-  var num  = 3
-    var productImageUrl = '';
+    // Dynamically load the product image URL
+    var productImageUrl = '<!-- PRODUCT_IMAGE_PLACEHOLDER -->';
     var bg_productId = '<!-- PRODUCT_ID -->';
-
-    console.log(productImageUrl)
 </script>
 
 </body>
