@@ -233,3 +233,89 @@ Catalog eligibility verified via `TGB_Product_Data::get_base_guns()` and `TGB_Pr
 ## 5. Persistence Policy
 
 Unlike temporary integration tests, these nine configured prototype records and their prepared gallery assets are **permanent local project fixtures**. They must NOT be deleted after testing, as Parts 7 through 12 depend upon them.
+
+---
+
+## 6. Part 7: Mounting Interfaces & Structured Compatibility
+
+Part 7 introduces structured mount compatibility and default initial placement. Compatibility is evaluated strictly via taxonomy term ID intersection between Part accepted interfaces and Base Gun mount points.
+
+### 6.1 Prototype Mount Interface Taxonomy Terms (`tgb_mount_interface`)
+
+| Term ID | Name | Slug | Purpose & Real-World Interface Standard |
+|---|---|---|---|
+| **2644** | **Picatinny** | `picatinny` | MIL-STD-1913 / STANAG 2324 accessory mounting rail standard |
+| **2645** | **M-LOK** | `m-lok` | Magpul M-LOK direct attachment modular locking slot standard |
+| **2646** | **14mm CCW** | `14mm-ccw` | Standard 14mm Counter-Clockwise airsoft muzzle thread standard |
+| **2647** | **Carry Handle** | `carry-handle` | AR-15 / M16 carrying handle channel screw-mount standard |
+
+---
+
+### 6.2 Base Gun Platform Mount Points (Product `91635`)
+
+The Base Gun platform (*VFC BCM MK2 MCMR 11.5 EVO Deluxe GBBR Gray*) is configured with four base-local mount points. Coordinates are canonical millimeters ($1\text{ mm} = 1\text{ logical px}$) measured from the top-left ($0, 0$) of the Base Gun builder image ($1492 \times 473$ px, reference length $780\text{ mm}$):
+
+| Mount Point ID | Label | Interface (Term ID) | Local X (mm) | Local Y (mm) | Calibration Basis |
+|---|---|---|---|---|---|
+| `mount-top-rail-rear` | Top Rail Rear | Picatinny (`2644`) | `450.0` | `9.5` | Flat-top upper receiver MIL-STD-1913 Picatinny rail section above ejection port / magwell. Primary optics / sight mounting point. |
+| `mount-top-rail-fwd` | Top Rail Forward | Picatinny (`2644`) | `185.0` | `6.3` | MCMR 12 o'clock Picatinny rail section forward of the receiver towards the gas block. Forward accessory / magnifier point. |
+| `mount-lower-handguard` | Lower Handguard | M-LOK (`2645`) | `220.0` | `59.0` | MCMR 6 o'clock lower M-LOK slot section. Primary foregrip, angled grip, and handstop mounting point. |
+| `mount-muzzle` | Muzzle | 14mm CCW (`2646`) | `65.0` | `38.2` | Outer barrel $14\text{ mm}$ CCW muzzle thread shoulder at flash hider interface, centered along bore axis. |
+
+---
+
+### 6.3 Eight-Part Prototype Compatibility Matrix
+
+| Product ID | Product Title | Part Type | Accepted Mount Interface(s) | Matching Base Gun Mount Point | Compatible? | Specification / Manufacturer Evidence |
+|---|---|---|---|---|---|---|
+| **77721** | Taktik MCX Style Silencer Suppressor Plastic Black | Silencers (`2638`) | 14mm CCW (`2646`) | `mount-muzzle` (`2646`) | **YES** | Product description: "14mm CCW self threading". Attaches directly to 14mm CCW barrel threads. |
+| **80030** | Taktik HUXWRX Style QD 556 Silencer Suppressor ABS Black | Silencers (`2638`) | 14mm CCW (`2646`) | `mount-muzzle` (`2646`) | **YES** | Product specifications: "Thread: 14mm CCW". Includes 14mm CCW flash hider mount. |
+| **85057** | Taktik M-LOK MLok SI Curved Grip HandStop ABS CF Black | Grips (`2639`) | M-LOK (`2645`) | `mount-lower-handguard` (`2645`) | **YES** | Product specifications: "2 MLok Screws... M-lok attachment". Mounts to M-LOK handguard slots. |
+| **89535** | RGW Anchor HandStop M-LOK Black | Grips (`2639`) | M-LOK (`2645`) | `mount-lower-handguard` (`2645`) | **YES** | Manufacturer specs: RGW Anchor HandStop designed for direct M-LOK slot attachment. |
+| **89499** | RHAM EXPS3 Holographic Sight Black | Optics (`2640`) | Picatinny (`2644`) | `mount-top-rail-rear` (`2644`) | **YES** *(Out of Stock)* | Manufacturer specs: EXPS3 features integrated MIL-STD-1913 Picatinny quick-detach mount. (Card shows *Compatible*, Add button shows *Unavailable* per inventory). |
+| **87467** | G&P Retro 4x20 Scope for Carry Handle Black | Optics (`2640`) | Carry Handle (`2647`) | *None* | **NO** | Manufacturer specs: Attaches specifically via AR-15 carry handle screw channel. BCM MK2 platform has no carry handle. |
+| **55097** | SF M600 Flashlight Black | Accessories (`2641`) | Picatinny (`2644`) | `mount-top-rail-rear` (`2644`) | **YES** | Manufacturer specs: Surefire M600 Scout weaponlight includes integrated thumbscrew Picatinny rail clamp. |
+| **91093** | RGW ARI Finger Stop Picatinny Black | Accessories (`2641`) | Picatinny (`2644`) | `mount-top-rail-rear` (`2644`) | **YES** | Product specifications: "RGW ARI Finger Stop Picatinny Black". Cross-bolt clamp for Picatinny rails. |
+
+**Compatibility Summary:**
+- **Total Prototype Parts:** 8
+- **Compatible with Base Gun:** 7
+- **Incompatible with Base Gun:** 1 (Genuine incompatibility: Product `87467` requires a Carry Handle)
+- **Unconfigured:** 0
+
+---
+
+### 6.4 Part Attachment Anchors & Visual Calibration Basis
+
+Attachment anchors represent the exact visual point on the Part builder image (as percentages $0\text{--}100\%$) that docks to the Base Gun mount point:
+
+| Product ID | Product Title | Anchor X (%) | Anchor Y (%) | Visual Calibration Basis |
+|---|---|---|---|---|
+| **77721** | Taktik MCX Style Silencer | `100.0%` | `50.0%` | Silencer builder image is right-facing barrel-facing; the rear $14\text{ mm}$ CCW barrel thread socket is at the far right edge ($X=100\%$) centered along bore ($Y=50\%$). |
+| **80030** | Taktik HUXWRX Style QD 556 Silencer | `100.0%` | `50.0%` | Rear female thread collar at right edge ($X=100\%$) centered along cylindrical suppressor bore ($Y=50\%$). |
+| **85057** | Taktik M-LOK SI Curved Grip HandStop | `50.0%` | `0.0%` | Top flat mounting surface interfaces with lower handguard ($Y=0\%$), centered longitudinally ($X=50\%$). |
+| **89535** | RGW Anchor HandStop M-LOK Black | `50.0%` | `0.0%` | Top flat M-LOK mating surface ($Y=0\%$), centered across grip width ($X=50\%$). |
+| **89499** | RHAM EXPS3 Holographic Sight Black | `50.0%` | `100.0%` | Bottom cross-bolt clamping surface ($Y=100\%$), centered along sight housing base ($X=50\%$). |
+| **87467** | G&P Retro 4x20 Scope for Carry Handle | `40.0%` | `100.0%` | Carry handle screw lug at bottom base ($Y=100\%$), $40\%$ from left edge. |
+| **55097** | SF M600 Flashlight Black | `66.0%` | `69.0%` | Integrated rail clamp bracket on light body is located $66\%$ from bezel, $69\%$ down from top edge. |
+| **91093** | RGW ARI Finger Stop Picatinny Black | `50.0%` | `24.0%` | Upper rail clamp channel rests $24\%$ from top edge ($Y=24\%$), centered horizontally ($X=50\%$). |
+
+---
+
+### 6.5 Default Initial Placement Records
+
+When added to the build, initial placement coordinates are calculated via:
+$$\text{initialX} = \text{baseX} + \text{mountX} - (\text{partWidth} \times \text{anchorX} / 100)$$
+$$\text{initialY} = \text{baseY} + \text{mountY} - (\text{partHeight} \times \text{anchorY} / 100)$$
+*(With canonical stage dimensions $1180 \times 500\text{ logical px}$ and centered Base Gun at $\text{baseX} = 200.0$, $\text{baseY} = 126.0$ for the $780 \times 247.3\text{ mm}$ Base Gun):*
+
+| Product ID | Selected Mount Point | Absolute Mount (X, Y) | Part Dimensions (W × H mm) | Anchor Offset (X, Y mm) | Calculated Initial (X, Y mm) | Stage Clamping? | Post-Add Freedom |
+|---|---|---|---|---|---|---|---|
+| **77721** (Silencer) | `mount-muzzle` | $(265.0, 164.2)$ | $183.0 \times 42.4$ | $(183.0, 21.2)$ | $(82, 143)$ | **NO** (unclamped) | 100% Free pointer dragging |
+| **80030** (Silencer) | `mount-muzzle` | $(265.0, 164.2)$ | $136.0 \times 44.8$ | $(136.0, 22.4)$ | $(129, 142)$ | **NO** (unclamped) | 100% Free pointer dragging |
+| **85057** (Grip) | `mount-lower-handguard` | $(420.0, 185.0)$ | $120.0 \times 67.2$ | $(60.0, 0.0)$ | $(360, 185)$ | **NO** (unclamped) | 100% Free pointer dragging |
+| **89535** (Grip) | `mount-lower-handguard` | $(420.0, 185.0)$ | $60.0 \times 87.4$ | $(30.0, 0.0)$ | $(390, 185)$ | **NO** (unclamped) | 100% Free pointer dragging |
+| **89499** (Optic) | `mount-top-rail-rear` | $(650.0, 135.5)$ | $97.0 \times 71.4$ | $(48.5, 71.4)$ | $(602, 64)$ | **NO** (unclamped) | 100% Free pointer dragging |
+| **87467** (Scope) | *Incompatible* | N/A | $150.0 \times 103.0$ | N/A | N/A *(Add disabled)* | N/A | N/A |
+| **55097** (Accessory) | `mount-top-rail-rear` | $(650.0, 135.5)$ | $140.0 \times 91.1$ | $(92.4, 62.8)$ | $(558, 73)$ | **NO** (unclamped) | 100% Free pointer dragging |
+| **91093** (Accessory) | `mount-top-rail-rear` | $(650.0, 135.5)$ | $35.0 \times 34.4$ | $(17.5, 8.3)$ | $(633, 127)$ | **NO** (unclamped) | 100% Free pointer dragging |

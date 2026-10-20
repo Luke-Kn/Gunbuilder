@@ -58,6 +58,7 @@ class TGB_Core {
 		TGB_Shortcode::init();
 		TGB_Product_Integration::init();
 		TGB_Part_Types::init();
+		TGB_Mount_Interfaces::init();
 		TGB_Product_Config::init();
 		TGB_Product_Data::init();
 		TGB_Catalog_API::init();

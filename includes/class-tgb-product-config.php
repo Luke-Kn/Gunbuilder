@@ -198,6 +198,186 @@ class TGB_Product_Config {
 					)
 				);
 				?>
+
+				<!-- 6. Base Gun Mounting Points (Conditional on Role = Base Gun) -->
+				<div id="tgb_base_gun_mounting_section" class="tgb-mounting-section" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+					<p class="form-field">
+						<strong><?php esc_html_e( 'Base Platform Mount Points', 'part-selector' ); ?></strong>
+						<span class="description" style="display: block; margin-top: 4px;">
+							<?php esc_html_e( 'Define attachment positions in millimetres (1 mm = 1 logical px) relative to the top-left (0,0) of the weapon builder image.', 'part-selector' ); ?>
+						</span>
+					</p>
+
+					<?php
+					$available_interfaces = TGB_Mount_Interfaces::get_all_interfaces();
+					$base_mount_points    = TGB_Mounting::get_base_mount_points( $product_id );
+					?>
+
+					<div style="padding: 0 20px 20px 162px;">
+						<?php if ( empty( $available_interfaces ) ) : ?>
+							<p class="notice notice-warning inline" style="margin-bottom: 15px; padding: 10px;">
+								<?php
+								printf(
+									/* translators: %s: URL to mount interfaces admin screen */
+									wp_kses_post( __( 'No Mount Interfaces found. <a href="%s" target="_blank">Create Mount Interfaces under Products → Gun Builder Mount Interfaces</a> first.', 'part-selector' ) ),
+									esc_url( admin_url( 'edit-tags.php?taxonomy=' . TGB_Mount_Interfaces::TAXONOMY . '&post_type=product' ) )
+								);
+								?>
+							</p>
+						<?php endif; ?>
+
+						<table class="widefat tgb-mount-points-table" id="tgb_mount_points_table" style="max-width: 800px; margin-bottom: 10px;">
+							<thead>
+								<tr>
+									<th style="width: 30%;"><?php esc_html_e( 'Label / Location', 'part-selector' ); ?></th>
+									<th style="width: 30%;"><?php esc_html_e( 'Mount Interface', 'part-selector' ); ?></th>
+									<th style="width: 15%;"><?php esc_html_e( 'Local X (mm)', 'part-selector' ); ?></th>
+									<th style="width: 15%;"><?php esc_html_e( 'Local Y (mm)', 'part-selector' ); ?></th>
+									<th style="width: 10%; text-align: center;"><?php esc_html_e( 'Action', 'part-selector' ); ?></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php if ( ! empty( $base_mount_points ) ) : ?>
+									<?php foreach ( $base_mount_points as $idx => $pt ) : ?>
+										<tr class="tgb-mount-point-row">
+											<td>
+												<input type="hidden" name="tgb_mount_points[<?php echo esc_attr( $idx ); ?>][id]" value="<?php echo esc_attr( $pt['id'] ); ?>" />
+												<input type="text" name="tgb_mount_points[<?php echo esc_attr( $idx ); ?>][label]" value="<?php echo esc_attr( $pt['label'] ); ?>" placeholder="<?php esc_attr_e( 'e.g. Top Rail Rear', 'part-selector' ); ?>" style="width: 100%;" />
+											</td>
+											<td>
+												<select name="tgb_mount_points[<?php echo esc_attr( $idx ); ?>][interface_id]" style="width: 100%;">
+													<option value="0"><?php esc_html_e( '-- Select Interface --', 'part-selector' ); ?></option>
+													<?php foreach ( $available_interfaces as $iface ) : ?>
+														<option value="<?php echo esc_attr( $iface->term_id ); ?>" <?php selected( $pt['interface']['id'], $iface->term_id ); ?>>
+															<?php echo esc_html( $iface->name ); ?>
+														</option>
+													<?php endforeach; ?>
+												</select>
+											</td>
+											<td>
+												<input type="number" step="any" min="0" name="tgb_mount_points[<?php echo esc_attr( $idx ); ?>][x]" value="<?php echo esc_attr( $pt['x'] ); ?>" placeholder="0" style="width: 100%;" />
+											</td>
+											<td>
+												<input type="number" step="any" min="0" name="tgb_mount_points[<?php echo esc_attr( $idx ); ?>][y]" value="<?php echo esc_attr( $pt['y'] ); ?>" placeholder="0" style="width: 100%;" />
+											</td>
+											<td style="text-align: center; vertical-align: middle;">
+												<button type="button" class="button tgb-remove-mount-point" title="<?php esc_attr_e( 'Remove Mount Point', 'part-selector' ); ?>">&times;</button>
+											</td>
+										</tr>
+									<?php endforeach; ?>
+								<?php endif; ?>
+							</tbody>
+						</table>
+
+						<button type="button" class="button button-secondary" id="tgb_add_mount_point_btn" <?php disabled( empty( $available_interfaces ) ); ?>>
+							<?php esc_html_e( '+ Add Mount Point', 'part-selector' ); ?>
+						</button>
+					</div>
+				</div>
+
+				<!-- 7. Part Mounting (Conditional on Role = Part) -->
+				<div id="tgb_part_mounting_section" class="tgb-mounting-section" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+					<p class="form-field">
+						<strong><?php esc_html_e( 'Part Mounting & Attachment Anchor', 'part-selector' ); ?></strong>
+						<span class="description" style="display: block; margin-top: 4px;">
+							<?php esc_html_e( 'Specify which mount standards this component accepts and the visual anchor point on its image that docks to the weapon mount.', 'part-selector' ); ?>
+						</span>
+					</p>
+
+					<!-- Accepted Interfaces -->
+					<div class="form-field" style="padding: 10px 20px 10px 162px;">
+						<label style="width: 150px; margin-left: -162px; float: left;"><?php esc_html_e( 'Accepted Interfaces', 'part-selector' ); ?></label>
+						<?php
+						$current_part_interfaces = TGB_Mount_Interfaces::get_product_interfaces( $product_id );
+						$current_interface_ids   = wp_list_pluck( $current_part_interfaces, 'term_id' );
+						?>
+
+						<?php if ( ! empty( $available_interfaces ) ) : ?>
+							<div class="tgb-interfaces-checkbox-group" style="display: flex; flex-wrap: wrap; gap: 10px; max-width: 600px;">
+								<?php foreach ( $available_interfaces as $iface ) : ?>
+									<label style="display: inline-flex; align-items: center; gap: 4px; font-weight: normal; margin-right: 15px;">
+										<input type="checkbox" name="tgb_mount_interfaces[]" value="<?php echo esc_attr( $iface->term_id ); ?>" <?php checked( in_array( $iface->term_id, $current_interface_ids, true ) ); ?> />
+										<?php echo esc_html( $iface->name ); ?>
+									</label>
+								<?php endforeach; ?>
+							</div>
+							<span class="description" style="display: block; margin-top: 6px;">
+								<?php esc_html_e( 'Select all physical mounting interfaces compatible with this component (e.g. M-LOK, Picatinny).', 'part-selector' ); ?>
+							</span>
+						<?php else : ?>
+							<p class="description">
+								<?php
+								printf(
+									/* translators: %s: URL to mount interfaces admin screen */
+									wp_kses_post( __( '<a href="%s" target="_blank">Create Mount Interfaces under Products → Gun Builder Mount Interfaces</a>.', 'part-selector' ) ),
+									esc_url( admin_url( 'edit-tags.php?taxonomy=' . TGB_Mount_Interfaces::TAXONOMY . '&post_type=product' ) )
+								);
+								?>
+							</p>
+						<?php endif; ?>
+					</div>
+
+					<?php
+					$anchor_data = TGB_Mounting::get_part_anchor( $product_id );
+					$anchor_x    = $anchor_data ? $anchor_data['x_percent'] : get_post_meta( $product_id, TGB_Mounting::META_ANCHOR_X, true );
+					$anchor_y    = $anchor_data ? $anchor_data['y_percent'] : get_post_meta( $product_id, TGB_Mounting::META_ANCHOR_Y, true );
+
+					// Attachment Anchor X (%).
+					woocommerce_wp_text_input(
+						array(
+							'id'                => TGB_Mounting::META_ANCHOR_X,
+							'value'             => $anchor_x,
+							'label'             => __( 'Attachment Anchor X (%)', 'part-selector' ),
+							'placeholder'       => 'e.g. 50',
+							'type'              => 'text',
+							'desc_tip'          => true,
+							'description'       => __( 'Horizontal percentage across the component image representing the attachment point (0% = left edge, 50% = center, 100% = right edge).', 'part-selector' ),
+						)
+					);
+
+					// Attachment Anchor Y (%).
+					woocommerce_wp_text_input(
+						array(
+							'id'                => TGB_Mounting::META_ANCHOR_Y,
+							'value'             => $anchor_y,
+							'label'             => __( 'Attachment Anchor Y (%)', 'part-selector' ),
+							'placeholder'       => 'e.g. 100',
+							'type'              => 'text',
+							'desc_tip'          => true,
+							'description'       => __( 'Vertical percentage across the component image representing the attachment point (0% = top edge, 50% = center, 100% = bottom edge).', 'part-selector' ),
+						)
+					);
+					?>
+				</div>
+
+				<!-- Mount Point Row Template for JS Cloning -->
+				<script type="text/template" id="tgb_mount_point_template">
+					<tr class="tgb-mount-point-row">
+						<td>
+							<input type="hidden" name="tgb_mount_points[{{INDEX}}][id]" value="{{ID}}" />
+							<input type="text" name="tgb_mount_points[{{INDEX}}][label]" value="" placeholder="<?php esc_attr_e( 'e.g. Top Rail Rear', 'part-selector' ); ?>" style="width: 100%;" />
+						</td>
+						<td>
+							<select name="tgb_mount_points[{{INDEX}}][interface_id]" style="width: 100%;">
+								<option value="0"><?php esc_html_e( '-- Select Interface --', 'part-selector' ); ?></option>
+								<?php foreach ( $available_interfaces as $iface ) : ?>
+									<option value="<?php echo esc_attr( $iface->term_id ); ?>">
+										<?php echo esc_html( $iface->name ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</td>
+						<td>
+							<input type="number" step="any" min="0" name="tgb_mount_points[{{INDEX}}][x]" value="0" placeholder="0" style="width: 100%;" />
+						</td>
+						<td>
+							<input type="number" step="any" min="0" name="tgb_mount_points[{{INDEX}}][y]" value="0" placeholder="0" style="width: 100%;" />
+						</td>
+						<td style="text-align: center; vertical-align: middle;">
+							<button type="button" class="button tgb-remove-mount-point" title="<?php esc_attr_e( 'Remove Mount Point', 'part-selector' ); ?>">&times;</button>
+						</td>
+					</tr>
+				</script>
 			</div>
 		</div>
 		<?php
@@ -274,9 +454,54 @@ class TGB_Product_Config {
 				// Clear term if none or invalid selected.
 				wp_set_object_terms( $post_id, array(), TGB_Part_Types::TAXONOMY, false );
 			}
-		} else {
-			// For Base Gun or unconfigured, remove any attached Part Type terms to prevent stale relationships.
+
+			// Save Part Accepted Mount Interfaces (tgb_mount_interface taxonomy).
+			$raw_interfaces = isset( $_POST['tgb_mount_interfaces'] ) && is_array( $_POST['tgb_mount_interfaces'] )
+				? array_map( 'absint', $_POST['tgb_mount_interfaces'] )
+				: array();
+			$valid_interfaces = array();
+			foreach ( $raw_interfaces as $iface_id ) {
+				if ( $iface_id > 0 && term_exists( $iface_id, TGB_Mount_Interfaces::TAXONOMY ) ) {
+					$valid_interfaces[] = $iface_id;
+				}
+			}
+			wp_set_object_terms( $post_id, $valid_interfaces, TGB_Mount_Interfaces::TAXONOMY, false );
+
+			// Save Part Attachment Anchor percentages.
+			$raw_anchor_x = isset( $_POST[ TGB_Mounting::META_ANCHOR_X ] ) ? wp_unslash( $_POST[ TGB_Mounting::META_ANCHOR_X ] ) : '';
+			$raw_anchor_y = isset( $_POST[ TGB_Mounting::META_ANCHOR_Y ] ) ? wp_unslash( $_POST[ TGB_Mounting::META_ANCHOR_Y ] ) : '';
+			$anchor_x_val = TGB_Mounting::sanitize_anchor_percent( $raw_anchor_x );
+			$anchor_y_val = TGB_Mounting::sanitize_anchor_percent( $raw_anchor_y );
+			update_post_meta( $post_id, TGB_Mounting::META_ANCHOR_X, $anchor_x_val );
+			update_post_meta( $post_id, TGB_Mounting::META_ANCHOR_Y, $anchor_y_val );
+
+			// Clear Base Gun mount points to prevent stale data.
+			delete_post_meta( $post_id, TGB_Mounting::META_MOUNT_POINTS );
+
+		} elseif ( self::ROLE_BASE_GUN === $valid_role ) {
+			// For Base Gun, remove Part Type and Part Mount Interface terms.
 			wp_set_object_terms( $post_id, array(), TGB_Part_Types::TAXONOMY, false );
+			wp_set_object_terms( $post_id, array(), TGB_Mount_Interfaces::TAXONOMY, false );
+
+			// Clear Part anchors.
+			delete_post_meta( $post_id, TGB_Mounting::META_ANCHOR_X );
+			delete_post_meta( $post_id, TGB_Mounting::META_ANCHOR_Y );
+
+			// Save Base Gun Mount Points.
+			$raw_mount_points = isset( $_POST['tgb_mount_points'] ) && is_array( $_POST['tgb_mount_points'] )
+				? $_POST['tgb_mount_points']
+				: array();
+			$base_max_w = ! empty( $reference_mm_val ) ? (float) $reference_mm_val : null;
+			$sanitized_points = TGB_Mounting::sanitize_mount_points( $raw_mount_points, $base_max_w );
+			update_post_meta( $post_id, TGB_Mounting::META_MOUNT_POINTS, wp_json_encode( $sanitized_points ) );
+
+		} else {
+			// For unconfigured products, remove all builder taxonomy relationships and mounting metadata.
+			wp_set_object_terms( $post_id, array(), TGB_Part_Types::TAXONOMY, false );
+			wp_set_object_terms( $post_id, array(), TGB_Mount_Interfaces::TAXONOMY, false );
+			delete_post_meta( $post_id, TGB_Mounting::META_ANCHOR_X );
+			delete_post_meta( $post_id, TGB_Mounting::META_ANCHOR_Y );
+			delete_post_meta( $post_id, TGB_Mounting::META_MOUNT_POINTS );
 		}
 
 		// 6. Builder Ready validation.

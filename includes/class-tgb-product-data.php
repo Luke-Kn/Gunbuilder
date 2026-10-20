@@ -263,6 +263,19 @@ class TGB_Product_Data {
 		// Catalog eligibility.
 		$is_eligible = self::is_catalog_eligible( $wc_product );
 
+		// Mounting data (Base Gun mount points or Part accepted interfaces & anchor).
+		$mounting_data = array();
+		if ( TGB_Product_Config::ROLE_BASE_GUN === $role ) {
+			$mounting_data = array(
+				'points' => TGB_Mounting::get_base_mount_points( $product_id ),
+			);
+		} elseif ( TGB_Product_Config::ROLE_PART === $role ) {
+			$mounting_data = array(
+				'interfaces' => TGB_Mounting::get_part_mount_interfaces( $product_id ),
+				'anchor'     => TGB_Mounting::get_part_anchor( $product_id ),
+			);
+		}
+
 		return array(
 			'id'               => $product_id,
 			'name'             => (string) $wc_product->get_name(),
@@ -276,6 +289,7 @@ class TGB_Product_Data {
 			'stock'            => $stock_data,
 			'weight'           => $weight_data,
 			'woo'              => $woo_data,
+			'mounting'         => $mounting_data,
 			'catalog_eligible' => $is_eligible,
 		);
 	}

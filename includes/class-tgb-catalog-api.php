@@ -376,6 +376,79 @@ class TGB_Catalog_API {
 				'purchasable' => (bool) ( $product['woo']['purchasable'] ?? false ),
 				'type'        => (string) ( $product['woo']['type'] ?? 'simple' ),
 			) : null,
+			'mounting'     => self::serialize_mounting( $product ),
 		);
+	}
+
+	/**
+	 * Serializes normalized mounting data for public REST consumption.
+	 *
+	 * Base Gun returns { points: [ { id, label, interface: { id, name, slug }, x, y } ] }.
+	 * Part returns { interfaces: [ { id, name, slug } ], anchor: { x_percent, y_percent } | null }.
+	 *
+	 * @param array $product Normalized product data from TGB_Product_Data.
+	 * @return array Public mounting structure.
+	 */
+	private static function serialize_mounting( array $product ) {
+		$role = (string) ( $product['role'] ?? '' );
+		$raw_mounting = ( isset( $product['mounting'] ) && is_array( $product['mounting'] ) )
+			? $product['mounting']
+			: array();
+
+		if ( 'base_gun' === $role ) {
+			$points = array();
+			if ( ! empty( $raw_mounting['points'] ) && is_array( $raw_mounting['points'] ) ) {
+				foreach ( $raw_mounting['points'] as $pt ) {
+					if ( ! is_array( $pt ) ) {
+						continue;
+					}
+					$points[] = array(
+						'id'        => (string) ( $pt['id'] ?? '' ),
+						'label'     => (string) ( $pt['label'] ?? '' ),
+						'interface' => array(
+							'id'   => (int) ( $pt['interface']['id'] ?? 0 ),
+							'name' => (string) ( $pt['interface']['name'] ?? '' ),
+							'slug' => (string) ( $pt['interface']['slug'] ?? '' ),
+						),
+						'x'         => (float) ( $pt['x'] ?? 0.0 ),
+						'y'         => (float) ( $pt['y'] ?? 0.0 ),
+					);
+				}
+			}
+			return array(
+				'points' => $points,
+			);
+		}
+
+		if ( 'part' === $role ) {
+			$interfaces = array();
+			if ( ! empty( $raw_mounting['interfaces'] ) && is_array( $raw_mounting['interfaces'] ) ) {
+				foreach ( $raw_mounting['interfaces'] as $iface ) {
+					if ( ! is_array( $iface ) ) {
+						continue;
+					}
+					$interfaces[] = array(
+						'id'   => (int) ( $iface['id'] ?? 0 ),
+						'name' => (string) ( $iface['name'] ?? '' ),
+						'slug' => (string) ( $iface['slug'] ?? '' ),
+					);
+				}
+			}
+
+			$anchor = null;
+			if ( ! empty( $raw_mounting['anchor'] ) && is_array( $raw_mounting['anchor'] ) ) {
+				$anchor = array(
+					'x_percent' => (float) ( $raw_mounting['anchor']['x_percent'] ?? 0.0 ),
+					'y_percent' => (float) ( $raw_mounting['anchor']['y_percent'] ?? 0.0 ),
+				);
+			}
+
+			return array(
+				'interfaces' => $interfaces,
+				'anchor'     => $anchor,
+			);
+		}
+
+		return array();
 	}
 }

@@ -95,6 +95,7 @@ class TGB_Shortcode {
 		}
 
 		// Prepare strictly scoped rendering payload (Section 11).
+		$serialized_data = TGB_Catalog_API::serialize_product( $product_data );
 		$render_product = array(
 			'id'            => (int) $product_data['id'],
 			'name'          => (string) $product_data['name'],
@@ -107,6 +108,7 @@ class TGB_Shortcode {
 				'aspect_ratio' => (float) $product_data['builder_image']['aspect_ratio'],
 				'alt'          => (string) $product_data['builder_image']['alt'],
 			),
+			'mounting'      => $serialized_data['mounting'] ?? null,
 		);
 
 		return array(

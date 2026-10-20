@@ -24,3 +24,23 @@
 	margin-left: -162px !important;
 	float: left;
 }
+
+#tgb_gun_builder_data .tgb-mount-points-table th,
+#tgb_gun_builder_data .tgb-mount-points-table td {
+	padding: 8px 10px;
+	vertical-align: middle;
+}
+
+#tgb_gun_builder_data .tgb-remove-mount-point {
+	color: #b32d2e;
+	border-color: #b32d2e;
+	font-weight: bold;
+	line-height: 1;
+	padding: 0 6px;
+	height: 26px;
+}
+
+#tgb_gun_builder_data .tgb-remove-mount-point:hover {
+	background: #b32d2e;
+	color: #fff;
+}

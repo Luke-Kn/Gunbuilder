@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Stage 6 completed. Ready for Stage 7.
+Stage 7 completed. Ready for Stage 8.
 
 ## Current Branch
 
@@ -103,11 +103,35 @@ Stage 6 completed. Ready for Stage 7.
   - Verified mobile responsive layouts at 430px, 390px, 375px, and 320px with zero horizontal page overflow.
   - Documented complete prototype in `GUN-BUILDER-PROTOTYPE.md`.
   - Maintained strict scope boundaries: zero compatibility rules, mounting points, snapping, price totals, or cart integration implemented.
+- **Stage 7 Complete: Structured Mounting + Compatibility + Default Placement**
+  - Registered dedicated non-public, non-hierarchical taxonomy `tgb_mount_interface` under `Products → Gun Builder Mount Interfaces`.
+  - Mapped taxonomy capabilities to WooCommerce product term permissions (`manage_product_terms`, etc.); default taxonomy metabox suppressed on product edit screen.
+  - Implemented role-specific mounting fields within the WooCommerce "Gun Builder" product tab:
+    - Base Gun: Repeatable-row editor for mount points (`_tgb_mount_points`) with unique IDs (`mount-...`), label, mount interface selector, and base-local X / Y positions in millimeters ($1\text{ mm} = 1\text{ logical px}$).
+    - Part: Accepted Mount Interfaces multi-term selector and Attachment Anchor percentages (`_tgb_mount_anchor_x`, `_tgb_mount_anchor_y`, 0–100%).
+  - Built authoritative mounting service in `includes/class-tgb-mounting.php` handling sanitization, bounds checking, term ID intersection compatibility, and default placement offset calculations.
+  - Extended `TGB_Product_Data` normalized contract and `TGB_Catalog_API` public REST serializer to expose clean, normalized mounting structures without internal meta keys.
+  - Implemented structured compatibility based strictly on taxonomy term ID intersection (`intersection(part.mountInterfaceIds, base.mountPointInterfaceIds).length > 0`); zero product name, category name, or SKU heuristics.
+  - Maintained Part 3 catalog eligibility: unconfigured products remain visible in catalog with `Mount information unavailable` status and disabled Add button.
+  - Built client-side mounting resolver `TGB_Mounting` in `assets/js/gun-builder.js`:
+    - Evaluates compatibility against current Base Gun.
+    - Determines default mount point deterministically (first matching configured mount point in admin order).
+    - Calculates initial placement docking Part visual anchor to Base Gun mount point: $\text{initialX} = \text{baseX} + \text{mountX} - (\text{partW} \times \text{anchorX}\%)$, $\text{initialY} = \text{baseY} + \text{mountY} - (\text{partH} \times \text{anchorY}\%)$ clamped to stage boundaries.
+  - **Preserved 100% Free Pointer Dragging**: Initial mount calculation is strictly an initial placement mechanism; zero snapping, zero magnetic attraction, zero boundary lock, and zero auto-return on `pointerup`. Customer retains full Part 5 dragging freedom anywhere on stage.
+  - Updated Product Selection cards with restrained, customer-friendly status badges (`Compatible`, `Not compatible with selected platform`, `Mount information unavailable`).
+  - Preserved WooCommerce purchase availability priority: interface-compatible but out-of-stock products display `Compatible` badge with disabled `Unavailable` button.
+  - Extended diagnostic debug mode (`?tgb_debug=1`) to render mount point crosshairs and tooltips without interfering with customer-facing presentation.
+  - Configured 4 permanent prototype mount interfaces (`Picatinny`, `M-LOK`, `14mm CCW`, `Carry Handle`).
+  - Calibrated Base Gun (`91635`) with 4 physical mount points and calibrated all 8 prototype Parts with defensible interfaces and anchors.
+  - Verified authentic prototype compatibility: 7 compatible Parts, 1 genuinely incompatible Part (`87467` Retro Scope for Carry Handle), 0 unconfigured.
+  - Documented complete mounting specifications in `GUN-BUILDER-PROTOTYPE.md`.
+  - Strictly preserved scope boundaries: no persistent snapping, magnetic mounting, Current Build full list, pricing/weight totals, cart, checkout, Save/Share, persistence, resizing, or rotation implemented.
 
 ## Current Task
 
-Stage 6 completed, thoroughly tested, and verified. Awaiting supervisor review.
+Stage 7 completed, tested, calibrated, and documented. Awaiting review.
 
 ## Next Step
 
-Stage 7: Default Mounting + Compatibility (mounting interfaces, weapon-specific allowed/denied parts, attachment mounting logic, and snap anchors).
+Stage 8: Current Build, Pricing and Weight (Current Build drawer/list, remove part UI, dynamic price totals, dynamic weight totals).
+*(Do NOT mark Stage 8 complete)*

@@ -199,6 +199,7 @@
 						width: baseGunData.builder_image.width || 0,
 						height: baseGunData.builder_image.height || 0,
 					} : null,
+					mounting: baseGunData.mounting || null,
 				};
 			}
 
@@ -657,8 +658,12 @@
 					name: product.name,
 					reference_mm: product.reference_mm,
 					builder_image: product.builder_image,
+					mounting: product.mounting || null,
 				});
 			}
+
+			// Render debug mount points if base gun has mount points (Part 7)
+			this.renderDebugMountPoints(product, this.currentStageGeometry.baseX, this.currentStageGeometry.baseY);
 
 			// 6. Reveal Frame
 			this.frameEl.style.display = 'block';
@@ -806,6 +811,49 @@
 				this.stageEl.removeChild(this.stageEl.firstChild);
 			}
 			this.layers = [];
+		}
+
+		/**
+		 * Renders visual debug markers for Base Gun mount points (?tgb_debug=1).
+		 *
+		 * @param {Object} product Base Gun product data.
+		 * @param {number} baseX Base Gun logical stage X.
+		 * @param {number} baseY Base Gun logical stage Y.
+		 */
+		renderDebugMountPoints(product, baseX, baseY) {
+			if (!this.stageEl) return;
+
+			// Clear previous markers
+			const existing = this.stageEl.querySelectorAll('.tgb-mount-point-marker');
+			existing.forEach(el => el.remove());
+
+			if (!product || !product.mounting || !Array.isArray(product.mounting.points)) {
+				return;
+			}
+
+			product.mounting.points.forEach(pt => {
+				const marker = document.createElement('div');
+				marker.className = 'tgb-mount-point-marker';
+
+				const absX = Math.round(baseX + (parseFloat(pt.x) || 0));
+				const absY = Math.round(baseY + (parseFloat(pt.y) || 0));
+
+				marker.style.left = absX + 'px';
+				marker.style.top = absY + 'px';
+
+				const ifaceName = (pt.interface && pt.interface.name) ? pt.interface.name : '';
+				const tooltip = document.createElement('div');
+				tooltip.className = 'tgb-mount-point-tooltip';
+				tooltip.textContent = `${pt.label || 'Mount'} (${ifaceName})\nLocal: X ${pt.x} / Y ${pt.y}\nAbs: X ${absX} / Y ${absY}`;
+
+				const crosshair = document.createElement('div');
+				crosshair.className = 'tgb-mount-point-crosshair';
+
+				marker.appendChild(crosshair);
+				marker.appendChild(tooltip);
+
+				this.stageEl.appendChild(marker);
+			});
 		}
 
 		/**
@@ -1255,7 +1303,140 @@
 	}
 
 	// =========================================================================
-	// 5. PRODUCT SELECTION CONTROLLER (Part 6)
+	// 5. STRUCTURED MOUNTING & COMPATIBILITY RESOLVER (Part 7)
+	// =========================================================================
+
+	/**
+	 * Client-side Structured Mounting and Compatibility Resolver.
+	 *
+	 * Evaluates mount interface intersection, selects deterministic default
+	 * mount points, and computes canonical initial placement coordinates.
+	 */
+	const TGB_Mounting = {
+		/**
+		 * Evaluates compatibility status between a Base Gun and a Part product.
+		 *
+		 * @param {Object} baseProduct Normalized Base Gun product.
+		 * @param {Object} partProduct Normalized Part product.
+		 * @return {'compatible'|'incompatible'|'unconfigured'}
+		 */
+		getCompatibility(baseProduct, partProduct) {
+			if (!baseProduct || !partProduct) {
+				return 'unconfigured';
+			}
+
+			// Validate Base Gun mounting configuration
+			const basePoints = (baseProduct.mounting && Array.isArray(baseProduct.mounting.points))
+				? baseProduct.mounting.points
+				: [];
+			if (basePoints.length === 0) {
+				return 'unconfigured';
+			}
+
+			// Validate Part mounting configuration
+			const partInterfaces = (partProduct.mounting && Array.isArray(partProduct.mounting.interfaces))
+				? partProduct.mounting.interfaces
+				: [];
+			const partAnchor = (partProduct.mounting && partProduct.mounting.anchor)
+				? partProduct.mounting.anchor
+				: null;
+
+			if (partInterfaces.length === 0 || !partAnchor || typeof partAnchor.x_percent !== 'number' || typeof partAnchor.y_percent !== 'number') {
+				return 'unconfigured';
+			}
+
+			const baseInterfaceIds = basePoints
+				.map(pt => pt.interface && pt.interface.id)
+				.filter(id => typeof id === 'number' && id > 0);
+
+			const partInterfaceIds = partInterfaces
+				.map(iface => iface.id)
+				.filter(id => typeof id === 'number' && id > 0);
+
+			const hasIntersection = partInterfaceIds.some(id => baseInterfaceIds.includes(id));
+
+			return hasIntersection ? 'compatible' : 'incompatible';
+		},
+
+		/**
+		 * Finds the deterministic default mount point on a Base Gun for a Part.
+		 *
+		 * Iterates Base Gun mount points in their configured admin order and selects
+		 * the FIRST mount point whose interface ID matches an accepted Part interface ID.
+		 *
+		 * @param {Object} baseProduct Normalized Base Gun product.
+		 * @param {Object} partProduct Normalized Part product.
+		 * @return {Object|null} Matching mount point or null.
+		 */
+		findDefaultMountPoint(baseProduct, partProduct) {
+			if (this.getCompatibility(baseProduct, partProduct) !== 'compatible') {
+				return null;
+			}
+
+			const basePoints = baseProduct.mounting.points;
+			const acceptedIds = partProduct.mounting.interfaces.map(iface => iface.id);
+
+			for (let i = 0; i < basePoints.length; i++) {
+				const pt = basePoints[i];
+				if (pt.interface && acceptedIds.includes(pt.interface.id)) {
+					return pt;
+				}
+			}
+
+			return null;
+		},
+
+		/**
+		 * Calculates canonical initial placement position for a Part docking to a Base Gun mount point.
+		 *
+		 * Formulas:
+		 *   absoluteMountX = baseX + mountX
+		 *   absoluteMountY = baseY + mountY
+		 *   partAnchorOffsetX = partWidth * anchorXPercent / 100
+		 *   partAnchorOffsetY = partHeight * anchorYPercent / 100
+		 *   initialPartX = absoluteMountX - partAnchorOffsetX
+		 *   initialPartY = absoluteMountY - partAnchorOffsetY
+		 *
+		 * Applies stage boundary clamping so Part is guaranteed fully within the logical stage.
+		 *
+		 * @param {number} baseX Base Gun logical stage X.
+		 * @param {number} baseY Base Gun logical stage Y.
+		 * @param {Object} mountPoint Selected Base Gun mount point { x, y }.
+		 * @param {number} partWidth Part logical width in mm/logical px.
+		 * @param {number} partHeight Part logical height in mm/logical px.
+		 * @param {number} anchorXPercent Part visual attachment anchor X (0-100).
+		 * @param {number} anchorYPercent Part visual attachment anchor Y (0-100).
+		 * @param {number} stageWidth Logical stage width.
+		 * @param {number} stageHeight Logical stage height.
+		 * @return {{x: number, y: number}} Canonical clamped stage coordinates.
+		 */
+		calculateInitialPosition(baseX, baseY, mountPoint, partWidth, partHeight, anchorXPercent, anchorYPercent, stageWidth, stageHeight) {
+			const mountX = parseFloat(mountPoint.x) || 0.0;
+			const mountY = parseFloat(mountPoint.y) || 0.0;
+
+			const absoluteMountX = baseX + mountX;
+			const absoluteMountY = baseY + mountY;
+
+			const partAnchorOffsetX = partWidth * (parseFloat(anchorXPercent) / 100.0);
+			const partAnchorOffsetY = partHeight * (parseFloat(anchorYPercent) / 100.0);
+
+			let initialX = Math.round(absoluteMountX - partAnchorOffsetX);
+			let initialY = Math.round(absoluteMountY - partAnchorOffsetY);
+
+			// Stage boundary clamping
+			if (typeof stageWidth === 'number' && stageWidth > 0) {
+				initialX = Math.max(0, Math.min(initialX, Math.round(stageWidth - partWidth)));
+			}
+			if (typeof stageHeight === 'number' && stageHeight > 0) {
+				initialY = Math.max(0, Math.min(initialY, Math.round(stageHeight - partHeight)));
+			}
+
+			return { x: initialX, y: initialY };
+		}
+	};
+
+	// =========================================================================
+	// 6. PRODUCT SELECTION CONTROLLER (Parts 6 & 7)
 	// =========================================================================
 
 	/**
@@ -1353,6 +1534,7 @@
 					role: 'base_gun',
 					reference_mm: currentBase.reference_mm,
 					builder_image: currentBase.builder_image,
+					mounting: currentBase.mounting || null,
 				});
 			}
 
@@ -1618,6 +1800,32 @@
 			}
 			bodyContainer.appendChild(inBuildBadge);
 
+			// Compatibility Badge (Part 7)
+			if (!isBaseGun) {
+				const compatBadge = document.createElement('span');
+				compatBadge.className = 'tgb-card-compat-badge';
+				compatBadge.setAttribute('data-compat-product', String(product.id));
+
+				const baseProduct = currentBase ? this.productRegistry.get(currentBase.productId) : null;
+				if (baseProduct) {
+					const compatStatus = TGB_Mounting.getCompatibility(baseProduct, product);
+					if (compatStatus === 'compatible') {
+						compatBadge.classList.add('tgb-card-compat-badge--compatible');
+						compatBadge.textContent = 'Compatible';
+					} else if (compatStatus === 'incompatible') {
+						compatBadge.classList.add('tgb-card-compat-badge--incompatible');
+						compatBadge.textContent = 'Not compatible with selected platform';
+					} else {
+						compatBadge.classList.add('tgb-card-compat-badge--unconfigured');
+						compatBadge.textContent = 'Mount information unavailable';
+					}
+					compatBadge.style.display = 'inline-block';
+				} else {
+					compatBadge.style.display = 'none';
+				}
+				bodyContainer.appendChild(compatBadge);
+			}
+
 			// Title (Safe DOM textContent)
 			const titleEl = document.createElement('h4');
 			titleEl.className = 'tgb-card-title';
@@ -1651,9 +1859,11 @@
 					btn.textContent = 'Select';
 				}
 			} else {
-				// Part Button
+				// Part Button (Part 7: Compatibility + Inventory Priority)
 				const hasBase = Boolean(currentBase);
+				const baseProduct = hasBase ? this.productRegistry.get(currentBase.productId) : null;
 				const inStock = !product.stock || product.stock.in_stock !== false;
+				const compatStatus = baseProduct ? TGB_Mounting.getCompatibility(baseProduct, product) : null;
 
 				if (!inStock) {
 					btn.className += ' tgb-btn--unavailable is-unavailable';
@@ -1664,6 +1874,16 @@
 					btn.textContent = 'Add';
 					btn.disabled = true;
 					btn.title = 'Choose a base platform first.';
+				} else if (compatStatus !== 'compatible') {
+					btn.disabled = true;
+					btn.textContent = 'Add';
+					if (compatStatus === 'incompatible') {
+						btn.className += ' tgb-btn--incompatible is-incompatible';
+						btn.title = 'Not compatible with selected platform.';
+					} else {
+						btn.className += ' tgb-btn--unconfigured is-unconfigured';
+						btn.title = 'Mount information unavailable.';
+					}
 				} else {
 					btn.className += ' tgb-btn--add';
 					btn.textContent = 'Add';
@@ -1772,23 +1992,41 @@
 				return;
 			}
 
+			const baseProduct = this.productRegistry.get(currentBase.productId);
+			const compatStatus = TGB_Mounting.getCompatibility(baseProduct, product);
+			if (compatStatus !== 'compatible') {
+				this.showStatus('This component is not compatible with the selected platform.', false);
+				return;
+			}
+
+			const mountPoint = TGB_Mounting.findDefaultMountPoint(baseProduct, product);
+			if (!mountPoint) {
+				this.showStatus('No matching mount point found on platform.', false);
+				return;
+			}
+
 			// Store in registry
 			this.productRegistry.set(product.id, product);
 
-			// Neutral Center Placement (Requirement 28):
-			// x = (stageWidth - partWidth) / 2, y = (stageHeight - partHeight) / 2
-			const stage = this.renderer.currentStageGeometry || { stageWidth: 1000, stageHeight: 600 };
+			// Structured Default Placement (Part 7, Requirement 17):
+			const stage = this.renderer.currentStageGeometry || { stageWidth: 1000, stageHeight: 600, baseX: 0, baseY: 0 };
 			const geo = calculateProductGeometry(product);
+			const anchor = (product.mounting && product.mounting.anchor) ? product.mounting.anchor : { x_percent: 50, y_percent: 50 };
 
-			let spawnX = Math.round((stage.stageWidth - geo.logicalWidth) / 2);
-			let spawnY = Math.round((stage.stageHeight - geo.logicalHeight) / 2);
+			const initialPos = TGB_Mounting.calculateInitialPosition(
+				stage.baseX,
+				stage.baseY,
+				mountPoint,
+				geo.logicalWidth,
+				geo.logicalHeight,
+				anchor.x_percent,
+				anchor.y_percent,
+				stage.stageWidth,
+				stage.stageHeight
+			);
 
-			// Boundary Clamping
-			spawnX = Math.max(0, Math.min(spawnX, Math.round(stage.stageWidth - geo.logicalWidth)));
-			spawnY = Math.max(0, Math.min(spawnY, Math.round(stage.stageHeight - geo.logicalHeight)));
-
-			// Add to authoritative Build State (Part 5)
-			const partInstance = this.buildState.addPart(product, spawnX, spawnY);
+			// Add to authoritative Build State (Part 5 & 7)
+			const partInstance = this.buildState.addPart(product, initialPos.x, initialPos.y);
 
 			// Sync in-build count badges
 			this.syncAllCardButtons();
@@ -1840,17 +2078,51 @@
 						btn.disabled = false;
 					}
 				} else {
-					// Part button
+					// Part button & compatibility badge (Part 7)
+					const compatBadge = card.querySelector('.tgb-card-compat-badge');
+					const baseProduct = hasBase ? this.productRegistry.get(currentBase.productId) : null;
 					const inStock = !product.stock || product.stock.in_stock !== false;
+					const compatStatus = baseProduct ? TGB_Mounting.getCompatibility(baseProduct, product) : null;
+
+					if (compatBadge) {
+						compatBadge.className = 'tgb-card-compat-badge';
+						if (baseProduct && compatStatus) {
+							if (compatStatus === 'compatible') {
+								compatBadge.classList.add('tgb-card-compat-badge--compatible');
+								compatBadge.textContent = 'Compatible';
+							} else if (compatStatus === 'incompatible') {
+								compatBadge.classList.add('tgb-card-compat-badge--incompatible');
+								compatBadge.textContent = 'Not compatible with selected platform';
+							} else {
+								compatBadge.classList.add('tgb-card-compat-badge--unconfigured');
+								compatBadge.textContent = 'Mount information unavailable';
+							}
+							compatBadge.style.display = 'inline-block';
+						} else {
+							compatBadge.style.display = 'none';
+						}
+					}
+
 					if (!inStock) {
 						btn.className = 'tgb-btn tgb-btn--unavailable is-unavailable';
 						btn.textContent = 'Unavailable';
 						btn.disabled = true;
+						btn.removeAttribute('title');
 					} else if (!hasBase) {
 						btn.className = 'tgb-btn tgb-btn--add';
 						btn.textContent = 'Add';
 						btn.disabled = true;
 						btn.title = 'Choose a base platform first.';
+					} else if (compatStatus !== 'compatible') {
+						btn.disabled = true;
+						btn.textContent = 'Add';
+						if (compatStatus === 'incompatible') {
+							btn.className = 'tgb-btn tgb-btn--incompatible is-incompatible';
+							btn.title = 'Not compatible with selected platform.';
+						} else {
+							btn.className = 'tgb-btn tgb-btn--unconfigured is-unconfigured';
+							btn.title = 'Mount information unavailable.';
+						}
 					} else {
 						btn.className = 'tgb-btn tgb-btn--add';
 						btn.textContent = 'Add';
@@ -2019,12 +2291,15 @@
 		selection: null,
 	};
 
+	window.TGB_Mounting = TGB_Mounting;
+
 	// Unified TGB namespace for all builder subsystems
 	window.TGB = {
 		BuildState: TGB_BuildState,
 		Renderer: TGB_Renderer,
 		Interactions: TGB_Interactions,
 		Catalog: window.TGB_Catalog,
+		Mounting: TGB_Mounting,
 		state: null,
 		renderer: null,
 		interactions: null,

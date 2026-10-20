@@ -409,6 +409,73 @@
 	display: block;
 }
 
+/* Mount Points Debug Overlay (Part 7) */
+#taktik-gun-builder .tgb-mount-point-marker {
+	display: none;
+	position: absolute;
+	width: 14px;
+	height: 14px;
+	margin-left: -7px;
+	margin-top: -7px;
+	pointer-events: none;
+	z-index: 90;
+}
+
+#taktik-gun-builder.tgb-debug .tgb-mount-point-marker {
+	display: block;
+}
+
+#taktik-gun-builder .tgb-mount-point-crosshair {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border: 1.5px solid #00f0ff;
+	border-radius: 50%;
+	box-shadow: 0 0 6px rgba(0, 240, 255, 0.6);
+}
+
+#taktik-gun-builder .tgb-mount-point-crosshair::before,
+#taktik-gun-builder .tgb-mount-point-crosshair::after {
+	content: '';
+	position: absolute;
+	background: #00f0ff;
+}
+
+#taktik-gun-builder .tgb-mount-point-crosshair::before {
+	top: 50%;
+	left: -3px;
+	right: -3px;
+	height: 1.5px;
+	transform: translateY(-50%);
+}
+
+#taktik-gun-builder .tgb-mount-point-crosshair::after {
+	left: 50%;
+	top: -3px;
+	bottom: -3px;
+	width: 1.5px;
+	transform: translateX(-50%);
+}
+
+#taktik-gun-builder .tgb-mount-point-tooltip {
+	position: absolute;
+	left: 18px;
+	top: -6px;
+	background: rgba(10, 14, 23, 0.92);
+	border: 1px solid #00f0ff;
+	border-radius: 4px;
+	padding: 4px 8px;
+	font-family: monospace;
+	font-size: 10px;
+	color: #ffffff;
+	white-space: pre;
+	pointer-events: none;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+	line-height: 1.35;
+}
+
 /* Component Selection Tray & Product Selection (Part 6) */
 #taktik-gun-builder .tgb-tray-section {
 	width: 100%;
@@ -684,6 +751,45 @@
 	color: var(--tgb-text-dim);
 	border-color: var(--tgb-border);
 	cursor: not-allowed;
+}
+
+#taktik-gun-builder .tgb-btn--incompatible.is-incompatible,
+#taktik-gun-builder .tgb-btn--unconfigured.is-unconfigured {
+	background: var(--tgb-border-subtle);
+	color: var(--tgb-text-dim);
+	border-color: var(--tgb-border);
+	cursor: not-allowed;
+	opacity: 0.65;
+}
+
+/* Compatibility Badges (Part 7) */
+#taktik-gun-builder .tgb-card-compat-badge {
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	border-radius: 4px;
+	padding: 3px 6px;
+	display: inline-block;
+	align-self: flex-start;
+	line-height: 1.25;
+}
+
+#taktik-gun-builder .tgb-card-compat-badge--compatible {
+	color: #2ecc71;
+	background: rgba(46, 204, 113, 0.12);
+	border: 1px solid rgba(46, 204, 113, 0.28);
+}
+
+#taktik-gun-builder .tgb-card-compat-badge--incompatible {
+	color: #e74c3c;
+	background: rgba(231, 76, 60, 0.12);
+	border: 1px solid rgba(231, 76, 60, 0.28);
+}
+
+#taktik-gun-builder .tgb-card-compat-badge--unconfigured {
+	color: var(--tgb-text-dim);
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--tgb-border);
 }
 
 #taktik-gun-builder .tgb-btn--secondary {
