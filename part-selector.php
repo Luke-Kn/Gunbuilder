@@ -55,3 +55,77 @@ function taktik_gun_builder() {
 
 // Initialize plugin.
 taktik_gun_builder();
+
+
+/**
+ * Register the top-level admin menu item.
+ */
+function tgb_register_menu() {
+	//$hook = 
+    add_menu_page(
+		__( 'Gun Builder', 'taktik-gun-builder' ),
+		__( 'Gun Builder', 'taktik-gun-builder' ),
+		'manage_options',
+		'taktik-gun-builder',
+		'tgb_render_page',
+		'dashicons-admin-tools',
+		56
+	);
+
+	// Only load assets on our own screen.
+	//add_action( "admin_print_scripts-{$hook}", 'tgb_enqueue_assets' );
+}
+add_action( 'admin_menu', 'tgb_register_menu' );
+
+/**
+ * Enqueue CSS + JS and pass data to the front end.
+ */
+function tgb_enqueue_assets() {
+	wp_enqueue_style(
+		'tgb-fonts',
+		'https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&display=swap',
+		array(),
+		null
+	);
+	wp_enqueue_style( 'tgb-admin', TGB_URL . 'assets/admin.css', array( 'tgb-fonts' ), TGB_VERSION );
+	wp_enqueue_script( 'tgb-admin', TGB_URL . 'assets/admin.js', array(), TGB_VERSION, true );
+
+	wp_localize_script(
+		'tgb-admin',
+		'TGB',
+		array(
+			'restUrl'    => esc_url_raw( rest_url( 'taktik-gun-builder/v1/' ) ),
+			'nonce'      => wp_create_nonce( 'wp_rest' ),
+			/**
+			 * Component categories shown as pills. The first one is the
+			 * base platform and gates all the others.
+			 */
+			'categories' => apply_filters(
+				'tgb_categories',
+				array(
+					array( 'id' => 'base',   'label' => __( 'Base Platform', 'taktik-gun-builder' ) ),
+				)
+			),
+			/**
+			 * Builder-ready products, keyed by category id.
+			 * Replace with a WP_Query / WooCommerce lookup.
+			 */
+			'products'   => apply_filters( 'tgb_products', array() ),
+			'i18n'       => array(
+				'items'      => __( 'items', 'taktik-gun-builder' ),
+				'item'       => __( 'item', 'taktik-gun-builder' ),
+				'noProducts' => __( 'No builder-ready products are available in this category.', 'taktik-gun-builder' ),
+			),
+		)
+	);
+}
+
+/**
+ * Render the admin page.
+ */
+function tgb_render_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	require TGB_PLUGIN_DIR . 'templates/admin-page.php';
+}
