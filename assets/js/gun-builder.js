@@ -1733,10 +1733,7 @@
 				btn.textContent = cat.name;
 				this.navEl.appendChild(btn);
 			});
-			let search_bar  = document.createElement('input');
-			search_bar.setAttribute('type', 'search');
-			search_bar.setAttribute('placeholder', 'Search parts...');
-			search_bar.id = 'tgb-search-bar';
+			let search_bar  = document.getElementById('tgb-search-bar');
 
 			search_bar.addEventListener('change', async (e) => {
 				this.gridEl.textContent = '';
@@ -1747,8 +1744,6 @@
 			this.renderProducts(data.items)
 			
 		})
-
-			this.navEl.appendChild(search_bar);
 		}
 
 		/**
