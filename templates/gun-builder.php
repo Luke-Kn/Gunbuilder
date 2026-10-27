@@ -27,8 +27,8 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 	<header class="tgb-header">
 		<div class="tgb-header-meta">
 			<span class="tgb-badge"><?php esc_html_e( 'Taktik Airsoft', 'part-selector' ); ?></span>
-			<h1 class="tgb-title"><?php esc_html_e( 'Custom Gun Builder', 'part-selector' ); ?></h1>
-			<p class="tgb-subtitle"><?php esc_html_e( 'Build and customize your tactical loadout', 'part-selector' ); ?></p>
+			<h1 class="tgb-title"><?php esc_html_e( 'Gun Builder', 'part-selector' ); ?></h1>
+			<p class="tgb-subtitle"><?php esc_html_e( 'Build your setup with compatible parts.', 'part-selector' ); ?></p>
 		</div>
 	</header>
 
@@ -68,8 +68,8 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 								<polyline points="21 15 16 10 5 21"></polyline>
 							</svg>
 						</div>
-						<h3 class="tgb-state-title"><?php esc_html_e( 'Select a base gun to start your build', 'part-selector' ); ?></h3>
-						<p class="tgb-state-desc"><?php esc_html_e( 'Choose a base platform below to start customizing your build.', 'part-selector' ); ?></p>
+						<h3 class="tgb-state-title"><?php esc_html_e( 'Choose a base platform to begin your build', 'part-selector' ); ?></h3>
+						<p class="tgb-state-desc"><?php esc_html_e( 'Select a base gun from the catalog below to start customizing your loadout.', 'part-selector' ); ?></p>
 					</div>
 
 					<!-- Invalid Product State (Ineligible / Part ID / Missing) -->
@@ -106,9 +106,14 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 			<div class="tgb-panel tgb-current-build-panel">
 				<div class="tgb-panel-header">
 					<h2 class="tgb-panel-title"><?php esc_html_e( 'Current Build', 'part-selector' ); ?></h2>
-					<span class="tgb-build-count" id="tgb-sidebar-build-count">
-						<?php echo ( 'ready' === $initial_render_data['status'] ) ? esc_html__( '1 Weapon', 'part-selector' ) : esc_html__( '0 Items', 'part-selector' ); ?>
-					</span>
+					<div class="tgb-panel-header-actions">
+						<span class="tgb-build-count" id="tgb-sidebar-build-count">
+							<?php echo ( 'ready' === $initial_render_data['status'] ) ? esc_html__( '1 Weapon', 'part-selector' ) : esc_html__( '0 Items', 'part-selector' ); ?>
+						</span>
+						<button type="button" class="tgb-btn-reset-build" id="tgb-reset-build-btn" aria-label="<?php esc_attr_e( 'Reset build', 'part-selector' ); ?>" title="<?php esc_attr_e( 'Reset build', 'part-selector' ); ?>" style="display: none;">
+							<?php esc_html_e( 'Reset', 'part-selector' ); ?>
+						</button>
+					</div>
 				</div>
 				<div class="tgb-panel-body" id="tgb-sidebar-build-body">
 					<?php if ( 'ready' === $initial_render_data['status'] && ! empty( $initial_render_data['product'] ) ) : ?>
@@ -124,7 +129,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 						</div>
 					<?php else : ?>
 						<div class="tgb-placeholder-notice" id="tgb-sidebar-placeholder">
-							<p><?php esc_html_e( 'Select a base platform below to begin customizing your build.', 'part-selector' ); ?></p>
+							<p><?php esc_html_e( 'Choose a base platform below to begin your build.', 'part-selector' ); ?></p>
 						</div>
 					<?php endif; ?>
 				</div>
@@ -143,8 +148,15 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 				<!-- Category Navigation Strip -->
 				<nav class="tgb-category-nav" id="tgb-category-nav" aria-label="<?php esc_attr_e( 'Product Categories', 'part-selector' ); ?>" role="tablist">
 					<!-- Dynamically populated: Base Platform + taxonomy terms -->
+			
 				</nav>
-
+				<button type="button" class="tgb-toggle" role="switch" aria-checked="false" id="tgb-compatible-toggle">
+	<span class="tgb-toggle__track" aria-hidden="true">
+		<span class="tgb-toggle__thumb"></span>
+	</span>
+	<span class="tgb-toggle__label">Compatible only</span>
+	<span class="tgb-toggle__state" aria-hidden="true">OFF</span>
+</button>
 				<!-- Tray Status Notification (e.g. empty or error) -->
 				<div class="tgb-tray-status" id="tgb-tray-status" style="display: none;"></div>
 
@@ -188,5 +200,8 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 			</div>
 		</div>
 	</section>
+
+	<!-- Accessible Screen Reader Live Announcer (Part 8) -->
+	<div class="screen-reader-text" id="tgb-live-announcer" aria-live="polite" aria-atomic="true"></div>
 
 </div>

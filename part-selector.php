@@ -40,6 +40,7 @@ require_once TGB_PLUGIN_DIR . 'includes/class-tgb-mounting.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-config.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-data.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-catalog-api.php';
+require_once TGB_PLUGIN_DIR . 'includes/class-tgb-cart.php';
 
 // =============================================================================
 // Bootstrap

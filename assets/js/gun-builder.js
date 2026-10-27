@@ -199,6 +199,8 @@
 						width: baseGunData.builder_image.width || 0,
 						height: baseGunData.builder_image.height || 0,
 					} : null,
+					price: baseGunData.price || null,
+					weight: baseGunData.weight || null,
 					mounting: baseGunData.mounting || null,
 				};
 			}
@@ -221,14 +223,17 @@
 		 * @param {number} [zIndex] Optional explicit z-index layer.
 		 * @return {Object|null} Created part instance state entry.
 		 */
-		addPart(product, initialX = 0, initialY = 0, zIndex = null) {
+		addPart(product, initialX = 0, initialY = 0, zIndex = null, explicitInstanceId = null) {
 			if (!product) {
 				return null;
 			}
 
 			const geometry = calculateProductGeometry(product);
-			const instanceId = this._generateInstanceId();
+			const instanceId = explicitInstanceId || this._generateInstanceId();
 			const partZIndex = typeof zIndex === 'number' ? zIndex : this.nextZIndex++;
+			if (typeof zIndex === 'number' && zIndex >= this.nextZIndex) {
+				this.nextZIndex = zIndex + 1;
+			}
 
 			const part = {
 				instanceId: instanceId,
@@ -475,6 +480,7 @@
 					break;
 
 				case 'reset':
+				case 'build_reset':
 					this.clearPartLayers();
 					break;
 			}
@@ -591,25 +597,30 @@
 		 * @param {Object} product Normalized Base Gun product.
 		 */
 		loadAndRenderBaseGun(product) {
-			if (!product.builder_image || !product.builder_image.url) {
-				this.showInvalidState('Weapon image is not available.');
-				return;
-			}
+			return new Promise((resolve) => {
+				if (!product || !product.builder_image || !product.builder_image.url) {
+					this.showInvalidState('Weapon image is not available.');
+					resolve(false);
+					return;
+				}
 
-			this.showLoadingState();
+				this.showLoadingState();
 
-			// Preload image
-			const preloader = new Image();
-			preloader.src = product.builder_image.url;
+				// Preload image
+				const preloader = new Image();
+				preloader.src = product.builder_image.url;
 
-			preloader.onload = () => {
-				this.hideAllStates();
-				this.mountBaseGun(product);
-			};
+				preloader.onload = () => {
+					this.hideAllStates();
+					this.mountBaseGun(product);
+					resolve(true);
+				};
 
-			preloader.onerror = () => {
-				this.showErrorState();
-			};
+				preloader.onerror = () => {
+					this.showErrorState();
+					resolve(false);
+				};
+			});
 		}
 
 		/**
@@ -658,6 +669,8 @@
 					name: product.name,
 					reference_mm: product.reference_mm,
 					builder_image: product.builder_image,
+					price: product.price || null,
+					weight: product.weight || null,
 					mounting: product.mounting || null,
 				});
 			}
@@ -1169,7 +1182,16 @@
 				// Pointer capture already released or element detached
 			}
 
+			const instanceId = element.getAttribute('data-tgb-instance-id');
 			this.activeDrag = null;
+
+			if (this.buildState && instanceId) {
+				this.buildState._notify({
+					type: 'drag_ended',
+					instanceId: instanceId,
+					state: this.buildState.getState()
+				});
+			}
 		}
 
 		/**
@@ -1432,6 +1454,151 @@
 			}
 
 			return { x: initialX, y: initialY };
+		},
+
+		/**
+		 * Calculates deterministic lower-left staging position for a newly added Part.
+		 *
+		 * Requirements (Part 11):
+		 *   - Staged in lower-left area of canonical stage.
+		 *   - Margin: base 20px with small deterministic stagger (+12px per part) so
+		 *     multiple parts do not completely obscure one another.
+		 *   - Bounded wrapping (modulo 6) so parts stay within lower-left staging zone.
+		 * Calculates a deterministic, non-overlapping initial staging position in the lower-left area.
+		 *
+		 * Staged parts are arranged left-to-right starting from the lower-left margin (20px).
+		 * When candidate space exceeds the available stage width, placement wraps to a new row ABOVE.
+		 * Staging positions use each part's actual logical dimensions (1 mm = 1 logical px) with a
+		 * 20px gap, preventing initial visual overlap while ensuring parts remain fully visible and easy to grab.
+		 *
+		 * @param {number} stageWidth Logical stage width in mm/logical px.
+		 * @param {number} stageHeight Logical stage height in mm/logical px.
+		 * @param {number} partWidth Part logical width in mm/logical px.
+		 * @param {number} partHeight Part logical height in mm/logical px.
+		 * @param {Array|number} [existingParts=[]] Array of existing part objects or count.
+		 * @param {Object|null} [baseGun=null] Base Gun geometry object { x, y, width, height }.
+		 * @return {{x: number, y: number}} Canonical clamped stage coordinates.
+		 */
+		calculateStagingPosition(stageWidth, stageHeight, partWidth, partHeight, existingParts = [], baseGun = null) {
+			const marginX = 20;
+			const marginY = 20;
+			const gap = 20;
+
+			const sWidth = (typeof stageWidth === 'number' && stageWidth > 0) ? stageWidth : 1180;
+			const sHeight = (typeof stageHeight === 'number' && stageHeight > 0) ? stageHeight : 500;
+			const pWidth = Math.max(1, Math.round(partWidth || 50));
+			const pHeight = Math.max(1, Math.round(partHeight || 50));
+
+			// Extract Base Gun obstacle
+			let baseGunBox = null;
+			if (baseGun && typeof baseGun.x === 'number' && typeof baseGun.y === 'number' && baseGun.width > 0 && baseGun.height > 0) {
+				baseGunBox = {
+					x: Math.round(baseGun.x),
+					y: Math.round(baseGun.y),
+					width: Math.round(baseGun.width),
+					height: Math.round(baseGun.height),
+				};
+			}
+
+			// Extract existing part obstacles
+			const partObstacles = [];
+			if (Array.isArray(existingParts)) {
+				for (const part of existingParts) {
+					if (part && typeof part.x === 'number' && typeof part.y === 'number') {
+						partObstacles.push({
+							id: part.instanceId || part.id || 'part',
+							x: Math.round(part.x),
+							y: Math.round(part.y),
+							width: Math.round(part.width || 50),
+							height: Math.round(part.height || 50),
+						});
+					}
+				}
+			}
+
+			// Helper: test collision with another staged part (with gap padding)
+			function collidesWithPart(candX, candY, candW, candH, part) {
+				return (
+					candX < part.x + part.width + gap &&
+					candX + candW + gap > part.x &&
+					candY < part.y + part.height + gap &&
+					candY + candH + gap > part.y
+				);
+			}
+
+			// Helper: test direct intersection with Base Gun
+			function collidesWithBaseGun(candX, candY, candW, candH) {
+				if (!baseGunBox) return false;
+				return (
+					candX < baseGunBox.x + baseGunBox.width &&
+					candX + candW > baseGunBox.x &&
+					candY < baseGunBox.y + baseGunBox.height &&
+					candY + candH > baseGunBox.y
+				);
+			}
+
+			// Helper: check collision against all active obstacles
+			function getCollision(candX, candY) {
+				for (const part of partObstacles) {
+					if (collidesWithPart(candX, candY, pWidth, pHeight, part)) {
+						return { type: 'part', obj: part };
+					}
+				}
+				if (collidesWithBaseGun(candX, candY, pWidth, pHeight)) {
+					return { type: 'base_gun', obj: baseGunBox };
+				}
+				return null;
+			}
+
+			// Search row by row, originating from bottom margin and moving upward
+			let currentRowBottom = marginY;
+			const maxRows = 20;
+
+			for (let row = 0; row < maxRows; row++) {
+				const candidateY = Math.round(sHeight - pHeight - currentRowBottom);
+				if (candidateY < marginY) {
+					break; // Pushed past top margin
+				}
+
+				let candidateX = marginX;
+				let rowMaxHeight = pHeight;
+
+				// Track tallest part overlapping this row
+				for (const part of partObstacles) {
+					if (candidateY < part.y + part.height && candidateY + pHeight > part.y) {
+						if (part.height > rowMaxHeight) {
+							rowMaxHeight = part.height;
+						}
+					}
+				}
+
+				while (candidateX + pWidth + marginX <= sWidth) {
+					const collision = getCollision(candidateX, candidateY);
+					if (!collision) {
+						// Free non-overlapping spot found!
+						return {
+							x: Math.max(0, Math.min(candidateX, sWidth - pWidth)),
+							y: Math.max(0, Math.min(candidateY, sHeight - pHeight)),
+						};
+					}
+
+					// Advance past the collision
+					const jumpX = Math.round(collision.obj.x + collision.obj.width + gap);
+					if (jumpX <= candidateX) {
+						candidateX += gap;
+					} else {
+						candidateX = jumpX;
+					}
+				}
+
+				// Wrap to row above
+				currentRowBottom += Math.round(rowMaxHeight + gap);
+			}
+
+			// Fallback: clamp within stage bounds
+			const fallbackX = marginX;
+			const fallbackY = Math.max(marginY, sHeight - pHeight - marginY);
+			return { x: fallbackX, y: fallbackY };
 		}
 	};
 
@@ -1470,7 +1637,9 @@
 			this.sidebarBodyEl = root.querySelector('#tgb-sidebar-build-body');
 
 			this.categories = []; // [{ id: 'base_gun', name: 'Base Platform' }, ...]
-			this.activeCategoryKey = 'base_gun';
+			this.activeCategoryKey = '2661';
+			this.activeCategoryId = 120;
+
 			this.categoryCache = new Map(); // key => { items: [], has_more: false, next_cursor: null, loaded: false }
 
 			this.activeAbortController = null;
@@ -1480,6 +1649,7 @@
 			this.boundHandleGridClick = this.handleGridClick.bind(this);
 			this.boundHandleLoadMore = this.handleLoadMore.bind(this);
 			this.boundStateChange = this.handleStateChange.bind(this);
+
 		}
 
 		/**
@@ -1528,14 +1698,17 @@
 			// 6. Pre-seed registry from initial render Base Gun if present
 			const currentBase = this.buildState.getBaseGun();
 			if (currentBase && currentBase.productId) {
-				this.productRegistry.set(currentBase.productId, {
+				const existing = this.productRegistry.get(currentBase.productId) || {};
+				this.productRegistry.set(currentBase.productId, Object.assign({}, existing, {
 					id: currentBase.productId,
 					name: currentBase.name,
 					role: 'base_gun',
 					reference_mm: currentBase.reference_mm,
 					builder_image: currentBase.builder_image,
-					mounting: currentBase.mounting || null,
-				});
+					price: currentBase.price || existing.price || null,
+					weight: currentBase.weight || existing.weight || null,
+					mounting: currentBase.mounting || existing.mounting || null,
+				}));
 			}
 
 			// 7. Load default category (Base Platform)
@@ -1560,6 +1733,22 @@
 				btn.textContent = cat.name;
 				this.navEl.appendChild(btn);
 			});
+			let search_bar  = document.createElement('input');
+			search_bar.setAttribute('type', 'search');
+			search_bar.setAttribute('placeholder', 'Search parts...');
+			search_bar.id = 'tgb-search-bar';
+
+			search_bar.addEventListener('change', async (e) => {
+				this.gridEl.textContent = '';
+				this.showLoading();
+			let data = await fetch(`http://localhost:10003/wp-json/tgb/v1/parts/search?type_id=${this.activeCategoryKey}&q=${search_bar.value}&limit=100`)
+			.then(response => response.json())
+			this.hideLoading();
+			this.renderProducts(data.items)
+			
+		})
+
+			this.navEl.appendChild(search_bar);
 		}
 
 		/**
@@ -1569,6 +1758,8 @@
 		 * @param {boolean} [forceRefresh=false]
 		 */
 		async switchCategory(categoryKey, forceRefresh = false) {
+			categoryKey = String(categoryKey);
+
 			// Cancel any pending in-flight request
 			if (this.activeAbortController) {
 				this.activeAbortController.abort();
@@ -1977,7 +2168,12 @@
 		}
 
 		/**
-		 * Adds a Part to the build at a neutral centered position.
+		 * Adds a Part to the build in the lower-left staging area.
+		 *
+		 * In V1 (Part 11), newly added parts are staged deterministically in the
+		 * lower-left area of the stage with small stagger, allowing the customer
+		 * to freely drag them onto or around the gun. Mounting data remains active
+		 * for compatibility validation and future automated docking.
 		 *
 		 * @param {Object} product Normalized Part product.
 		 */
@@ -1999,33 +2195,25 @@
 				return;
 			}
 
-			const mountPoint = TGB_Mounting.findDefaultMountPoint(baseProduct, product);
-			if (!mountPoint) {
-				this.showStatus('No matching mount point found on platform.', false);
-				return;
-			}
-
 			// Store in registry
 			this.productRegistry.set(product.id, product);
 
-			// Structured Default Placement (Part 7, Requirement 17):
+			// Lower-Left Staging Spawn (Part 12 non-overlapping placement):
 			const stage = this.renderer.currentStageGeometry || { stageWidth: 1000, stageHeight: 600, baseX: 0, baseY: 0 };
 			const geo = calculateProductGeometry(product);
-			const anchor = (product.mounting && product.mounting.anchor) ? product.mounting.anchor : { x_percent: 50, y_percent: 50 };
+			const existingParts = (this.buildState.parts) || [];
+			const currentBaseGun = (this.buildState.getBaseGun && this.buildState.getBaseGun()) || this.buildState.baseGun || null;
 
-			const initialPos = TGB_Mounting.calculateInitialPosition(
-				stage.baseX,
-				stage.baseY,
-				mountPoint,
+			const initialPos = TGB_Mounting.calculateStagingPosition(
+				stage.stageWidth,
+				stage.stageHeight,
 				geo.logicalWidth,
 				geo.logicalHeight,
-				anchor.x_percent,
-				anchor.y_percent,
-				stage.stageWidth,
-				stage.stageHeight
+				existingParts,
+				currentBaseGun
 			);
 
-			// Add to authoritative Build State (Part 5 & 7)
+			// Add to authoritative Build State (Part 5 & 11 & 12)
 			const partInstance = this.buildState.addPart(product, initialPos.x, initialPos.y);
 
 			// Sync in-build count badges
@@ -2134,65 +2322,11 @@
 		}
 
 		/**
-		 * Updates sidebar Current Build summary panel.
+		 * Updates sidebar Current Build summary panel (delegates to TGB_CurrentBuild).
 		 */
 		syncSidebar() {
-			if (!this.sidebarCountEl || !this.sidebarBodyEl) return;
-
-			const currentBase = this.buildState.getBaseGun();
-			const partsCount = (this.buildState.parts || []).length;
-
-			if (!currentBase) {
-				this.sidebarCountEl.textContent = '0 Items';
-				this.sidebarBodyEl.textContent = '';
-				const notice = document.createElement('div');
-				notice.className = 'tgb-placeholder-notice';
-				const p = document.createElement('p');
-				p.textContent = 'Select a base platform below to begin customizing your build.';
-				notice.appendChild(p);
-				this.sidebarBodyEl.appendChild(notice);
-			} else {
-				if (partsCount === 0) {
-					this.sidebarCountEl.textContent = '1 Weapon';
-				} else if (partsCount === 1) {
-					this.sidebarCountEl.textContent = '1 Weapon • 1 Component';
-				} else {
-					this.sidebarCountEl.textContent = `1 Weapon • ${partsCount} Components`;
-				}
-
-				this.sidebarBodyEl.textContent = '';
-				const card = document.createElement('div');
-				card.className = 'tgb-current-base-card';
-
-				const tag = document.createElement('div');
-				tag.className = 'tgb-card-tag';
-				tag.textContent = 'Base Platform';
-				card.appendChild(tag);
-
-				const title = document.createElement('h3');
-				title.className = 'tgb-card-title';
-				title.textContent = currentBase.name;
-				card.appendChild(title);
-
-				const specs = document.createElement('div');
-				specs.className = 'tgb-card-specs';
-				const specItem = document.createElement('span');
-				specItem.className = 'tgb-spec-item';
-
-				const specLabel = document.createElement('span');
-				specLabel.className = 'tgb-spec-label';
-				specLabel.textContent = 'Length: ';
-				specItem.appendChild(specLabel);
-
-				const specVal = document.createElement('span');
-				specVal.className = 'tgb-spec-value';
-				specVal.textContent = `${currentBase.reference_mm} mm`;
-				specItem.appendChild(specVal);
-
-				specs.appendChild(specItem);
-				card.appendChild(specs);
-
-				this.sidebarBodyEl.appendChild(card);
+			if (window.TGB && window.TGB.currentBuild) {
+				window.TGB.currentBuild.render();
 			}
 		}
 
@@ -2201,7 +2335,6 @@
 		 */
 		handleStateChange() {
 			this.syncAllCardButtons();
-			this.syncSidebar();
 		}
 
 		/**
@@ -2248,10 +2381,1255 @@
 			if (!this.actionsEl) return;
 			this.actionsEl.style.display = hasMore ? 'block' : 'none';
 		}
+
+		/**
+		 * Shows customer-facing notification banner (e.g. for restore status).
+		 *
+		 * @param {string} message
+		 * @param {string} [type='info'] 'info'|'warning'|'error'
+		 * @param {number} [autoDismissMs=8000]
+		 */
+		showNotice(message, type = 'info', autoDismissMs = 8000) {
+			const container = this.root.querySelector('.tgb-workspace') || this.root;
+			let notice = this.root.querySelector('.tgb-restore-notice');
+			if (!notice) {
+				notice = document.createElement('div');
+				notice.className = 'tgb-restore-notice';
+				container.insertBefore(notice, container.firstChild);
+			}
+
+			notice.className = `tgb-restore-notice tgb-restore-notice--${type}`;
+			notice.setAttribute('role', type === 'error' ? 'alert' : 'status');
+			notice.textContent = '';
+
+			const textSpan = document.createElement('span');
+			textSpan.textContent = message;
+			notice.appendChild(textSpan);
+
+			const closeBtn = document.createElement('button');
+			closeBtn.type = 'button';
+			closeBtn.className = 'tgb-restore-notice-close';
+			closeBtn.setAttribute('aria-label', 'Dismiss notice');
+			closeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+			closeBtn.onclick = () => {
+				if (notice.parentNode) notice.parentNode.removeChild(notice);
+			};
+			notice.appendChild(closeBtn);
+
+			if (autoDismissMs > 0) {
+				setTimeout(() => {
+					if (notice.parentNode) notice.parentNode.removeChild(notice);
+				}, autoDismissMs);
+			}
+		}
 	}
 
 	// =========================================================================
-	// 6. API EXPORTS & NAMESPACE (Section 41 & Part 6)
+	// 7. CART INTEGRATION CLIENT (Part 9)
+	// =========================================================================
+
+	/**
+	 * Client service managing secure Add Build to Cart submissions.
+	 *
+	 * Extracts minimal build identity from TGB_BuildState (never DOM inspection),
+	 * enforces idempotency, prevents concurrent submissions, and communicates with
+	 * the server-side TGB_Cart endpoint.
+	 */
+	class TGB_CartClient {
+		constructor(buildState, config = null) {
+			this.buildState = buildState;
+			this.config = config || (window.taktikGunBuilder || {});
+			this.isSubmitting = false;
+			this.currentRequestId = null;
+		}
+
+		/**
+		 * Submits current build to WooCommerce cart.
+		 *
+		 * @return {Promise<{success: boolean, data?: Object, message?: string}>}
+		 */
+		async addBuildToCart() {
+			if (this.isSubmitting) {
+				return { success: false, message: 'Submission already in progress.' };
+			}
+
+			const state = this.buildState.getState();
+			const baseGun = state.baseGun;
+
+			if (!baseGun || !baseGun.productId) {
+				return { success: false, message: 'Choose a base platform before adding to cart.' };
+			}
+
+			// Unique request ID per submission attempt (Requirement 33 & 77)
+			this.currentRequestId = 'req-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+			this.isSubmitting = true;
+
+			// Minimal payload strictly from Build State (Requirement 7 & 67)
+			const parts = (state.parts || []).map(p => ({
+				product_id: p.productId,
+				instance_id: p.instanceId || ''
+			}));
+
+			const payload = {
+				base_product_id: baseGun.productId,
+				parts: parts,
+				request_id: this.currentRequestId,
+				nonce: this.config.cartNonce || ''
+			};
+
+			const endpointUrl = (this.config.ajaxUrl || '/wp-admin/admin-ajax.php') + '?action=tgb_add_build_to_cart';
+
+			try {
+				const response = await fetch(endpointUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': this.config.cartNonce || ''
+					},
+					body: JSON.stringify(payload)
+				});
+
+				const res = await response.json();
+
+				if (response.ok && res && res.success) {
+					this.triggerCartFragments(res.data);
+					return {
+						success: true,
+						data: res.data || {}
+					};
+				} else {
+					const errorMsg = (res && res.data && res.data.message)
+						? res.data.message
+						: (res && res.message ? res.message : "We couldn't add this build to your cart. Please review the build and try again.");
+
+					return {
+						success: false,
+						message: errorMsg
+					};
+				}
+			} catch (err) {
+				return {
+					success: false,
+					message: 'Network connection issue. Please check your connection and try again.'
+				};
+			} finally {
+				this.isSubmitting = false;
+			}
+		}
+
+		/**
+		 * Triggers standard WooCommerce frontend cart fragments refresh events.
+		 */
+		triggerCartFragments(data) {
+			try {
+				if (typeof window.jQuery !== 'undefined') {
+					window.jQuery(document.body).trigger('added_to_cart', [
+						data ? data.fragments : null,
+						data ? data.cart_hash : null,
+						null
+					]);
+					window.jQuery(document.body).trigger('wc_fragment_refresh');
+				}
+				document.dispatchEvent(new CustomEvent('tgb_build_added_to_cart', { detail: data }));
+			} catch (e) {
+				// Non-blocking
+			}
+		}
+	}
+
+	// =========================================================================
+	// 8. CURRENT BUILD CONTROLLER (Parts 8 & 9)
+	// =========================================================================
+
+	/**
+	 * Controller for Current Build summary panel, component list, remove actions,
+	 * live subtotal, total weight, and secure Add Build to Cart action.
+	 *
+	 * Completely state-driven from TGB_BuildState + TGB_ProductRegistry.
+	 * Ignores part_moved events completely (zero drag overhead, Requirements 8 & 9).
+	 */
+	class TGB_CurrentBuild {
+		constructor(root, buildState, productRegistry, currencyConfig = null, weightConfig = null) {
+			this.root = root;
+			this.buildState = buildState;
+			this.productRegistry = productRegistry;
+			this.currencyConfig = currencyConfig || (window.taktikGunBuilder && window.taktikGunBuilder.currency) || {};
+			this.weightConfig = weightConfig || (window.taktikGunBuilder && window.taktikGunBuilder.weight) || {};
+
+			this.countEl = root.querySelector('#tgb-sidebar-build-count');
+			this.bodyEl = root.querySelector('#tgb-sidebar-build-body');
+			this.announcerEl = root.querySelector('#tgb-live-announcer');
+
+			this.cartClient = new TGB_CartClient(this.buildState, window.taktikGunBuilder);
+			this.cartFeedback = null; // { type: 'success' | 'error', message: string, url?: string }
+
+			this.boundStateChange = this.handleStateChange.bind(this);
+			this.boundBodyClick = this.handleBodyClick.bind(this);
+		}
+
+		init() {
+			if (!this.bodyEl) return;
+
+			// Subscribe to Build State (composition changes)
+			this.buildState.subscribe(this.boundStateChange);
+
+			// Listen for remove & cart button clicks via event delegation
+			this.bodyEl.addEventListener('click', this.boundBodyClick);
+
+			// Listen for Reset Build button
+			const resetBtn = this.root.querySelector('#tgb-reset-build-btn');
+			if (resetBtn) {
+				resetBtn.addEventListener('click', () => this.handleResetBuild());
+			}
+
+			// Initial render
+			this.render();
+		}
+
+		/**
+		 * Reacts strictly to composition-changing Build State events.
+		 * Ignores part_moved events completely (Requirement 8 & 9).
+		 */
+		handleStateChange(event) {
+			if (!event || event.type === 'part_moved') {
+				return;
+			}
+			// Clear error feedback on subsequent composition mutations
+			if (this.cartFeedback && this.cartFeedback.type === 'error') {
+				this.cartFeedback = null;
+			}
+			this.render();
+		}
+
+		/**
+		 * Handles click events within the Current Build panel (Remove Part, Add Build to Cart).
+		 */
+		handleBodyClick(event) {
+			// Remove part button
+			const removeBtn = event.target.closest('.tgb-build-item-remove');
+			if (removeBtn) {
+				const instanceId = removeBtn.getAttribute('data-instance-id');
+				if (!instanceId) return;
+
+				const part = this.buildState.getPart(instanceId);
+				const partName = part ? part.name : 'Component';
+
+				// Remove part from authoritative Build State
+				const removed = this.buildState.removePart(instanceId);
+				if (removed) {
+					this.announce(`${partName} removed from build.`);
+				}
+				return;
+			}
+
+			// Add Build to Cart button
+			const addCartBtn = event.target.closest('#tgb-add-to-cart-btn');
+			if (addCartBtn) {
+				if (addCartBtn.disabled) return;
+				this.handleAddBuildToCart();
+				return;
+			}
+
+			// Reset Build button
+			const resetBtn = event.target.closest('#tgb-reset-build-btn');
+			if (resetBtn) {
+				this.handleResetBuild();
+				return;
+			}
+		}
+
+		/**
+		 * Resets the build: clears Build State, stage, Current Build, and persisted storage.
+		 */
+		handleResetBuild() {
+			if (this.buildState) {
+				this.buildState.reset();
+				this.buildState.setBaseGun(null);
+			}
+
+			if (window.TGB && window.TGB.persistence) {
+				window.TGB.persistence.clear();
+			}
+
+			if (window.TGB && window.TGB.renderer) {
+				window.TGB.renderer.showEmptyState();
+			}
+
+			if (window.TGB && window.TGB.selection) {
+				window.TGB.selection.syncAllCardButtons();
+				window.TGB.selection.syncSidebar();
+			}
+
+			this.announce('Build reset. All components cleared.');
+		}
+
+		/**
+		 * Submits build via CartClient and coordinates loading & feedback UI.
+		 */
+		async handleAddBuildToCart() {
+			if (!this.cartClient || this.cartClient.isSubmitting) {
+				return;
+			}
+
+			this.cartFeedback = null;
+			this.render(); // Set loading button state
+
+			const result = await this.cartClient.addBuildToCart();
+
+			if (result.success) {
+				const ref = (result.data && result.data.build_reference) ? result.data.build_reference : '';
+				const cartUrl = (result.data && result.data.cart_url)
+					? result.data.cart_url
+					: ((window.taktikGunBuilder && window.taktikGunBuilder.cartUrl) || '/cart/');
+
+				this.cartFeedback = {
+					type: 'success',
+					message: ref ? `Build added to cart (${ref}).` : 'Build added to cart.',
+					url: cartUrl
+				};
+				this.announce(`Build added to cart. Reference ${ref}.`);
+			} else {
+				this.cartFeedback = {
+					type: 'error',
+					message: result.message || "We couldn't add this build to your cart."
+				};
+				this.announce(`Error: ${this.cartFeedback.message}`);
+			}
+
+			this.render(); // Restore button state and render feedback message
+		}
+
+		/**
+		 * Announces accessible status messages to screen readers.
+		 */
+		announce(message) {
+			if (this.announcerEl) {
+				this.announcerEl.textContent = '';
+				void this.announcerEl.offsetWidth;
+				this.announcerEl.textContent = message;
+			}
+		}
+
+		/**
+		 * Formats numeric price according to WooCommerce currency settings (Requirements 21 & 22).
+		 */
+		formatPrice(amount) {
+			if (typeof amount !== 'number' || isNaN(amount)) {
+				return '';
+			}
+
+			const config = Object.assign({
+				symbol: '$',
+				decimals: 2,
+				decimal_separator: '.',
+				thousand_separator: ',',
+				price_format: '%1$s%2$s'
+			}, this.currencyConfig || {});
+
+			const decimals = typeof config.decimals === 'number' ? config.decimals : 2;
+			const isNegative = amount < 0;
+			const absAmount = Math.abs(amount);
+
+			const fixed = absAmount.toFixed(decimals);
+			const parts = fixed.split('.');
+			const integerPart = parts[0];
+			const fractionalPart = parts[1];
+
+			const thousandSep = typeof config.thousand_separator === 'string' ? config.thousand_separator : ',';
+			const decimalSep = typeof config.decimal_separator === 'string' ? config.decimal_separator : '.';
+			const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandSep);
+
+			let formattedNumber = formattedInteger;
+			if (decimals > 0 && typeof fractionalPart !== 'undefined') {
+				formattedNumber += decimalSep + fractionalPart;
+			}
+
+			const symbol = config.symbol || '$';
+			const format = config.price_format || '%1$s%2$s';
+			let result = format.replace('%1$s', symbol).replace('%2$s', formattedNumber);
+
+			return isNegative ? '-' + result : result;
+		}
+
+		/**
+		 * Formats weight in grams for customer display (Requirement 35).
+		 */
+		formatWeight(grams) {
+			if (typeof grams !== 'number' || isNaN(grams) || grams < 0) {
+				return null;
+			}
+
+			if (grams < 1000) {
+				return `${Math.round(grams)} g`;
+			}
+
+			const kg = grams / 1000;
+			return `${kg.toFixed(2)} kg`;
+		}
+
+		/**
+		 * Derives a deterministic summary model from current Build State + Product Registry (Requirement 39).
+		 */
+		calculateSummary() {
+			const baseGun = this.buildState.getBaseGun();
+			const parts = this.buildState.parts || [];
+
+			let knownSubtotal = 0;
+			let priceUnknownCount = 0;
+			let knownGrams = 0;
+			let weightUnknownCount = 0;
+
+			// Base Gun contribution
+			let baseProduct = null;
+			if (baseGun && baseGun.productId) {
+				baseProduct = this.productRegistry.get(baseGun.productId);
+
+				// Base Gun Price
+				if (baseProduct && baseProduct.price && typeof baseProduct.price.unit_amount === 'number') {
+					knownSubtotal += baseProduct.price.unit_amount;
+				} else if (baseGun.price && typeof baseGun.price.unit_amount === 'number') {
+					knownSubtotal += baseGun.price.unit_amount;
+				} else {
+					priceUnknownCount++;
+				}
+
+				// Base Gun Weight
+				if (baseProduct && baseProduct.weight && typeof baseProduct.weight.grams === 'number') {
+					knownGrams += baseProduct.weight.grams;
+				} else if (baseGun.weight && typeof baseGun.weight.grams === 'number') {
+					knownGrams += baseGun.weight.grams;
+				} else {
+					weightUnknownCount++;
+				}
+			}
+
+			// Parts contribution (each instance counts individually, Requirement 12, 25, 34)
+			const resolvedParts = parts.map(partInstance => {
+				const product = this.productRegistry.get(partInstance.productId);
+
+				let hasPrice = false;
+				let unitPrice = null;
+				if (product && product.price && typeof product.price.unit_amount === 'number') {
+					unitPrice = product.price.unit_amount;
+					knownSubtotal += unitPrice;
+					hasPrice = true;
+				} else {
+					priceUnknownCount++;
+				}
+
+				let hasWeight = false;
+				let grams = null;
+				if (product && product.weight && typeof product.weight.grams === 'number') {
+					grams = product.weight.grams;
+					knownGrams += grams;
+					hasWeight = true;
+				} else {
+					weightUnknownCount++;
+				}
+
+				return {
+					instance: partInstance,
+					product: product,
+					unitPrice: unitPrice,
+					hasPrice: hasPrice,
+					grams: grams,
+					hasWeight: hasWeight,
+				};
+			});
+
+			const decimals = (this.currencyConfig && typeof this.currencyConfig.decimals === 'number')
+				? this.currencyConfig.decimals
+				: 2;
+
+			return {
+				hasBase: Boolean(baseGun),
+				baseGun: baseGun,
+				baseProduct: baseProduct,
+				itemCount: (baseGun ? 1 : 0) + parts.length,
+				componentCount: parts.length,
+				resolvedParts: resolvedParts,
+				price: {
+					knownSubtotal: parseFloat(knownSubtotal.toFixed(decimals)),
+					unknownCount: priceUnknownCount,
+					complete: priceUnknownCount === 0,
+				},
+				weight: {
+					knownGrams: Math.round(knownGrams * 100) / 100,
+					unknownCount: weightUnknownCount,
+					complete: weightUnknownCount === 0,
+				},
+			};
+		}
+
+		/**
+		 * Renders the Current Build panel.
+		 */
+		render() {
+			if (!this.bodyEl) return;
+
+			const summary = this.calculateSummary();
+
+			// 1. Update count badge in header
+			if (this.countEl) {
+				if (!summary.hasBase) {
+					this.countEl.textContent = '0 Items';
+				} else if (summary.componentCount === 0) {
+					this.countEl.textContent = '1 Weapon';
+				} else if (summary.componentCount === 1) {
+					this.countEl.textContent = '1 Weapon • 1 Component';
+				} else {
+					this.countEl.textContent = `1 Weapon • ${summary.componentCount} Components`;
+				}
+			}
+
+			// Update Reset button visibility
+			const resetBtn = this.root.querySelector('#tgb-reset-build-btn');
+			if (resetBtn) {
+				resetBtn.style.display = summary.hasBase ? 'inline-flex' : 'none';
+			}
+
+			// Clear body safely
+			this.bodyEl.textContent = '';
+
+			// 2. Empty State (no Base Gun)
+			if (!summary.hasBase) {
+				const placeholder = document.createElement('div');
+				placeholder.className = 'tgb-placeholder-notice';
+				const p = document.createElement('p');
+				p.textContent = 'Choose a base platform below to begin your build.';
+				placeholder.appendChild(p);
+				this.bodyEl.appendChild(placeholder);
+				return;
+			}
+
+			// 3. Base Platform Section
+			const baseSection = document.createElement('div');
+			baseSection.className = 'tgb-current-build-section tgb-current-build-section--base';
+
+			const baseTagWrap = document.createElement('div');
+			baseTagWrap.className = 'tgb-card-tag-wrap';
+
+			const baseTag = document.createElement('div');
+			baseTag.className = 'tgb-card-tag';
+			baseTag.textContent = 'Base Platform';
+			baseTagWrap.appendChild(baseTag);
+
+			const isBaseOutOfStock = Boolean(summary.baseProduct && summary.baseProduct.stock && summary.baseProduct.stock.in_stock === false);
+			if (isBaseOutOfStock) {
+				const baseStockBadge = document.createElement('span');
+				baseStockBadge.className = 'tgb-build-item-stock-badge tgb-build-item-stock-badge--unavailable';
+				baseStockBadge.textContent = 'Unavailable';
+				baseTagWrap.appendChild(baseStockBadge);
+			}
+			baseSection.appendChild(baseTagWrap);
+
+			const baseRow = document.createElement('div');
+			baseRow.className = 'tgb-build-item-row tgb-build-item-row--base' + (isBaseOutOfStock ? ' is-unavailable' : '');
+
+			// Base Thumbnail
+			const baseThumbWrap = document.createElement('div');
+			baseThumbWrap.className = 'tgb-build-item-thumb-wrap';
+			const baseThumb = document.createElement('img');
+			baseThumb.className = 'tgb-build-item-thumb';
+			const baseImgUrl = (summary.baseGun.builder_image && summary.baseGun.builder_image.url)
+				? summary.baseGun.builder_image.url
+				: '';
+			baseThumb.src = baseImgUrl;
+			baseThumb.alt = summary.baseGun.name || 'Base Platform';
+			baseThumb.loading = 'lazy';
+			baseThumbWrap.appendChild(baseThumb);
+			baseRow.appendChild(baseThumbWrap);
+
+			// Base Details
+			const baseInfo = document.createElement('div');
+			baseInfo.className = 'tgb-build-item-info';
+
+			const baseTitle = document.createElement('h4');
+			baseTitle.className = 'tgb-build-item-name';
+			baseTitle.textContent = summary.baseGun.name;
+			baseInfo.appendChild(baseTitle);
+
+			const baseMeta = document.createElement('div');
+			baseMeta.className = 'tgb-build-item-meta';
+
+			// Base Price
+			const basePriceVal = (summary.baseProduct && summary.baseProduct.price && typeof summary.baseProduct.price.unit_amount === 'number')
+				? summary.baseProduct.price.unit_amount
+				: (summary.baseGun.price && typeof summary.baseGun.price.unit_amount === 'number' ? summary.baseGun.price.unit_amount : null);
+
+			if (typeof basePriceVal === 'number') {
+				const priceSpan = document.createElement('span');
+				priceSpan.className = 'tgb-build-item-price';
+				priceSpan.textContent = this.formatPrice(basePriceVal);
+				baseMeta.appendChild(priceSpan);
+			}
+
+			// Base Weight
+			const baseGramsVal = (summary.baseProduct && summary.baseProduct.weight && typeof summary.baseProduct.weight.grams === 'number')
+				? summary.baseProduct.weight.grams
+				: (summary.baseGun.weight && typeof summary.baseGun.weight.grams === 'number' ? summary.baseGun.weight.grams : null);
+
+			if (typeof baseGramsVal === 'number') {
+				const weightSpan = document.createElement('span');
+				weightSpan.className = 'tgb-build-item-weight';
+				weightSpan.textContent = this.formatWeight(baseGramsVal);
+				baseMeta.appendChild(weightSpan);
+			}
+
+			baseInfo.appendChild(baseMeta);
+			baseRow.appendChild(baseInfo);
+			baseSection.appendChild(baseRow);
+			this.bodyEl.appendChild(baseSection);
+
+			// 4. Components Section
+			const compSection = document.createElement('div');
+			compSection.className = 'tgb-current-build-section tgb-current-build-section--components';
+
+			const compHeader = document.createElement('div');
+			compHeader.className = 'tgb-current-build-section-header';
+			const compTitle = document.createElement('h3');
+			compTitle.className = 'tgb-current-build-section-title';
+			compTitle.textContent = `Components (${summary.componentCount})`;
+			compHeader.appendChild(compTitle);
+			compSection.appendChild(compHeader);
+
+			if (summary.componentCount === 0) {
+				const emptyComp = document.createElement('div');
+				emptyComp.className = 'tgb-build-empty-components';
+				emptyComp.textContent = 'No components added yet. Choose parts from the catalog below.';
+				compSection.appendChild(emptyComp);
+			} else {
+				const compList = document.createElement('div');
+				compList.className = 'tgb-build-components-list';
+
+				summary.resolvedParts.forEach(item => {
+					const isOutOfStock = Boolean(item.product && item.product.stock && item.product.stock.in_stock === false);
+
+					const partRow = document.createElement('div');
+					partRow.className = 'tgb-build-item-row' + (isOutOfStock ? ' is-unavailable' : '');
+					partRow.setAttribute('data-instance-id', item.instance.instanceId);
+
+					// Thumbnail
+					const thumbWrap = document.createElement('div');
+					thumbWrap.className = 'tgb-build-item-thumb-wrap';
+					const thumb = document.createElement('img');
+					thumb.className = 'tgb-build-item-thumb';
+					const imgUrl = (item.instance.builder_image && item.instance.builder_image.url)
+						? item.instance.builder_image.url
+						: (item.product && item.product.builder_image ? item.product.builder_image.url : '');
+					thumb.src = imgUrl;
+					thumb.alt = item.instance.name || 'Component';
+					thumb.loading = 'lazy';
+					thumbWrap.appendChild(thumb);
+					partRow.appendChild(thumbWrap);
+
+					// Details
+					const info = document.createElement('div');
+					info.className = 'tgb-build-item-info';
+
+					// Header row with Type badge, Stock status, and Remove button
+					const headerRow = document.createElement('div');
+					headerRow.className = 'tgb-build-item-header';
+
+					const badgesWrap = document.createElement('div');
+					badgesWrap.className = 'tgb-build-item-badges';
+
+					if (item.instance.partTypeName) {
+						const typeBadge = document.createElement('span');
+						typeBadge.className = 'tgb-build-item-type';
+						typeBadge.textContent = item.instance.partTypeName;
+						badgesWrap.appendChild(typeBadge);
+					}
+
+					if (isOutOfStock) {
+						const stockBadge = document.createElement('span');
+						stockBadge.className = 'tgb-build-item-stock-badge tgb-build-item-stock-badge--unavailable';
+						stockBadge.textContent = 'Unavailable';
+						badgesWrap.appendChild(stockBadge);
+					}
+
+					headerRow.appendChild(badgesWrap);
+
+					// Remove button
+					const removeBtn = document.createElement('button');
+					removeBtn.type = 'button';
+					removeBtn.className = 'tgb-build-item-remove';
+					removeBtn.setAttribute('data-instance-id', item.instance.instanceId);
+					removeBtn.setAttribute('aria-label', `Remove ${item.instance.name} from build`);
+					removeBtn.title = 'Remove component';
+					removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+					headerRow.appendChild(removeBtn);
+
+					info.appendChild(headerRow);
+
+					// Part Name
+					const nameEl = document.createElement('h4');
+					nameEl.className = 'tgb-build-item-name';
+					nameEl.textContent = item.instance.name;
+					info.appendChild(nameEl);
+
+					// Price and Weight row
+					const metaRow = document.createElement('div');
+					metaRow.className = 'tgb-build-item-meta';
+
+					if (item.hasPrice) {
+						const priceSpan = document.createElement('span');
+						priceSpan.className = 'tgb-build-item-price';
+						priceSpan.textContent = this.formatPrice(item.unitPrice);
+						metaRow.appendChild(priceSpan);
+					} else {
+						const priceSpan = document.createElement('span');
+						priceSpan.className = 'tgb-build-item-price tgb-build-item-price--unavailable';
+						priceSpan.textContent = 'Price unavailable';
+						metaRow.appendChild(priceSpan);
+					}
+
+					if (item.hasWeight) {
+						const weightSpan = document.createElement('span');
+						weightSpan.className = 'tgb-build-item-weight';
+						weightSpan.textContent = this.formatWeight(item.grams);
+						metaRow.appendChild(weightSpan);
+					} else {
+						const weightSpan = document.createElement('span');
+						weightSpan.className = 'tgb-build-item-weight tgb-build-item-weight--unavailable';
+						weightSpan.textContent = 'Weight unavailable';
+						metaRow.appendChild(weightSpan);
+					}
+
+					info.appendChild(metaRow);
+					partRow.appendChild(info);
+					compList.appendChild(partRow);
+				});
+
+				compSection.appendChild(compList);
+			}
+
+			this.bodyEl.appendChild(compSection);
+
+			// 5. Build Summary Section (Subtotal and Total Weight)
+			const summarySection = document.createElement('div');
+			summarySection.className = 'tgb-build-summary';
+
+			// Summary Header
+			const sumHeader = document.createElement('div');
+			sumHeader.className = 'tgb-build-summary-header';
+			sumHeader.textContent = 'Build Summary';
+			summarySection.appendChild(sumHeader);
+
+			// Row: Total Weight
+			const weightRow = document.createElement('div');
+			weightRow.className = 'tgb-summary-row';
+
+			const weightLabel = document.createElement('span');
+			weightLabel.className = 'tgb-summary-label';
+			weightLabel.textContent = 'Total Weight';
+			weightRow.appendChild(weightLabel);
+
+			const weightValWrap = document.createElement('div');
+			weightValWrap.className = 'tgb-summary-val-wrap';
+
+			const weightVal = document.createElement('span');
+			weightVal.className = 'tgb-summary-value tgb-summary-value--weight';
+			if (summary.weight.knownGrams > 0) {
+				weightVal.textContent = this.formatWeight(summary.weight.knownGrams);
+			} else if (summary.weight.complete) {
+				weightVal.textContent = '0 g';
+			} else {
+				weightVal.textContent = 'Unavailable';
+			}
+			weightValWrap.appendChild(weightVal);
+
+			if (!summary.weight.complete) {
+				const weightNote = document.createElement('span');
+				weightNote.className = 'tgb-summary-note';
+				weightNote.textContent = `Weight unavailable for ${summary.weight.unknownCount} item${summary.weight.unknownCount > 1 ? 's' : ''}`;
+				weightValWrap.appendChild(weightNote);
+			}
+
+			weightRow.appendChild(weightValWrap);
+			summarySection.appendChild(weightRow);
+
+			// Divider before subtotal
+			const divider = document.createElement('hr');
+			divider.className = 'tgb-summary-divider';
+			summarySection.appendChild(divider);
+
+			// Row: Product Subtotal
+			const priceRow = document.createElement('div');
+			priceRow.className = 'tgb-summary-row tgb-summary-row--total';
+
+			const priceLabel = document.createElement('span');
+			priceLabel.className = 'tgb-summary-label tgb-summary-label--total';
+			priceLabel.textContent = 'Product Subtotal';
+			priceRow.appendChild(priceLabel);
+
+			const priceValWrap = document.createElement('div');
+			priceValWrap.className = 'tgb-summary-val-wrap';
+
+			const priceVal = document.createElement('span');
+			priceVal.className = 'tgb-summary-value tgb-summary-value--price';
+			priceVal.textContent = this.formatPrice(summary.price.knownSubtotal);
+			priceValWrap.appendChild(priceVal);
+
+			if (!summary.price.complete) {
+				const priceNote = document.createElement('span');
+				priceNote.className = 'tgb-summary-note';
+				priceNote.textContent = `Price unavailable for ${summary.price.unknownCount} item${summary.price.unknownCount > 1 ? 's' : ''}`;
+				priceValWrap.appendChild(priceNote);
+			}
+
+			priceRow.appendChild(priceValWrap);
+			summarySection.appendChild(priceRow);
+
+			// 6. Add Build to Cart Actions Container (Part 9, Requirements 29, 30, 32, 35)
+			const actionsWrap = document.createElement('div');
+			actionsWrap.className = 'tgb-current-build-actions';
+
+			const addBtn = document.createElement('button');
+			addBtn.type = 'button';
+			addBtn.id = 'tgb-add-to-cart-btn';
+			addBtn.className = 'tgb-btn tgb-btn--primary tgb-add-to-cart-btn';
+
+			if (!summary.hasBase) {
+				addBtn.disabled = true;
+				addBtn.textContent = 'Choose a base platform to start your build';
+				addBtn.classList.add('is-disabled');
+			} else if (this.cartClient && this.cartClient.isSubmitting) {
+				addBtn.disabled = true;
+				addBtn.classList.add('is-loading');
+				addBtn.textContent = 'Adding Build...';
+			} else {
+				addBtn.disabled = false;
+				addBtn.textContent = 'Add Build to Cart';
+			}
+			actionsWrap.appendChild(addBtn);
+
+			// Render feedback status (success or error)
+			if (this.cartFeedback) {
+				const fb = document.createElement('div');
+				fb.className = `tgb-cart-feedback tgb-cart-feedback--${this.cartFeedback.type}`;
+				fb.setAttribute('role', this.cartFeedback.type === 'error' ? 'alert' : 'status');
+
+				const msgWrap = document.createElement('div');
+				msgWrap.className = 'tgb-cart-feedback__message';
+
+				if (this.cartFeedback.type === 'success') {
+					msgWrap.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+				} else {
+					msgWrap.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+				}
+
+				const span = document.createElement('span');
+				span.textContent = this.cartFeedback.message;
+				msgWrap.appendChild(span);
+				fb.appendChild(msgWrap);
+
+				if (this.cartFeedback.type === 'success' && this.cartFeedback.url) {
+					const viewCartLink = document.createElement('a');
+					viewCartLink.href = this.cartFeedback.url;
+					viewCartLink.className = 'tgb-btn tgb-btn--secondary tgb-btn--view-cart';
+					viewCartLink.textContent = 'View Cart';
+					fb.appendChild(viewCartLink);
+				}
+
+				actionsWrap.appendChild(fb);
+			}
+
+			summarySection.appendChild(actionsWrap);
+
+			this.bodyEl.appendChild(summarySection);
+		}
+	}
+
+	// =========================================================================
+	// 7.5. LOCAL BROWSER BUILD PERSISTENCE (V1.1 Part 1)
+	// =========================================================================
+
+	/**
+	 * Service managing local browser persistence of the current working build.
+	 *
+	 * Persists ONLY minimal client-side identity: version, timestamp, baseProductId,
+	 * and parts [{ instanceId, productId, x, y, zIndex }].
+	 * Authoritative business data (pricing, weights, stock status, mount data, image URLs)
+	 * is NEVER stored and is re-resolved from the WooCommerce/catalog layer on restore.
+	 */
+	class TGB_Persistence {
+		constructor(storageKey = 'tgb_current_build_state') {
+			this.storageKey = storageKey;
+			this.version = 1;
+			this.saveDebounceTimer = null;
+			this.isRestoring = false;
+		}
+
+		/**
+		 * Checks if localStorage is available and writable.
+		 * Safely handles SecurityError, QuotaExceededError, or blocked storage.
+		 *
+		 * @return {boolean}
+		 */
+		isAvailable() {
+			try {
+				if (typeof window === 'undefined' || !('localStorage' in window) || window.localStorage === null) {
+					return false;
+				}
+				const testKey = '__tgb_test_storage__';
+				window.localStorage.setItem(testKey, testKey);
+				window.localStorage.getItem(testKey);
+				window.localStorage.removeItem(testKey);
+				return true;
+			} catch (e) {
+				return false;
+			}
+		}
+
+		/**
+		 * Loads and strictly validates persisted build state from localStorage.
+		 * Returns null if missing, unparseable, version mismatch, or fundamentally malformed.
+		 * Bounded to a maximum of 30 Part instances.
+		 *
+		 * @return {Object|null}
+		 */
+		load() {
+			if (!this.isAvailable()) {
+				return null;
+			}
+			try {
+				const raw = window.localStorage.getItem(this.storageKey);
+				if (!raw || typeof raw !== 'string') {
+					return null;
+				}
+				const data = JSON.parse(raw);
+				if (!data || typeof data !== 'object' || Array.isArray(data)) {
+					this.clear();
+					return null;
+				}
+
+				// Schema version: must be integer and exactly supported version
+				if (!Number.isInteger(data.version) || data.version !== this.version) {
+					this.clear();
+					return null;
+				}
+
+				// Base Product ID: must be positive integer
+				const baseProductId = Number(data.baseProductId);
+				if (!Number.isInteger(baseProductId) || baseProductId <= 0) {
+					this.clear();
+					return null;
+				}
+
+				// Parts array: must be an array, maximum 30 entries (Requirement 2 & 5-C)
+				if (!Array.isArray(data.parts)) {
+					this.clear();
+					return null;
+				}
+				if (data.parts.length > 30) {
+					console.warn('[TGB Persistence] Persisted parts exceed maximum limit (30); rejecting oversized payload.');
+					this.clear();
+					return null;
+				}
+
+				// Strictly validate each individual Part entry
+				const validatedParts = [];
+				for (const p of data.parts) {
+					if (!p || typeof p !== 'object' || Array.isArray(p)) continue;
+
+					// Product ID: positive integer
+					const productId = Number(p.productId);
+					if (!Number.isInteger(productId) || productId <= 0) continue;
+
+					// Instance ID: string, bounded length (1 to 64 chars)
+					if (typeof p.instanceId !== 'string') continue;
+					const instanceId = p.instanceId.trim();
+					if (instanceId.length === 0 || instanceId.length > 64) continue;
+
+					// Coordinates: finite numbers (reject NaN, Infinity, strings, null)
+					if (typeof p.x !== 'number' || !Number.isFinite(p.x)) continue;
+					if (typeof p.y !== 'number' || !Number.isFinite(p.y)) continue;
+
+					// zIndex: finite integer bounded between 1 and 1000
+					let zIndex = 20;
+					if (typeof p.zIndex === 'number' && Number.isInteger(p.zIndex) && p.zIndex >= 1 && p.zIndex <= 1000) {
+						zIndex = p.zIndex;
+					} else if (p.zIndex !== undefined && (typeof p.zIndex !== 'number' || !Number.isInteger(p.zIndex) || p.zIndex < 1 || p.zIndex > 1000)) {
+						continue; // skip malformed/absurd zIndex entry
+					}
+
+					validatedParts.push({
+						instanceId,
+						productId,
+						x: p.x,
+						y: p.y,
+						zIndex
+					});
+				}
+
+				return {
+					version: data.version,
+					timestamp: typeof data.timestamp === 'number' && Number.isFinite(data.timestamp) ? data.timestamp : Date.now(),
+					baseProductId,
+					parts: validatedParts
+				};
+			} catch (err) {
+				try {
+					this.clear();
+				} catch (e) {}
+				return null;
+			}
+		}
+
+		/**
+		 * Persists only the minimal data needed to reconstruct the build.
+		 *
+		 * Stores: version, timestamp, baseProductId, parts [{ instanceId, productId, x, y, zIndex }]
+		 * Does NOT store: prices, weights, stock, image URLs, mount interfaces, subtotal, total weight.
+		 * Maximum 30 parts persisted.
+		 *
+		 * @param {TGB_BuildState} buildState
+		 */
+		save(buildState) {
+			if (!this.isAvailable() || this.isRestoring) {
+				return;
+			}
+			if (!buildState) {
+				return;
+			}
+
+			const baseGun = buildState.getBaseGun();
+			if (!baseGun || !baseGun.productId) {
+				this.clear();
+				return;
+			}
+
+			const state = buildState.getState();
+			const payload = {
+				version: this.version,
+				timestamp: Date.now(),
+				baseProductId: Number(baseGun.productId),
+				parts: (state.parts || []).slice(0, 30).map(p => ({
+					instanceId: typeof p.instanceId === 'string' ? p.instanceId.trim().slice(0, 64) : '',
+					productId: Number(p.productId),
+					x: typeof p.x === 'number' && Number.isFinite(p.x) ? p.x : 0,
+					y: typeof p.y === 'number' && Number.isFinite(p.y) ? p.y : 0,
+					zIndex: typeof p.zIndex === 'number' && Number.isInteger(p.zIndex) ? Math.min(1000, Math.max(1, p.zIndex)) : 20
+				}))
+			};
+
+			try {
+				window.localStorage.setItem(this.storageKey, JSON.stringify(payload));
+			} catch (err) {
+				console.warn('[TGB Persistence] Storage write failed safely:', err);
+			}
+		}
+
+		/**
+		 * Debounces persistence write for high-frequency events (e.g. dragging).
+		 *
+		 * @param {TGB_BuildState} buildState
+		 * @param {number} [delay=250]
+		 */
+		saveDebounced(buildState, delay = 250) {
+			if (!this.isAvailable() || this.isRestoring) {
+				return;
+			}
+			if (this.saveDebounceTimer) {
+				clearTimeout(this.saveDebounceTimer);
+			}
+			this.saveDebounceTimer = setTimeout(() => {
+				this.save(buildState);
+				this.saveDebounceTimer = null;
+			}, delay);
+		}
+
+		/**
+		 * Explicitly stores a Base Gun with empty parts (e.g. for deep links).
+		 *
+		 * @param {number} baseProductId
+		 */
+		saveBaseOnly(baseProductId) {
+			if (!this.isAvailable() || !baseProductId) return;
+			const pId = Number(baseProductId);
+			if (!Number.isInteger(pId) || pId <= 0) return;
+			const payload = {
+				version: this.version,
+				timestamp: Date.now(),
+				baseProductId: pId,
+				parts: []
+			};
+			try {
+				window.localStorage.setItem(this.storageKey, JSON.stringify(payload));
+			} catch (err) {}
+		}
+
+		/**
+		 * Deletes the persisted build from localStorage safely.
+		 */
+		clear() {
+			if (!this.isAvailable()) return;
+			try {
+				window.localStorage.removeItem(this.storageKey);
+			} catch (err) {}
+		}
+
+		/**
+		 * Restores the build using current authoritative runtime WooCommerce data.
+		 *
+		 * @param {TGB_CatalogClient} catalogClient
+		 * @param {TGB_ProductSelection} productSelection
+		 * @param {TGB_BuildState} buildState
+		 * @param {TGB_Renderer} renderer
+		 * @param {Map} productRegistry
+		 * @return {Promise<{restored: boolean, partial?: boolean, message?: string}>}
+		 */
+		async restoreBuild(catalogClient, productSelection, buildState, renderer, productRegistry) {
+			const persisted = this.load();
+			if (!persisted) {
+				return { restored: false, reason: 'none' };
+			}
+
+			this.isRestoring = true;
+
+			try {
+				// 1. Resolve and validate Base Gun from authoritative catalog
+				let baseProduct = productRegistry.get(persisted.baseProductId);
+				if (!baseProduct || baseProduct.role !== 'base_gun' || !baseProduct.builder_image) {
+					try {
+						const baseGunsRes = await catalogClient.getBaseGuns(100);
+						const found = (baseGunsRes.items || []).find(b => b.id === persisted.baseProductId);
+						if (found && found.role === 'base_gun' && found.builder_image && found.builder_image.url) {
+							baseProduct = found;
+							productRegistry.set(baseProduct.id, baseProduct);
+						}
+					} catch (e) {
+						baseProduct = null;
+					}
+				}
+
+				if (!baseProduct || baseProduct.role !== 'base_gun' || !baseProduct.builder_image || !baseProduct.builder_image.url) {
+					// Base Gun is invalid / no longer available: clear persistence and abort restore
+					this.clear();
+					renderer.showEmptyState();
+					return {
+						restored: false,
+						reason: 'base_unavailable',
+						message: 'Your previous build could not be restored because the base platform is no longer available.'
+					};
+				}
+
+				// Preload image and mount Base Gun
+				await renderer.loadAndRenderBaseGun(baseProduct);
+
+				// 2. Resolve and validate Parts
+				const persistedParts = Array.isArray(persisted.parts) ? persisted.parts : [];
+				if (persistedParts.length === 0) {
+					productSelection.syncAllCardButtons();
+					productSelection.syncSidebar();
+					return { restored: true, partial: false, baseGun: baseProduct, restoredPartsCount: 0, removedPartsCount: 0 };
+				}
+
+				// Ensure all Part Types and Parts are loaded into registry
+				const neededProductIds = [...new Set(persistedParts.map(p => p.productId))];
+				const missingFromRegistry = neededProductIds.some(id => !productRegistry.has(id));
+
+				if (missingFromRegistry) {
+					try {
+						const partTypes = await catalogClient.getPartTypes();
+						if (Array.isArray(partTypes)) {
+							await Promise.all(
+								partTypes.map(async (t) => {
+									try {
+										const res = await catalogClient.getPartsByType(t.id, 100);
+										if (res && Array.isArray(res.items)) {
+											res.items.forEach(item => {
+												productRegistry.set(item.id, item);
+											});
+											productSelection.categoryCache.set(String(t.id), {
+												items: res.items,
+												has_more: Boolean(res.has_more),
+												next_cursor: res.next_cursor || null,
+												loaded: true
+											});
+										}
+									} catch (err) {}
+								})
+							);
+						}
+					} catch (err) {}
+				}
+				let restoredCount = 0;
+				let removedCount = 0;
+
+				for (const partEntry of persistedParts) {
+					const product = productRegistry.get(partEntry.productId);
+
+					// Validate Part existence, role, builder image, and compatibility
+					const isValidPart = product &&
+						product.role === 'part' &&
+						product.builder_image &&
+						product.builder_image.url &&
+						TGB_Mounting.getCompatibility(baseProduct, product) === 'compatible';
+
+					if (isValidPart) {
+						// Coordinate Clamping (Requirement 3):
+						// Clamp coordinates to stage boundaries: 0 <= x <= stageWidth - partWidth, 0 <= y <= stageHeight - partHeight
+						const partGeom = calculateProductGeometry(product);
+						const partWidth = partGeom.logicalWidth;
+						const partHeight = partGeom.logicalHeight;
+						const stageW = (renderer.currentStageGeometry && renderer.currentStageGeometry.stageWidth) || 1000;
+						const stageH = (renderer.currentStageGeometry && renderer.currentStageGeometry.stageHeight) || 600;
+
+						const maxX = Math.max(0, stageW - partWidth);
+						const maxY = Math.max(0, stageH - partHeight);
+
+						const clampedX = Math.max(0, Math.min(partEntry.x, maxX));
+						const clampedY = Math.max(0, Math.min(partEntry.y, maxY));
+
+						buildState.addPart(
+							product,
+							clampedX,
+							clampedY,
+							partEntry.zIndex,
+							partEntry.instanceId
+						);
+						restoredCount++;
+					} else {
+						removedCount++;
+					}
+				}
+
+				productSelection.syncAllCardButtons();
+				productSelection.syncSidebar();
+
+				// Save clean normalized final state at end of successful restore (Section 4)
+				this.isRestoring = false;
+				this.save(buildState);
+
+				if (removedCount > 0) {
+					return {
+						restored: true,
+						partial: true,
+						baseGun: baseProduct,
+						restoredPartsCount: restoredCount,
+						removedPartsCount: removedCount,
+						message: 'Some previously selected components are no longer available and were removed from your restored build.'
+					};
+				}
+
+				return {
+					restored: true,
+					partial: false,
+					baseGun: baseProduct,
+					restoredPartsCount: restoredCount,
+					removedPartsCount: 0
+				};
+
+			} finally {
+				this.isRestoring = false;
+			}
+		}
+	}
+
+	// =========================================================================
+	// 8. API EXPORTS & NAMESPACE (Section 41 & Part 6)
 	// =========================================================================
 
 	const productRegistry = new Map();
@@ -2293,6 +3671,21 @@
 
 	window.TGB_Mounting = TGB_Mounting;
 
+	window.TGB_CurrentBuild = {
+		Class: TGB_CurrentBuild,
+		instance: null,
+	};
+
+	window.TGB_Cart = {
+		Client: TGB_CartClient,
+		instance: null,
+	};
+
+	window.TGB_Persistence = {
+		Class: TGB_Persistence,
+		instance: null,
+	};
+
 	// Unified TGB namespace for all builder subsystems
 	window.TGB = {
 		BuildState: TGB_BuildState,
@@ -2300,11 +3693,17 @@
 		Interactions: TGB_Interactions,
 		Catalog: window.TGB_Catalog,
 		Mounting: TGB_Mounting,
+		CurrentBuild: TGB_CurrentBuild,
+		Cart: window.TGB_Cart,
+		Persistence: TGB_Persistence,
 		state: null,
 		renderer: null,
 		interactions: null,
 		catalog: null,
 		selection: null,
+		currentBuild: null,
+		cart: null,
+		persistence: null,
 		registry: productRegistry,
 		addPart: function(product, x, y, zIndex) {
 			if (window.TGB.selection && (!x && !y)) {
@@ -2327,6 +3726,12 @@
 			}
 			return false;
 		},
+		addBuildToCart: function() {
+			if (window.TGB.currentBuild) {
+				return window.TGB.currentBuild.handleAddBuildToCart();
+			}
+			return null;
+		},
 		getState: function() {
 			if (window.TGB.state) {
 				return window.TGB.state.getState();
@@ -2334,8 +3739,14 @@
 			return null;
 		},
 		reset: function() {
-			if (window.TGB.state) {
+			if (window.TGB.currentBuild) {
+				window.TGB.currentBuild.handleResetBuild();
+			} else if (window.TGB.state) {
 				window.TGB.state.reset();
+				window.TGB.state.setBaseGun(null);
+				if (window.TGB.persistence) {
+					window.TGB.persistence.clear();
+				}
 			}
 		},
 	};
@@ -2343,7 +3754,7 @@
 	/**
 	 * Bootstraps the Gun Builder frontend shell, Build State, Renderer, Interactions, and Catalog.
 	 */
-	function initGunBuilder() {
+	async function initGunBuilder() {
 		const root = document.getElementById('taktik-gun-builder');
 		if (!root) {
 			return;
@@ -2355,6 +3766,28 @@
 
 		root.classList.add('tgb-ready');
 
+		// Pre-seed registry from initial render Base Gun if present (Requirement 6)
+		const initialScript = root.querySelector('.tgb-initial-render-data');
+		let initialPayload = null;
+		if (initialScript && initialScript.textContent) {
+			try {
+				initialPayload = JSON.parse(initialScript.textContent);
+			} catch (e) {
+				initialPayload = null;
+			}
+		}
+
+		if (initialPayload && initialPayload.product && initialPayload.product.id) {
+			productRegistry.set(initialPayload.product.id, initialPayload.product);
+		}
+
+		const currencyConfig = (initialPayload && initialPayload.currency)
+			|| (window.taktikGunBuilder && window.taktikGunBuilder.currency)
+			|| {};
+		const weightConfig = (initialPayload && initialPayload.weight_unit)
+			? { unit: initialPayload.weight_unit }
+			: ((window.taktikGunBuilder && window.taktikGunBuilder.weight) || {});
+
 		const buildState = new TGB_BuildState();
 		const renderer = new TGB_Renderer(root, buildState);
 		renderer.init();
@@ -2365,7 +3798,12 @@
 
 		const catalogClient = new TGB_CatalogClient();
 		const productSelection = new TGB_ProductSelection(root, catalogClient, buildState, renderer, productRegistry);
-		productSelection.init();
+		await productSelection.init();
+
+		const currentBuild = new TGB_CurrentBuild(root, buildState, productRegistry, currencyConfig, weightConfig);
+		currentBuild.init();
+
+		const persistence = new TGB_Persistence('tgb_current_build_state');
 
 		// Wire up global references
 		window.TGB_BuildState.instance = buildState;
@@ -2373,12 +3811,79 @@
 		window.TGB_Interactions.instance = interactions;
 		window.TGB_Catalog.client = catalogClient;
 		window.TGB_Catalog.selection = productSelection;
+		window.TGB_CurrentBuild.instance = currentBuild;
+		window.TGB_Cart.instance = currentBuild.cartClient;
+		window.TGB_Persistence.instance = persistence;
 
 		window.TGB.state = buildState;
 		window.TGB.renderer = renderer;
 		window.TGB.interactions = interactions;
 		window.TGB.catalog = catalogClient;
 		window.TGB.selection = productSelection;
+		window.TGB.currentBuild = currentBuild;
+		window.TGB.cart = currentBuild.cartClient;
+		window.TGB.persistence = persistence;
+
+		// 1. Deep Link vs Persistence Restoration Precedence (Section 14 & Test I)
+		const urlParams = new URLSearchParams(window.location.search);
+		const hasDeepLink = urlParams.has('product_id') && urlParams.get('product_id').trim() !== '';
+		const deepLinkId = hasDeepLink ? parseInt(urlParams.get('product_id'), 10) : 0;
+
+		if (hasDeepLink && deepLinkId > 0) {
+			// Explicit deep link takes precedence over stored local persistence (Rule B & Test I)
+			if (initialPayload && initialPayload.status === 'ready' && initialPayload.product) {
+				persistence.saveBaseOnly(deepLinkId);
+				try {
+					window.history.replaceState({}, document.title, window.location.pathname);
+				} catch (e) {}
+			}
+		} else if (!hasDeepLink) {
+			// Normal builder page load: restore persisted build if present (Rule A & Test A)
+			try {
+				const persisted = persistence.load();
+				if (persisted) {
+					const restoreRes = await persistence.restoreBuild(catalogClient, productSelection, buildState, renderer, productRegistry);
+					if (restoreRes && restoreRes.restored) {
+						if (restoreRes.partial && restoreRes.message) {
+							productSelection.showNotice(restoreRes.message, 'warning');
+							currentBuild.announce(restoreRes.message);
+						} else {
+							currentBuild.announce('Your previous build was restored.');
+						}
+					} else if (restoreRes && restoreRes.message) {
+						productSelection.showNotice(restoreRes.message, 'error');
+						currentBuild.announce(restoreRes.message);
+					}
+				}
+			} catch (err) {
+				console.warn('[TGB Persistence] Restore failed safely:', err);
+			}
+		}
+
+		// 2. Wire Auto-Persistence Subscription (Section 12)
+		buildState.subscribe((event) => {
+			if (!event || persistence.isRestoring) return;
+			try {
+				switch (event.type) {
+					case 'base_gun_set':
+					case 'part_added':
+					case 'part_removed':
+					case 'drag_ended':
+						persistence.save(buildState);
+						try {
+							if (window.location.search.includes('product_id')) {
+								window.history.replaceState({}, document.title, window.location.pathname);
+							}
+						} catch (e) {}
+						break;
+					case 'part_moved':
+						persistence.saveDebounced(buildState, 250);
+						break;
+				}
+			} catch (err) {
+				console.warn('[TGB Persistence] Auto-persist error suppressed:', err);
+			}
+		});
 	}
 
 	if (document.readyState === 'loading') {
@@ -2388,3 +3893,26 @@
 	}
 
 })(window, document);
+
+
+document.querySelectorAll('.tgb-toggle').forEach((btn) => {
+	btn.addEventListener('click', () => {
+		const on = btn.getAttribute('aria-checked') !== 'true';
+		btn.setAttribute('aria-checked', String(on));
+		btn.querySelector('.tgb-toggle__state').textContent = on ? 'ON' : 'OFF';
+		btn.dispatchEvent(new CustomEvent('tgb:toggle', { bubbles: true, detail: { checked: on } }));
+
+		if(on){
+			let incompatibleCards = document.querySelectorAll('.tgb-card-compat-badge--incompatible');
+			incompatibleCards.forEach(card => {
+				console.log(card.closest('.tgb-product-card'));
+				card.closest('.tgb-product-card').style.display = 'none';
+			});
+		}else{
+			let incompatibleCards = document.querySelectorAll('.tgb-card-compat-badge--incompatible');
+			incompatibleCards.forEach(card => {
+				card.closest('.tgb-product-card').style.display = 'flex';
+			});
+		}
+	});
+});

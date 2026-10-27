@@ -70,11 +70,24 @@ class TGB_Shortcode {
 	public static function resolve_initial_render_data( $product_id ) {
 		$product_id = absint( $product_id );
 
+		$currency_settings = array(
+			'code'               => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'CAD',
+			'symbol'             => function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : '$',
+			'decimals'           => function_exists( 'wc_get_price_decimals' ) ? wc_get_price_decimals() : 2,
+			'decimal_separator'  => function_exists( 'wc_get_price_decimal_separator' ) ? wc_get_price_decimal_separator() : '.',
+			'thousand_separator' => function_exists( 'wc_get_price_thousand_separator' ) ? wc_get_price_thousand_separator() : ',',
+			'price_format'       => function_exists( 'get_woocommerce_price_format' ) ? get_woocommerce_price_format() : '%1$s%2$s',
+		);
+
+		$store_weight_unit = (string) get_option( 'woocommerce_weight_unit', 'kg' );
+
 		if ( $product_id <= 0 ) {
 			return array(
-				'status'  => 'empty',
-				'message' => __( 'Select a base gun to start your build.', 'part-selector' ),
-				'product' => null,
+				'status'      => 'empty',
+				'message'     => __( 'Select a base gun to start your build.', 'part-selector' ),
+				'product'     => null,
+				'currency'    => $currency_settings,
+				'weight_unit' => $store_weight_unit,
 			);
 		}
 
@@ -88,9 +101,11 @@ class TGB_Shortcode {
 			empty( $product_data['builder_image'] )
 		) {
 			return array(
-				'status'  => 'invalid',
-				'message' => __( 'This product is not currently available in the Gun Builder.', 'part-selector' ),
-				'product' => null,
+				'status'      => 'invalid',
+				'message'     => __( 'This product is not currently available in the Gun Builder.', 'part-selector' ),
+				'product'     => null,
+				'currency'    => $currency_settings,
+				'weight_unit' => $store_weight_unit,
 			);
 		}
 
@@ -108,13 +123,17 @@ class TGB_Shortcode {
 				'aspect_ratio' => (float) $product_data['builder_image']['aspect_ratio'],
 				'alt'          => (string) $product_data['builder_image']['alt'],
 			),
+			'price'         => $serialized_data['price'] ?? null,
+			'weight'        => $serialized_data['weight'] ?? null,
 			'mounting'      => $serialized_data['mounting'] ?? null,
 		);
 
 		return array(
-			'status'  => 'ready',
-			'message' => '',
-			'product' => $render_product,
+			'status'      => 'ready',
+			'message'     => '',
+			'product'     => $render_product,
+			'currency'    => $currency_settings,
+			'weight_unit' => $store_weight_unit,
 		);
 	}
 }

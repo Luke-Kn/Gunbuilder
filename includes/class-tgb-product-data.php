@@ -215,17 +215,19 @@ class TGB_Product_Data {
 		$builder_image = self::get_builder_image_data( $wc_product );
 
 		// Pricing data via public WooCommerce APIs.
-		$display_price = (float) wc_get_price_to_display( $wc_product );
-		$regular_price = (float) ( '' !== $wc_product->get_regular_price()
-			? wc_get_price_to_display( $wc_product, array( 'price' => $wc_product->get_regular_price() ) )
-			: $display_price );
+		$has_price     = ( '' !== $wc_product->get_price() );
+		$display_price = $has_price ? (float) wc_get_price_to_display( $wc_product ) : null;
+		$regular_price = ( $has_price && '' !== $wc_product->get_regular_price() )
+			? (float) wc_get_price_to_display( $wc_product, array( 'price' => $wc_product->get_regular_price() ) )
+			: $display_price;
 
 		$price_data = array(
-			'raw'     => $display_price,
-			'display' => wc_price( $display_price ),
-			'html'    => (string) $wc_product->get_price_html(),
-			'on_sale' => (bool) $wc_product->is_on_sale(),
-			'regular' => $regular_price,
+			'raw'         => null !== $display_price ? $display_price : 0.0,
+			'unit_amount' => $display_price,
+			'display'     => null !== $display_price ? wc_price( $display_price ) : '',
+			'html'        => (string) $wc_product->get_price_html(),
+			'on_sale'     => (bool) $wc_product->is_on_sale(),
+			'regular'     => $regular_price,
 		);
 
 		// Stock data.
@@ -401,6 +403,65 @@ class TGB_Product_Data {
 		return self::query_catalog_products( $base_query_args, $normalized_args );
 	}
 
+	public static function search_parts( $query = '', $term_id = 0, array $args = array() ) {
+	$query           = trim( sanitize_text_field( (string) $query ) );
+	$term_id         = absint( $term_id );
+	$normalized_args = self::normalize_query_args( $args );
+
+	// If a type was requested, it must exist in the part type taxonomy.
+	if ( $term_id > 0 && ! term_exists( $term_id, TGB_Part_Types::TAXONOMY ) ) {
+		return array(
+			'items'       => array(),
+			'limit'       => $normalized_args['limit'],
+			'has_more'    => false,
+			'next_cursor' => null,
+		);
+	}
+
+	$base_query_args = array(
+		's'           => $query,
+		'post_type'   => 'product',
+		'post_status' => 'publish',
+		'meta_query'  => array(
+			array(
+				'key'   => TGB_Product_Config::META_ROLE,
+				'value' => TGB_Product_Config::ROLE_PART,
+			),
+			array(
+				'key'   => TGB_Product_Config::META_ENABLED,
+				'value' => 'yes',
+			),
+			array(
+				'key'   => TGB_Product_Config::META_READY,
+				'value' => 'yes',
+			),
+			array(
+				'key'     => '_product_image_gallery',
+				'value'   => '',
+				'compare' => '!=',
+			),
+		),
+	);
+
+	// Optional keyword filter.
+	if ( '' !== $query ) {
+		$base_query_args['s'] = $query;
+	}
+
+	// Optional part type filter.
+	if ( $term_id > 0 ) {
+		$base_query_args['tax_query'] = array(
+			array(
+				'taxonomy' => TGB_Part_Types::TAXONOMY,
+				'field'    => 'term_id',
+				'terms'    => $term_id,
+			),
+		);
+	}
+
+	return self::query_catalog_products( $base_query_args, $normalized_args );
+}
+
 	// =========================================================================
 	// 5. Internal Helper Utilities
 	// =========================================================================
@@ -412,13 +473,13 @@ class TGB_Product_Data {
 	 * @return WC_Product|null WC_Product on success, or null on failure.
 	 */
 	private static function resolve_wc_product( $product ) {
-		if ( $product instanceof WC_Product ) {
+		if ( class_exists( 'WC_Product' ) && $product instanceof WC_Product ) {
 			return $product;
 		}
 
-		if ( is_numeric( $product ) && absint( $product ) > 0 ) {
+		if ( function_exists( 'wc_get_product' ) && is_numeric( $product ) && absint( $product ) > 0 ) {
 			$resolved = wc_get_product( absint( $product ) );
-			return ( $resolved instanceof WC_Product ) ? $resolved : null;
+			return ( class_exists( 'WC_Product' ) && $resolved instanceof WC_Product ) ? $resolved : null;
 		}
 
 		return null;
@@ -518,81 +579,97 @@ class TGB_Product_Data {
 	 * @return array Response matching pagination contract { items, limit, has_more, next_cursor }.
 	 */
 	private static function query_catalog_products( array $base_query_args, array $normalized_args ) {
-		$limit        = $normalized_args['limit'];
-		$start_offset = self::decode_cursor( $normalized_args['cursor'] );
+	$limit        = $normalized_args['limit'];
+	$start_offset = self::decode_cursor( $normalized_args['cursor'] );
 
-		$items       = array();
-		$has_more    = false;
-		$next_cursor = null;
+	$items       = array();
+	$has_more    = false;
+	$next_cursor = null;
 
-		$candidate_offset = $start_offset;
+	$candidate_offset = $start_offset;
 
-		// Bounded database batch size: at least 20, at most 100 candidate IDs per query.
-		$batch_size = ( isset( $normalized_args['_batch_size'] ) && $normalized_args['_batch_size'] > 0 )
-			? absint( $normalized_args['_batch_size'] )
-			: max( 20, min( 100, $limit * 2 ) );
+	// Bounded database batch size: at least 20, at most 100 candidate IDs per query.
+	$batch_size = ( isset( $normalized_args['_batch_size'] ) && $normalized_args['_batch_size'] > 0 )
+		? absint( $normalized_args['_batch_size'] )
+		: max( 20, min( 100, $limit * 2 ) );
 
-		while ( true ) {
-			$query_args = array_merge(
-				$base_query_args,
-				array(
-					'posts_per_page' => $batch_size,
-					'offset'         => $candidate_offset,
-					'fields'         => 'ids',
-					'no_found_rows'  => true,
-					'orderby'        => $normalized_args['orderby'],
-					'order'          => $normalized_args['order'],
-				)
-			);
+	// Search mode: rank by relevance. Otherwise use the requested ordering.
+	// Either way, add ID as a tiebreaker so offset pagination stays stable.
+	$is_search = ! empty( $base_query_args['s'] );
 
-			$candidate_query = new WP_Query( $query_args );
+	if ( $is_search ) {
+		$orderby = array(
+			'relevance' => 'DESC',
+			'ID'        => 'DESC',
+		);
+	} else {
+		$order   = ( isset( $normalized_args['order'] ) && 'ASC' === strtoupper( $normalized_args['order'] ) ) ? 'ASC' : 'DESC';
+		$orderby = array(
+			$normalized_args['orderby'] => $order,
+			'ID'                        => $order,
+		);
+	}
 
-			if ( ! ( $candidate_query instanceof WP_Query ) || empty( $candidate_query->posts ) || ! is_array( $candidate_query->posts ) ) {
-				// No more candidates in database; candidate stream genuinely exhausted.
-				break;
+	while ( true ) {
+		$query_args = array_merge(
+			$base_query_args,
+			array(
+				'posts_per_page' => $batch_size,
+				'offset'         => $candidate_offset,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				'orderby'        => $orderby,
+			)
+		);
+
+		$candidate_query = new WP_Query( $query_args );
+
+		if ( ! ( $candidate_query instanceof WP_Query ) || empty( $candidate_query->posts ) || ! is_array( $candidate_query->posts ) ) {
+			// No more candidates in database; candidate stream genuinely exhausted.
+			break;
+		}
+
+		$batch_candidate_ids = $candidate_query->posts;
+
+		foreach ( $batch_candidate_ids as $candidate_id ) {
+			$current_scan_offset = $candidate_offset;
+			$candidate_offset++;
+
+			$product = wc_get_product( $candidate_id );
+			if ( ! $product ) {
+				continue;
 			}
 
-			$batch_candidate_ids = $candidate_query->posts;
-
-			foreach ( $batch_candidate_ids as $candidate_id ) {
-				$current_scan_offset = $candidate_offset;
-				$candidate_offset++;
-
-				$product = wc_get_product( $candidate_id );
-				if ( ! $product ) {
-					continue;
-				}
-
-				if ( ! self::is_catalog_eligible( $product ) ) {
-					continue;
-				}
-
-				if ( count( $items ) < $limit ) {
-					$product_data = self::get_product_data( $product );
-					if ( $product_data ) {
-						$items[] = $product_data;
-					}
-				} else {
-					// We already collected $limit items and just found 1 additional eligible product.
-					// This product begins the next continuation result set.
-					$has_more    = true;
-					$next_cursor = self::encode_cursor( $current_scan_offset );
-					break 2;
-				}
+			if ( ! self::is_catalog_eligible( $product ) ) {
+				continue;
 			}
 
-			// If fewer candidates were returned than requested in this batch,
-			// the database candidate stream is genuinely exhausted.
-			if ( count( $batch_candidate_ids ) < $batch_size ) {
-				break;
+			if ( count( $items ) < $limit ) {
+				$product_data = self::get_product_data( $product );
+				if ( $product_data ) {
+					$items[] = $product_data;
+				}
+			} else {
+				// We already collected $limit items and just found 1 additional eligible product.
+				// This product begins the next continuation result set.
+				$has_more    = true;
+				$next_cursor = self::encode_cursor( $current_scan_offset );
+				break 2;
 			}
 		}
 
-		return array(
-			'items'       => array_values( $items ),
-			'limit'       => $limit,
-			'has_more'    => $has_more,
-			'next_cursor' => $next_cursor,
-		);
+		// If fewer candidates were returned than requested in this batch,
+		// the database candidate stream is genuinely exhausted.
+		if ( count( $batch_candidate_ids ) < $batch_size ) {
+			break;
+		}
 	}
+
+	return array(
+		'items'       => array_values( $items ),
+		'limit'       => $limit,
+		'has_more'    => $has_more,
+		'next_cursor' => $next_cursor,
+	);
+}
 }

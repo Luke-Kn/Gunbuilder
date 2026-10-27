@@ -110,6 +110,49 @@ class TGB_Catalog_API {
 				),
 			)
 		);
+
+
+		// 4. GET /wp-json/tgb/v1/parts/search
+		register_rest_route(	
+			self::NAMESPACE,
+			'/parts/search',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'search_parts' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'q'       => array(
+						'description'       => __( 'Search query string.', 'part-selector' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				'type_id' => array(
+						'description'       => __( 'Dynamic Part Type taxonomy term ID.', 'part-selector' ),
+						'type'              => 'integer',
+						'required'          => true,
+						'sanitize_callback' => 'absint',
+						'validate_callback' => array( __CLASS__, 'validate_type_id' ),
+					),
+					'limit'   => array(
+						'description'       => __( 'Maximum number of items to return.', 'part-selector' ),
+						'type'              => 'integer',
+						'default'           => 20,
+						'minimum'           => 1,
+						'maximum'           => 100,
+						'sanitize_callback' => 'absint',
+						'validate_callback' => array( __CLASS__, 'validate_limit' ),
+					),
+					'cursor'  => array(
+						'description'       => __( 'Continuation cursor for pagination.', 'part-selector' ),
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => array( __CLASS__, 'validate_cursor' ),
+					),
+				),
+			)
+		);
 	}
 
 	// =========================================================================
@@ -125,7 +168,15 @@ class TGB_Catalog_API {
 	 * @return bool|WP_Error
 	 */
 	public static function validate_limit( $param, $request, $key ) {
-		$val = absint( $param );
+		if ( ! is_numeric( $param ) ) {
+			return new WP_Error(
+				'tgb_invalid_limit',
+				__( 'Limit must be an integer between 1 and 100.', 'part-selector' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$val = (int) $param;
 		if ( $val < 1 || $val > 100 ) {
 			return new WP_Error(
 				'tgb_invalid_limit',
@@ -302,7 +353,7 @@ class TGB_Catalog_API {
 		$type_id = absint( $request->get_param( 'type_id' ) );
 		$limit   = $request->get_param( 'limit' ) ? absint( $request->get_param( 'limit' ) ) : 20;
 		$cursor  = $request->get_param( 'cursor' ) ? sanitize_text_field( $request->get_param( 'cursor' ) ) : null;
-
+		
 		$query_args = array(
 			'limit'  => $limit,
 			'cursor' => $cursor,
@@ -327,6 +378,36 @@ class TGB_Catalog_API {
 		);
 	}
 
+
+public static function search_parts( $request ) {
+	$query   = $request->get_param( 'q' ) ? sanitize_text_field( $request->get_param( 'q' ) ) : '';
+	$type_id = absint( $request->get_param( 'type_id' ) );
+	$limit   = $request->get_param( 'limit' ) ? absint( $request->get_param( 'limit' ) ) : 20;
+	$cursor  = $request->get_param( 'cursor' ) ? sanitize_text_field( $request->get_param( 'cursor' ) ) : null;
+
+	$query_args = array(
+		'limit'  => $limit,
+		'cursor' => $cursor,
+	);
+
+	$result = TGB_Product_Data::search_parts( $query, $type_id, $query_args );
+
+	$serialized_items = array();
+	if ( ! empty( $result['items'] ) && is_array( $result['items'] ) ) {
+		foreach ( $result['items'] as $item ) {
+			$serialized_items[] = self::serialize_product( $item );
+		}
+	}
+
+	return rest_ensure_response(
+		array(
+			'items'       => $serialized_items,
+			'limit'       => (int) $result['limit'],
+			'has_more'    => (bool) $result['has_more'],
+			'next_cursor' => $result['next_cursor'],
+		)
+	);
+}
 	// =========================================================================
 	// Public Product Serialization (Section 8)
 	// =========================================================================
@@ -362,9 +443,15 @@ class TGB_Catalog_API {
 				'alt'           => (string) ( $product['builder_image']['alt'] ?? '' ),
 			) : null,
 			'price'        => ! empty( $product['price'] ) ? array(
-				'raw'     => (float) ( $product['price']['raw'] ?? 0.0 ),
-				'display' => (string) wp_strip_all_tags( html_entity_decode( (string) ( $product['price']['display'] ?? '' ), ENT_QUOTES, 'UTF-8' ) ),
-				'on_sale' => (bool) ( $product['price']['on_sale'] ?? false ),
+				'raw'         => (float) ( $product['price']['raw'] ?? 0.0 ),
+				'unit_amount' => isset( $product['price']['unit_amount'] ) && null !== $product['price']['unit_amount']
+					? (float) $product['price']['unit_amount']
+					: null,
+				'display'     => (string) wp_strip_all_tags( html_entity_decode( (string) ( $product['price']['display'] ?? '' ), ENT_QUOTES, 'UTF-8' ) ),
+				'on_sale'     => (bool) ( $product['price']['on_sale'] ?? false ),
+				'regular'     => isset( $product['price']['regular'] ) && null !== $product['price']['regular']
+					? (float) $product['price']['regular']
+					: null,
 			) : null,
 			'stock'        => ! empty( $product['stock'] ) ? array(
 				'status'     => (string) ( $product['stock']['status'] ?? 'outofstock' ),

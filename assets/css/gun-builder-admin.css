@@ -44,3 +44,35 @@
 	background: #b32d2e;
 	color: #fff;
 }
+
+/* Part Accepted Mount Interfaces Checkbox Group */
+#tgb_gun_builder_data .tgb-interfaces-checkbox-group {
+	display: flex !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	gap: 10px 18px !important;
+	max-width: 650px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+#tgb_gun_builder_data .tgb-interfaces-checkbox-group label {
+	float: none !important;
+	width: auto !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 6px !important;
+	font-weight: normal !important;
+	line-height: 1.4 !important;
+	cursor: pointer !important;
+	white-space: nowrap !important;
+}
+
+#tgb_gun_builder_data .tgb-interfaces-checkbox-group label input[type="checkbox"] {
+	margin: 0 !important;
+	float: none !important;
+	position: static !important;
+	vertical-align: middle !important;
+}

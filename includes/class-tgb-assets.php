@@ -58,10 +58,23 @@ class TGB_Assets {
 			'tgb-gun-builder-js',
 			'taktikGunBuilder',
 			array(
-				'version' => TGB_VERSION,
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'restUrl' => esc_url_raw( rest_url( 'tgb/v1/' ) ),
-				'siteUrl' => home_url(),
+				'version'  => TGB_VERSION,
+				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+				'restUrl'  => esc_url_raw( rest_url( 'tgb/v1/' ) ),
+				'siteUrl'   => home_url(),
+				'cartUrl'   => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/cart/' ),
+				'cartNonce' => wp_create_nonce( TGB_Cart::NONCE_ACTION ),
+				'currency' => array(
+					'code'               => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'CAD',
+					'symbol'             => function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : '$',
+					'decimals'           => function_exists( 'wc_get_price_decimals' ) ? wc_get_price_decimals() : 2,
+					'decimal_separator'  => function_exists( 'wc_get_price_decimal_separator' ) ? wc_get_price_decimal_separator() : '.',
+					'thousand_separator' => function_exists( 'wc_get_price_thousand_separator' ) ? wc_get_price_thousand_separator() : ',',
+					'price_format'       => function_exists( 'get_woocommerce_price_format' ) ? get_woocommerce_price_format() : '%1$s%2$s',
+				),
+				'weight'   => array(
+					'unit' => (string) get_option( 'woocommerce_weight_unit', 'kg' ),
+				),
 			)
 		);
 	}

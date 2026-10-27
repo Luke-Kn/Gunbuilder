@@ -6,37 +6,49 @@
 
 #taktik-gun-builder {
 	/* Design Tokens */
-	--tgb-bg-canvas: #0b0d13;
-	--tgb-bg-surface: #121620;
-	--tgb-bg-surface-elevated: #1a202d;
-	--tgb-bg-stage: #0d1017;
-	--tgb-border: #22293b;
-	--tgb-border-subtle: #191f2d;
-	--tgb-border-focus: #3b4662;
+	--tgb-bg-canvas: #0a0d14;
+	--tgb-bg-surface: #111622;
+	--tgb-bg-surface-elevated: #171f2e;
+	--tgb-bg-stage: #07090e;
+	--tgb-border: #222b3d;
+	--tgb-border-subtle: #171e2c;
+	--tgb-border-focus: #3a4866;
 
-	--tgb-text-main: #f0f3f8;
-	--tgb-text-muted: #8d98ab;
-	--tgb-text-dim: #545e72;
+	--tgb-text-main: #f0f4fa;
+	--tgb-text-muted: #9aa8be;
+	--tgb-text-dim: #63738c;
 
 	--tgb-accent: #e67e22;
 	--tgb-accent-hover: #f39c12;
+	--tgb-accent-active: #d35400;
 	--tgb-accent-soft: rgba(230, 126, 34, 0.12);
 
 	--tgb-radius-sm: 6px;
 	--tgb-radius-md: 10px;
 	--tgb-radius-lg: 14px;
 
+	--tgb-space-2xs: 4px;
+	--tgb-space-xs: 8px;
+	--tgb-space-sm: 12px;
+	--tgb-space-md: 16px;
+	--tgb-space-lg: 20px;
+	--tgb-space-xl: 24px;
+	--tgb-space-2xl: 32px;
+
+	--tgb-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+
 	/* Shell Container */
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
 	width: 100%;
-	max-width: 1280px;
+	max-width: 1400px;
 	margin: 0 auto;
 	padding: 20px 16px;
 	box-sizing: border-box;
 	background-color: var(--tgb-bg-canvas);
 	color: var(--tgb-text-main);
+	font-family: var(--tgb-font-family);
 	border-radius: var(--tgb-radius-lg);
 	border: 1px solid var(--tgb-border);
 	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
@@ -101,7 +113,9 @@
 
 @media (min-width: 960px) {
 	#taktik-gun-builder .tgb-workspace {
-		grid-template-columns: 1fr 340px;
+		grid-template-columns: minmax(0, 1fr) 350px;
+		gap: 24px;
+		align-items: start;
 	}
 }
 
@@ -114,22 +128,22 @@
 
 #taktik-gun-builder .tgb-viewport-container {
 	position: relative;
-	background: var(--tgb-bg-surface);
+	background: radial-gradient(ellipse at center, #151a26 0%, #0c0f16 100%);
 	border: 1px solid var(--tgb-border);
 	border-radius: var(--tgb-radius-md);
-	min-height: 420px;
+	min-height: 440px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	padding: 16px;
-	box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+	box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.45);
 	overflow: hidden;
 }
 
 #taktik-gun-builder .tgb-stage-viewport {
 	position: relative;
 	width: 100%;
-	min-height: 380px;
+	min-height: 400px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -321,6 +335,33 @@
 	letter-spacing: 0.05em;
 }
 
+#taktik-gun-builder .tgb-panel-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+#taktik-gun-builder .tgb-btn-reset-build {
+	background: transparent;
+	border: 1px solid var(--tgb-border-subtle);
+	color: var(--tgb-text-dim);
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 3px 8px;
+	border-radius: var(--tgb-radius-sm);
+	cursor: pointer;
+	line-height: 1.2;
+	transition: all var(--tgb-transition-fast);
+}
+
+#taktik-gun-builder .tgb-btn-reset-build:hover {
+	color: #ff5252;
+	border-color: rgba(255, 82, 82, 0.45);
+	background: rgba(255, 82, 82, 0.08);
+}
+
 #taktik-gun-builder .tgb-panel-body {
 	padding: 16px;
 	flex-grow: 1;
@@ -329,7 +370,468 @@
 	gap: 12px;
 }
 
-/* Current Build Weapon Card */
+/* Screen Reader Utility */
+#taktik-gun-builder .screen-reader-text {
+	border: 0;
+	clip: rect(1px, 1px, 1px, 1px);
+	clip-path: inset(50%);
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	width: 1px;
+	word-wrap: normal !important;
+}
+
+/* Current Build Sections (Part 8) */
+#taktik-gun-builder .tgb-current-build-section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+#taktik-gun-builder .tgb-current-build-section--base {
+	background: var(--tgb-bg-surface-elevated);
+	border: 1px solid var(--tgb-border);
+	border-radius: var(--tgb-radius-sm);
+	padding: 12px;
+	gap: 8px;
+}
+
+#taktik-gun-builder .tgb-current-build-section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-bottom: 4px;
+	border-bottom: 1px solid var(--tgb-border-subtle);
+}
+
+#taktik-gun-builder .tgb-current-build-section-title {
+	margin: 0;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--tgb-text-muted);
+}
+
+#taktik-gun-builder .tgb-build-empty-components {
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--tgb-text-dim);
+	padding: 12px;
+	background: var(--tgb-bg-surface-elevated);
+	border: 1px dashed var(--tgb-border-subtle);
+	border-radius: var(--tgb-radius-sm);
+	text-align: center;
+}
+
+#taktik-gun-builder .tgb-build-components-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 360px;
+	overflow-y: auto;
+	padding-right: 2px;
+}
+
+/* Custom scrollbar for components list */
+#taktik-gun-builder .tgb-build-components-list::-webkit-scrollbar {
+	width: 4px;
+}
+#taktik-gun-builder .tgb-build-components-list::-webkit-scrollbar-track {
+	background: var(--tgb-bg-surface);
+	border-radius: 4px;
+}
+#taktik-gun-builder .tgb-build-components-list::-webkit-scrollbar-thumb {
+	background: var(--tgb-border);
+	border-radius: 4px;
+}
+#taktik-gun-builder .tgb-build-components-list::-webkit-scrollbar-thumb:hover {
+	background: var(--tgb-accent);
+}
+
+/* Component & Base Gun Rows */
+#taktik-gun-builder .tgb-build-item-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: var(--tgb-bg-surface-elevated);
+	border: 1px solid var(--tgb-border);
+	border-radius: var(--tgb-radius-sm);
+	padding: 8px 10px;
+	transition: border-color var(--tgb-transition-fast), background-color var(--tgb-transition-fast);
+}
+
+#taktik-gun-builder .tgb-build-item-row:hover {
+	border-color: rgba(230, 126, 34, 0.35);
+}
+
+#taktik-gun-builder .tgb-build-item-row--base {
+	background: transparent;
+	border: none;
+	padding: 0;
+}
+
+#taktik-gun-builder .tgb-build-item-thumb-wrap {
+	flex-shrink: 0;
+	width: 54px;
+	height: 42px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--tgb-bg-deep);
+	border: 1px solid var(--tgb-border-subtle);
+	border-radius: var(--tgb-radius-sm);
+	overflow: hidden;
+	padding: 2px;
+}
+
+#taktik-gun-builder .tgb-build-item-thumb {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	display: block;
+}
+
+#taktik-gun-builder .tgb-build-item-info {
+	flex-grow: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+#taktik-gun-builder .tgb-build-item-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 6px;
+}
+
+#taktik-gun-builder .tgb-build-item-badges {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+#taktik-gun-builder .tgb-build-item-stock-badge--unavailable {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 6px;
+	font-size: 8.5px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	border-radius: var(--tgb-radius-sm);
+	background: rgba(239, 68, 68, 0.15);
+	color: #ef4444;
+	border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+#taktik-gun-builder .tgb-card-tag-wrap {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+
+#taktik-gun-builder .tgb-build-item-row.is-unavailable {
+	border-left: 3px solid #ef4444;
+}
+
+#taktik-gun-builder .tgb-build-item-type {
+	font-size: 9.5px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--tgb-accent);
+}
+
+#taktik-gun-builder .tgb-build-item-name {
+	margin: 0;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--tgb-text-main);
+	line-height: 1.3;
+	word-break: break-word;
+}
+
+#taktik-gun-builder .tgb-build-item-meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 11.5px;
+	color: var(--tgb-text-muted);
+}
+
+#taktik-gun-builder .tgb-build-item-price {
+	font-weight: 600;
+	color: var(--tgb-accent);
+}
+
+#taktik-gun-builder .tgb-build-item-price--unavailable,
+#taktik-gun-builder .tgb-build-item-weight--unavailable {
+	font-style: italic;
+	color: var(--tgb-text-dim);
+	font-weight: 400;
+	font-size: 10.5px;
+}
+
+#taktik-gun-builder .tgb-build-item-weight {
+	color: var(--tgb-text-muted);
+}
+
+/* Remove Button */
+#taktik-gun-builder .tgb-build-item-remove {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	min-width: 28px;
+	min-height: 28px;
+	padding: 0;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: var(--tgb-radius-sm);
+	color: var(--tgb-text-dim);
+	cursor: pointer;
+	transition: all var(--tgb-transition-fast);
+	flex-shrink: 0;
+}
+
+/* Expanded touch target for mobile (min 44x44px accessible target) */
+#taktik-gun-builder .tgb-build-item-remove::after {
+	content: '';
+	position: absolute;
+	top: -8px;
+	right: -8px;
+	bottom: -8px;
+	left: -8px;
+	min-width: 44px;
+	min-height: 44px;
+}
+
+#taktik-gun-builder .tgb-build-item-remove:hover,
+#taktik-gun-builder .tgb-build-item-remove:focus-visible {
+	color: #ff6b6b;
+	background: rgba(255, 107, 107, 0.12);
+	border-color: rgba(255, 107, 107, 0.35);
+}
+
+/* Build Summary Card */
+#taktik-gun-builder .tgb-build-summary {
+	margin-top: 4px;
+	background: var(--tgb-bg-surface-elevated);
+	border: 1px solid var(--tgb-border);
+	border-radius: var(--tgb-radius-sm);
+	padding: 12px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+#taktik-gun-builder .tgb-build-summary-header {
+	font-size: 10.5px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--tgb-text-dim);
+	margin-bottom: 2px;
+}
+
+#taktik-gun-builder .tgb-summary-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 10px;
+}
+
+#taktik-gun-builder .tgb-summary-label {
+	font-size: 12.5px;
+	color: var(--tgb-text-muted);
+	font-weight: 500;
+}
+
+#taktik-gun-builder .tgb-summary-label--total {
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--tgb-text-main);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+#taktik-gun-builder .tgb-summary-val-wrap {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+}
+
+#taktik-gun-builder .tgb-summary-value {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--tgb-text-main);
+	font-feature-settings: "tnum";
+}
+
+#taktik-gun-builder .tgb-summary-value--weight {
+	color: var(--tgb-text-main);
+}
+
+#taktik-gun-builder .tgb-summary-value--price {
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--tgb-accent);
+}
+
+#taktik-gun-builder .tgb-summary-divider {
+	border: 0;
+	height: 1px;
+	background: var(--tgb-border-subtle);
+	margin: 4px 0;
+}
+
+/* Part 9: Add Build to Cart Actions & Feedback */
+#taktik-gun-builder .tgb-current-build-actions {
+	margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+#taktik-gun-builder .tgb-add-to-cart-btn {
+	width: 100%;
+	min-height: 46px;
+	padding: 12px 18px;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-align: center;
+	border-radius: var(--tgb-radius-sm);
+	background: linear-gradient(180deg, #ff7038 0%, #e0531e 100%);
+	color: #ffffff;
+	border: 1px solid rgba(255, 112, 56, 0.45);
+	box-shadow: 0 4px 14px rgba(224, 83, 30, 0.25);
+	transition: all 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+#taktik-gun-builder .tgb-add-to-cart-btn:hover:not(:disabled) {
+	background: linear-gradient(180deg, #ff7a47 0%, #eb5b24 100%);
+	box-shadow: 0 6px 18px rgba(224, 83, 30, 0.35);
+	transform: translateY(-1px);
+}
+
+#taktik-gun-builder .tgb-add-to-cart-btn:active:not(:disabled) {
+	transform: translateY(0);
+	box-shadow: 0 2px 8px rgba(224, 83, 30, 0.25);
+}
+
+#taktik-gun-builder .tgb-add-to-cart-btn:focus-visible {
+	outline: 2px solid var(--tgb-accent);
+	outline-offset: 2px;
+}
+
+#taktik-gun-builder .tgb-add-to-cart-btn:disabled,
+#taktik-gun-builder .tgb-add-to-cart-btn.is-disabled {
+	background: var(--tgb-bg-surface-elevated);
+	color: var(--tgb-text-dim);
+	border-color: var(--tgb-border);
+	box-shadow: none;
+	cursor: not-allowed;
+	transform: none;
+}
+
+#taktik-gun-builder .tgb-add-to-cart-btn.is-loading {
+	opacity: 0.85;
+	cursor: wait;
+}
+
+#taktik-gun-builder .tgb-cart-feedback {
+	border-radius: var(--tgb-radius-sm);
+	padding: 10px 12px;
+	font-size: 12.5px;
+	line-height: 1.4;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	animation: tgbFadeIn 0.25s ease-out;
+}
+
+#taktik-gun-builder .tgb-cart-feedback__message {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+#taktik-gun-builder .tgb-cart-feedback__message svg {
+	flex-shrink: 0;
+}
+
+#taktik-gun-builder .tgb-cart-feedback--success {
+	background: rgba(34, 197, 94, 0.12);
+	border: 1px solid rgba(34, 197, 94, 0.35);
+	color: #86efac;
+}
+
+#taktik-gun-builder .tgb-cart-feedback--success svg {
+	color: #4ade80;
+}
+
+#taktik-gun-builder .tgb-cart-feedback--error {
+	background: rgba(239, 68, 68, 0.12);
+	border: 1px solid rgba(239, 68, 68, 0.35);
+	color: #fca5a5;
+}
+
+#taktik-gun-builder .tgb-cart-feedback--error svg {
+	color: #f87171;
+}
+
+#taktik-gun-builder .tgb-btn--view-cart {
+	align-self: flex-start;
+	padding: 5px 12px;
+	font-size: 12px;
+	font-weight: 500;
+	background: rgba(34, 197, 94, 0.2);
+	border: 1px solid rgba(34, 197, 94, 0.4);
+	color: #ffffff;
+	text-decoration: none;
+	border-radius: var(--tgb-radius-sm);
+	transition: background 0.15s ease;
+	display: inline-block;
+}
+
+#taktik-gun-builder .tgb-btn--view-cart:hover {
+	background: rgba(34, 197, 94, 0.35);
+	color: #ffffff;
+}
+
+#taktik-gun-builder .tgb-btn--view-cart:focus-visible {
+	outline: 2px solid #4ade80;
+	outline-offset: 2px;
+}
+
+@keyframes tgbFadeIn {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+#taktik-gun-builder .tgb-summary-note {
+	font-size: 10.5px;
+	font-style: italic;
+	color: #e67e22;
+	text-align: right;
+}
+
+/* Legacy Card & Placeholder Styles */
 #taktik-gun-builder .tgb-current-base-card {
 	background: var(--tgb-bg-surface-elevated);
 	border: 1px solid var(--tgb-border);
@@ -494,7 +996,7 @@
 	gap: 8px;
 	overflow-x: auto;
 	-webkit-overflow-scrolling: touch;
-	padding-bottom: 6px;
+	padding: 4px 6px 10px 6px;
 	scrollbar-width: thin;
 	scrollbar-color: var(--tgb-border) transparent;
 }
@@ -509,11 +1011,12 @@
 }
 
 #taktik-gun-builder .tgb-category-btn {
+	flex-shrink: 0;
 	background: var(--tgb-bg-surface-elevated);
 	color: var(--tgb-text-muted);
 	border: 1px solid var(--tgb-border);
 	border-radius: 9999px;
-	padding: 7px 16px;
+	padding: 8px 18px;
 	font-size: 13px;
 	font-weight: 600;
 	cursor: pointer;
@@ -715,8 +1218,9 @@
 	align-items: center;
 	justify-content: center;
 	width: 100%;
-	padding: 8px 12px;
-	font-size: 12.5px;
+	min-height: 38px;
+	padding: 8px 14px;
+	font-size: 13px;
 	font-weight: 600;
 	border-radius: var(--tgb-radius-sm);
 	border: 1px solid transparent;
@@ -724,6 +1228,12 @@
 	transition: all 0.15s ease;
 	outline: none;
 	text-align: center;
+	box-sizing: border-box;
+}
+
+#taktik-gun-builder .tgb-btn:focus-visible {
+	outline: 2px solid var(--tgb-accent);
+	outline-offset: 2px;
 }
 
 #taktik-gun-builder .tgb-btn--add,
@@ -759,16 +1269,16 @@
 	color: var(--tgb-text-dim);
 	border-color: var(--tgb-border);
 	cursor: not-allowed;
-	opacity: 0.65;
+	opacity: 0.7;
 }
 
-/* Compatibility Badges (Part 7) */
+/* Compatibility Badges (Part 7 & Part 10 Refinement) */
 #taktik-gun-builder .tgb-card-compat-badge {
-	font-size: 10.5px;
+	font-size: 11px;
 	font-weight: 600;
 	letter-spacing: 0.02em;
 	border-radius: 4px;
-	padding: 3px 6px;
+	padding: 3px 7px;
 	display: inline-block;
 	align-self: flex-start;
 	line-height: 1.25;
@@ -781,13 +1291,13 @@
 }
 
 #taktik-gun-builder .tgb-card-compat-badge--incompatible {
-	color: #e74c3c;
-	background: rgba(231, 76, 60, 0.12);
-	border: 1px solid rgba(231, 76, 60, 0.28);
+	color: #e67e22;
+	background: rgba(230, 126, 34, 0.12);
+	border: 1px solid rgba(230, 126, 34, 0.28);
 }
 
 #taktik-gun-builder .tgb-card-compat-badge--unconfigured {
-	color: var(--tgb-text-dim);
+	color: var(--tgb-text-muted);
 	background: rgba(255, 255, 255, 0.05);
 	border: 1px solid var(--tgb-border);
 }
@@ -797,6 +1307,7 @@
 	color: var(--tgb-text-main);
 	border-color: var(--tgb-border);
 	width: auto;
+	min-height: 38px;
 	padding: 8px 18px;
 }
 
@@ -806,7 +1317,7 @@
 }
 
 #taktik-gun-builder .tgb-btn:disabled:not(.is-selected):not(.is-unavailable) {
-	opacity: 0.5;
+	opacity: 0.55;
 	cursor: not-allowed;
 }
 
@@ -822,21 +1333,40 @@
 	min-width: 160px;
 }
 
-/* Mobile Adjustments (320px - 768px) */
+/* Responsive Breakpoint System (Part 10 Refinement) */
+
+/* Tablet & Medium Screens (< 960px) */
+@media (max-width: 959px) {
+	#taktik-gun-builder .tgb-workspace {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+}
+
+/* Tablet Portrait & Small Tablets (<= 768px) */
 @media (max-width: 768px) {
 	#taktik-gun-builder {
-		padding: 14px 10px;
-		gap: 12px;
+		padding: 14px 12px;
+		gap: 14px;
 	}
 
 	#taktik-gun-builder .tgb-workspace {
-		gap: 12px;
+		gap: 14px;
+	}
+
+	#taktik-gun-builder .tgb-viewport-container {
+		min-height: 320px;
+		padding: 12px;
+	}
+
+	#taktik-gun-builder .tgb-stage-viewport {
+		min-height: 300px;
 	}
 
 	#taktik-gun-builder .tgb-catalog-grid,
 	#taktik-gun-builder .tgb-catalog-loading {
-		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-		gap: 10px;
+		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+		gap: 12px;
 	}
 
 	#taktik-gun-builder .tgb-card-thumb {
@@ -849,19 +1379,20 @@
 
 	#taktik-gun-builder .tgb-panel-body {
 		padding: 12px 14px;
-		gap: 8px;
+		gap: 10px;
 	}
 }
 
+/* Mobile Standard (<= 480px, covers 430px, 390px, 375px) */
 @media (max-width: 480px) {
 	#taktik-gun-builder {
-		padding: 10px 6px;
+		padding: 10px 8px;
 		border-radius: var(--tgb-radius-md);
-		gap: 10px;
+		gap: 12px;
 	}
 
 	#taktik-gun-builder .tgb-workspace {
-		gap: 10px;
+		gap: 12px;
 	}
 
 	#taktik-gun-builder .tgb-header {
@@ -869,25 +1400,30 @@
 	}
 
 	#taktik-gun-builder .tgb-title {
-		font-size: 17px;
+		font-size: 18px;
 	}
 
 	#taktik-gun-builder .tgb-subtitle {
-		font-size: 11.5px;
+		font-size: 12px;
 	}
 
 	#taktik-gun-builder .tgb-viewport-container {
-		min-height: 220px;
-		padding: 6px;
+		min-height: 240px;
+		padding: 8px;
 	}
 
 	#taktik-gun-builder .tgb-stage-viewport {
-		min-height: 200px;
+		min-height: 220px;
+	}
+
+	#taktik-gun-builder .tgb-category-nav {
+		padding: 4px 4px 8px 4px;
+		gap: 6px;
 	}
 
 	#taktik-gun-builder .tgb-category-btn {
-		padding: 5px 12px;
-		font-size: 12px;
+		padding: 6px 14px;
+		font-size: 12.5px;
 	}
 
 	#taktik-gun-builder .tgb-catalog-grid,
@@ -907,17 +1443,18 @@
 	}
 
 	#taktik-gun-builder .tgb-card-title {
-		font-size: 11.5px;
-		min-height: 30px;
+		font-size: 12px;
+		min-height: 32px;
 	}
 
 	#taktik-gun-builder .tgb-card-price {
-		font-size: 11.5px;
+		font-size: 12.5px;
 	}
 
 	#taktik-gun-builder .tgb-btn {
+		min-height: 36px;
 		padding: 6px 8px;
-		font-size: 11.5px;
+		font-size: 12px;
 	}
 
 	#taktik-gun-builder .tgb-panel-header {
@@ -939,12 +1476,44 @@
 	}
 
 	#taktik-gun-builder .tgb-placeholder-notice {
-		padding: 9px 11px;
+		padding: 10px 12px;
 	}
 
 	#taktik-gun-builder .tgb-placeholder-notice p {
-		font-size: 11.5px;
+		font-size: 12px;
 		line-height: 1.4;
+	}
+
+	#taktik-gun-builder .tgb-build-item-row {
+		padding: 6px 8px;
+		gap: 8px;
+	}
+
+	#taktik-gun-builder .tgb-build-item-thumb-wrap {
+		width: 48px;
+		height: 36px;
+	}
+
+	#taktik-gun-builder .tgb-build-item-name {
+		font-size: 12px;
+	}
+
+	#taktik-gun-builder .tgb-build-item-meta {
+		font-size: 11px;
+		gap: 6px;
+	}
+
+	#taktik-gun-builder .tgb-build-item-remove {
+		width: 26px;
+		height: 26px;
+	}
+
+	#taktik-gun-builder .tgb-build-summary {
+		padding: 10px 12px;
+	}
+
+	#taktik-gun-builder .tgb-summary-value--price {
+		font-size: 16px;
 	}
 
 	#taktik-gun-builder .tgb-state-title {
@@ -952,13 +1521,213 @@
 	}
 
 	#taktik-gun-builder .tgb-state-desc {
-		font-size: 11.5px;
+		font-size: 12px;
+	}
+
+	#taktik-gun-builder .tgb-add-to-cart-btn {
+		min-height: 44px;
+		padding: 11px 16px;
+		font-size: 13.5px;
+	}
+
+	#taktik-gun-builder .tgb-cart-feedback {
+		padding: 8px 10px;
+		font-size: 12px;
 	}
 }
 
-@media (max-width: 340px) {
+/* Mobile Small (<= 360px, covers 320px) */
+@media (max-width: 360px) {
 	#taktik-gun-builder .tgb-catalog-grid,
 	#taktik-gun-builder .tgb-catalog-loading {
 		grid-template-columns: 1fr;
+		gap: 10px;
 	}
+
+	#taktik-gun-builder .tgb-card-thumb {
+		height: 120px;
+	}
+
+	#taktik-gun-builder .tgb-build-item-meta {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 2px;
+	}
+
+	#taktik-gun-builder .tgb-add-to-cart-btn {
+		padding: 10px 12px;
+		font-size: 13px;
+	}
+}
+/* Local Persistence Customer Notices (V1.1 Part 1) */
+#taktik-gun-builder .tgb-restore-notice {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 16px;
+	border-radius: var(--tgb-radius-sm);
+	font-size: 13px;
+	line-height: 1.4;
+	margin-bottom: 12px;
+	background: rgba(30, 41, 59, 0.95);
+	border: 1px solid var(--tgb-border-subtle);
+	color: var(--tgb-text-main);
+	animation: tgbFadeIn 0.25s ease-out;
+}
+
+#taktik-gun-builder .tgb-restore-notice--warning,
+#taktik-gun-builder .tgb-restore-notice--error {
+	border-color: rgba(255, 112, 56, 0.4);
+	background: rgba(45, 26, 20, 0.95);
+	color: #ffb199;
+}
+
+#taktik-gun-builder .tgb-restore-notice--info {
+	border-color: rgba(56, 189, 248, 0.3);
+	background: rgba(15, 30, 48, 0.95);
+	color: #bae6fd;
+}
+
+#taktik-gun-builder .tgb-restore-notice-close {
+	background: transparent;
+	border: none;
+	color: inherit;
+	cursor: pointer;
+	padding: 4px;
+	display: flex;
+	align-items: center;
+	opacity: 0.7;
+	transition: opacity 0.15s;
+}
+
+#taktik-gun-builder .tgb-restore-notice-close:hover {
+	opacity: 1;
+}
+
+/* Accessibility: Reduced Motion (Part 10 Refinement) */
+@media (prefers-reduced-motion: reduce) {
+	#taktik-gun-builder,
+	#taktik-gun-builder * {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+#taktik-gun-builder  #tgb-search-bar {
+  background: var(--tgb-bg-surface-elevated);
+  color: var(--tgb-text-main);
+  border: 1px solid var(--tgb-border-subtle);
+  border-radius: 10px;
+  padding: 10px 10px;
+  font-size: 14px;
+   /* right-aligns the text inside the field */
+  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-left: auto; 
+	margin-right: 0;
+}
+
+#taktik-gun-builder  #tgb-search-bar::placeholder {
+  color: var(--tgb-text-muted);
+}
+
+#taktik-gun-builder  #tgb-search-bar:focus {
+  outline: none;
+  border-color: var(--tgb-accent);
+  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.25);
+}
+
+
+
+
+
+
+.tgb-toggle {
+	--tgb-accent:      #ff6a00;   /* swap for your plugin's orange */
+	--tgb-bg:          #14161a;
+	--tgb-border:      #2a2e35;
+	--tgb-text:        #c9ccd1;
+	--tgb-text-muted:  #6b7078;
+
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 14px 8px 10px;
+	background: var(--tgb-bg);
+	border: 1px solid var(--tgb-border);
+	color: var(--tgb-text);
+	font: 600 12px/1 inherit;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	cursor: pointer;
+	clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+	transition: border-color .15s ease, color .15s ease;
+}
+
+.tgb-toggle:hover {
+	border-color: var(--tgb-accent);
+}
+
+.tgb-toggle:focus-visible {
+	outline: 2px solid var(--tgb-accent);
+	outline-offset: 2px;
+}
+
+/* Track */
+.tgb-toggle__track {
+	position: relative;
+	flex: 0 0 auto;
+	width: 40px;
+	height: 18px;
+	background: #0b0c0e;
+	border: 1px solid var(--tgb-border);
+	clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+	transition: background .15s ease, border-color .15s ease;
+}
+
+/* Thumb */
+.tgb-toggle__thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 12px;
+	height: 12px;
+	background: var(--tgb-text-muted);
+	transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.tgb-toggle__state {
+	min-width: 24px;
+	color: var(--tgb-text-muted);
+	font-size: 10px;
+	text-align: right;
+	transition: color .15s ease;
+}
+
+/* ON state */
+.tgb-toggle[aria-checked="true"] {
+	border-color: var(--tgb-accent);
+}
+
+.tgb-toggle[aria-checked="true"] .tgb-toggle__track {
+	background: rgba(255, 106, 0, 0.18);
+	border-color: var(--tgb-accent);
+}
+
+.tgb-toggle[aria-checked="true"] .tgb-toggle__thumb {
+	transform: translateX(22px);
+	background: var(--tgb-accent);
+	box-shadow: 0 0 8px rgba(255, 106, 0, 0.7);
+}
+
+.tgb-toggle[aria-checked="true"] .tgb-toggle__state {
+	color: var(--tgb-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tgb-toggle,
+	.tgb-toggle__track,
+	.tgb-toggle__thumb,
+	.tgb-toggle__state { transition: none; }
 }
