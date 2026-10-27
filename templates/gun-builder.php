@@ -178,6 +178,7 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 					<!-- Dynamically populated: Base Platform + taxonomy terms -->
 
 				</nav>
+				<div>
 				<input type="text" id="tgb-search-bar"  placeholder="Search">
 					<button type="button" class="tgb-toggle" role="switch" aria-checked="false"
 						id="tgb-compatible-toggle">
@@ -187,6 +188,9 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 						<span class="tgb-toggle__label">Compatible only</span>
 						<span class="tgb-toggle__state" aria-hidden="true">OFF</span>
 					</button>
+
+				</div>
+
 				
 				<!-- Tray Status Notification (e.g. empty or error) -->
 				<div class="tgb-tray-status" id="tgb-tray-status" style="display: none;"></div>

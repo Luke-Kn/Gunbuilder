@@ -1001,6 +1001,7 @@
 	scrollbar-color: var(--tgb-border) transparent;
 }
 
+
 #taktik-gun-builder .tgb-category-nav::-webkit-scrollbar {
 	height: 4px;
 }
@@ -1625,7 +1626,8 @@
    /* right-aligns the text inside the field */
   transition: border-color 0.2s, box-shadow 0.2s;
   margin-left: auto; 
-	margin-right: 0;
+	margin-bottom: 10px;
+	width: 90vw;
 }
 
 #taktik-gun-builder  #tgb-search-bar::placeholder {
@@ -1640,6 +1642,13 @@
 
 
 
+@media (min-width: 767px) {
+  #taktik-gun-builder #tgb-search-bar{
+	margin-left: 0;
+	margin-right: auto;
+	width: 300px;
+  }
+}
 
 
 
@@ -1663,7 +1672,25 @@
 	cursor: pointer;
 	clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
 	transition: border-color .15s ease, color .15s ease;
+	margin-left: auto;
 }
+
+/* Mobile only styles */
+@media (min-width: 767px) {
+.tgb-toggle {
+
+	margin-left: auto;
+	margin-right: 0;
+}
+
+}   
+
+@media (max-width: 767px) {
+.tgb-toggle {
+width: 90vw;
+}
+
+}   
 
 .tgb-toggle:hover {
 	border-color: var(--tgb-accent);
