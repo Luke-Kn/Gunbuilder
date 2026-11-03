@@ -84,12 +84,11 @@ class TGB_Catalog_API {
 				'callback'            => array( __CLASS__, 'get_parts' ),
 				'permission_callback' => '__return_true',
 				'args'                => array(
-					'type_id' => array(
+					'category' => array(
 						'description'       => __( 'Dynamic Part Type taxonomy term ID.', 'part-selector' ),
 						'type'              => 'integer',
 						'required'          => true,
 						'sanitize_callback' => 'absint',
-						'validate_callback' => array( __CLASS__, 'validate_type_id' ),
 					),
 					'limit'   => array(
 						'description'       => __( 'Maximum number of items to return.', 'part-selector' ),
@@ -350,7 +349,7 @@ class TGB_Catalog_API {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function get_parts( $request ) {
-		$type_id = absint( $request->get_param( 'type_id' ) );
+		$category = absint( $request->get_param( 'category' ) );
 		$limit   = $request->get_param( 'limit' ) ? absint( $request->get_param( 'limit' ) ) : 20;
 		$cursor  = $request->get_param( 'cursor' ) ? sanitize_text_field( $request->get_param( 'cursor' ) ) : null;
 		
@@ -359,7 +358,7 @@ class TGB_Catalog_API {
 			'cursor' => $cursor,
 		);
 
-		$result = TGB_Product_Data::get_parts_by_type( $type_id, $query_args );
+		$result = TGB_Product_Data::get_parts_by_type( $category, $query_args );
 
 		$serialized_items = array();
 		if ( ! empty( $result['items'] ) && is_array( $result['items'] ) ) {
