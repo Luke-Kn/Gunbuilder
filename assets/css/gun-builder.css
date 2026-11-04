@@ -1910,3 +1910,104 @@ label[for="sizeSlider"] {
     0 0 0 2px var(--gb-bg),
     0 0 0 4px var(--gb-accent);
 }
+.tk-select-wrap {
+  --tk-btn-w: 44px;
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.tk-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 calc(var(--tk-btn-w) + 14px) 0 14px;
+  background-color: var(--tgb-accent);
+  color: var(--tgb-text-main);
+  border: 1px solid var(--tgb-border);
+  border-radius: 4px;
+  font: 600 13px/1.2 inherit;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+
+/* orange button block */
+.tk-select-wrap::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: var(--tk-btn-w);
+  background: var(--tgb-accent);
+  border-radius: 0 3px 3px 0;
+  pointer-events: none;
+  transition: background-color 0.15s;
+}
+
+/* chevron */
+.tk-select-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: calc(var(--tk-btn-w) / 2 - 4px + 1px);
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--tgb-bg-canvas);
+  border-bottom: 2px solid var(--tgb-bg-canvas);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+  transition: transform 0.15s;
+}
+
+/* states */
+.tk-select:hover {
+  background-color: var(--tgb-accent-hover);
+  border-color: var(--tgb-border-focus);
+}
+.tk-select-wrap:hover::before {
+  background: var(--tgb-accent-hover);
+}
+
+.tk-select:focus {
+  outline: none;
+  border-color: var(--tgb-accent);
+  box-shadow: 0 0 0 3px var(--tgb-accent-soft);
+  background-color: var(--tgb-accent);
+}
+.tk-select-wrap:focus-within::before {
+  background: var(--tgb-accent-active);
+}
+.tk-select-wrap:focus-within::after {
+  transform: translateY(-30%) rotate(225deg);
+  border-color: var(--tgb-text-main);
+}
+
+.tk-select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--tgb-text-dim);
+}
+.tk-select-wrap:has(.tk-select:disabled)::before {
+  background: var(--tgb-border);
+}
+
+/* dropdown list */
+.tk-select option {
+  background: var(--tgb-bg-surface);
+  color: var(--tgb-text-main);
+  padding: 10px;
+}
+.tk-select option:checked {
+  background: var(--tgb-accent);
+  color: var(--tgb-bg-canvas);
+}
+.tk-select option[disabled] {
+  color: var(--tgb-text-dim);
+}

@@ -1792,8 +1792,8 @@
       this.sidebarBodyEl = root.querySelector("#tgb-sidebar-build-body");
 
       this.categories = []; // [{ id: 'base_gun', name: 'Base Platform' }, ...]
-      this.activeCategoryKey = "74";
-      this.activeCategoryId = 74;
+      this.activeCategoryKey = "64";
+      this.activeCategoryId = 64;
 
       this.categoryCache = new Map(); // key => { items: [], has_more: false, next_cursor: null, loaded: false }
 
@@ -1816,11 +1816,12 @@
 
       // 1. Setup Base Platform tab
       this.categories = [
+        { id: 64, name: "All", slug: " " },
         { id: 74, name: "Optics", slug: " " },
-        { id: 472, name: "Barrel", slug: " " },
+        { id: 73, name: "Barrel", slug: " " },
         { id: 69, name: "Magazine", slug: " " },
-        { id: 64, name: "Accessories", slug: " " },
         { id: 68, name: "Grips", slug: " " },
+        { id: 70, name: "Silencers", slug: " " },
       ];
       // this.categories = [
       // 	//{ id: 'base_gun', name: 'Base Platform', slug: 'base-platform' }
@@ -1860,6 +1861,7 @@
       // 6. Pre-seed registry from initial render Base Gun if present
       const currentBase = this.buildState.loadBase();
       if (currentBase && currentBase.productId) {
+        F;
         const existing = this.productRegistry.get(currentBase.productId) || {};
         this.productRegistry.set(
           currentBase.productId,
@@ -1877,7 +1879,7 @@
       }
 
       // 7. Load default category (Base Platform)
-      await this.switchCategory("base_gun");
+      await this.switchCategory("64");
 
       // 8. Initial sync with current build state
       this.syncSidebar();
@@ -1889,7 +1891,7 @@
 
       slider.addEventListener("input", () => {
         console.log(slider.value);
-        label.textContent = `${slider.value} pixel = 1cm`;
+        label.textContent = `${slider.value} pixel = 0.1cm`;
         document.querySelectorAll(".tgb-layer").forEach((img) => {
           img.style.width = slider.value * img.dataset.tgbWidth + "px";
           img.style.height = slider.value * img.dataset.tgbHeight + "px";
@@ -2238,6 +2240,7 @@
       bodyContainer.appendChild(priceEl);
 
       // Action Button
+
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "tgb-btn";
@@ -2288,9 +2291,26 @@
           btn.textContent = "Add";
         }
       }
-      bodyContainer.appendChild(btn);
 
+      if (product.variants.length > 0) {
+        btn.setAttribute("data-action", "add-part-select");
+        const select = document.createElement("select");
+        select.classList.add("tk-select");
+        let option = document.createElement("option");
+        option.value = "";
+        option.text = "Select an Option";
+        select.appendChild(option);
+        product.variants.forEach((element) => {
+          let option = document.createElement("option");
+          option.value = element.product_id;
+          option.text = element.name;
+          select.appendChild(option);
+        });
+        bodyContainer.appendChild(select);
+      }
+      bodyContainer.appendChild(btn);
       card.appendChild(bodyContainer);
+
       return card;
     }
 
@@ -2336,6 +2356,10 @@
       if (action === "select-base") {
         this.selectBaseGun(product);
       } else if (action === "add-part") {
+        this.addPartToBuild(product);
+      } else if (action === "add-part-select") {
+        const select = e.target.closest("select");
+        console.log(select);
         this.addPartToBuild(product);
       }
     }

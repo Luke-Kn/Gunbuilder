@@ -379,7 +379,7 @@ class TGB_Product_Data
 		// }
 
 		$base_query_args = array(
-			'post_type'   => 'product',
+			'post_type'   =>  array('product', 'product_variation'),
 			'post_status' => 'publish',
 			'tax_query'      => array(
 				array(
@@ -406,6 +406,7 @@ class TGB_Product_Data
 					'value'   => '',
 					'compare' => '!=',
 				),
+
 			),
 		);
 
@@ -649,11 +650,18 @@ class TGB_Product_Data
 			foreach ($batch_candidate_ids as $candidate_id) {
 				$current_scan_offset = $candidate_offset;
 				$candidate_offset++;
-
+				$variants;
 				$product = wc_get_product($candidate_id);
 				if (! $product) {
 					continue;
 				}
+
+
+				if ($product->has_child()) {
+					$variants = $product->get_available_variations();
+				}
+
+
 
 				if (! self::is_catalog_eligible($product)) {
 					continue;
@@ -662,6 +670,9 @@ class TGB_Product_Data
 				if (count($items) < $limit) {
 					$product_data = self::get_product_data($product);
 					if ($product_data) {
+						if ($variants) {
+							$product_data['variants'] = $variants;
+						}
 						$items[] = $product_data;
 					}
 				} else {

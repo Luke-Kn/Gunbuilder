@@ -304,7 +304,7 @@ class TGB_Catalog_API
 			'limit'  => $limit,
 			'cursor' => $cursor,
 		);
-			
+
 		$result = TGB_Product_Data::get_base($query_args, $product_id);
 
 		$serialized_items = array();
@@ -376,6 +376,7 @@ class TGB_Catalog_API
 
 		$result = TGB_Product_Data::get_parts_by_type($category, $query_args);
 
+
 		$serialized_items = array();
 		if (! empty($result['items']) && is_array($result['items'])) {
 			foreach ($result['items'] as $item) {
@@ -439,11 +440,20 @@ class TGB_Catalog_API
 	 */
 	public static function serialize_product(array $product)
 	{
+		$variants = array();
+		if (isset($product['variants'])) {
+
+			foreach ($product['variants'] as $variant) {
+				array_push($variants, ['product_id' => $variant['variation_id'], 'name' => $variant['attributes']['attribute_color'] . ' - ' . $variant['attributes']['attribute_style'], 'image' => $variant['image']['src']]);
+			}
+		}
+
 		return array(
 			'id'           => (int) ($product['id'] ?? 0),
 			'name'         => (string) ($product['name'] ?? ''),
 			'slug'         => (string) ($product['slug'] ?? ''),
 			'permalink'    => (string) ($product['permalink'] ?? ''),
+			'variants'	   => (array) ($variants ?? []),
 			'role'         => (string) ($product['role'] ?? ''),
 			'part_type'    => ! empty($product['part_type']) ? array(
 				'id'   => (int) ($product['part_type']['id'] ?? 0),
