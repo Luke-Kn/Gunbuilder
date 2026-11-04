@@ -318,13 +318,14 @@ class TGB_Product_Data
 	 * @param array $args Query cursor, limit, and sorting arguments.
 	 * @return array Standard query response array { items, limit, has_more, next_cursor }.
 	 */
-	public static function get_base_guns(array $args = array())
+	public static function get_base(array $args = array(), $product_id)
 	{
 		$normalized_args = self::normalize_query_args($args);
 
 		$base_query_args = array(
 			'post_type'   => 'product',
 			'post_status' => 'publish',
+			'p' => $product_id,
 			'meta_query'  => array(
 				array(
 					'key'   => TGB_Product_Config::META_ROLE,
@@ -644,7 +645,7 @@ class TGB_Product_Data
 			}
 
 			$batch_candidate_ids = $candidate_query->posts;
-			
+
 			foreach ($batch_candidate_ids as $candidate_id) {
 				$current_scan_offset = $candidate_offset;
 				$candidate_offset++;

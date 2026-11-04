@@ -19,8 +19,6 @@
  */
 
 (function (window, document) {
-  "use strict";
-
   /**
    * Canonical Scale Constants (Part 4)
    */
@@ -378,8 +376,16 @@
      *
      * @return {Object|null}
      */
+    async loadBase() {
+      let params = new URLSearchParams(document.location.search);
+      return await fetch(
+        `/wp-json/tgb/v1/base?product_id=${params.get("product_id")}`,
+      ).then(async (response) => {
+        return await response.json();
+      });
+    }
     getBaseGun() {
-      return this.baseGun ? Object.assign({}, this.baseGun) : null;
+      return this.baseGun;
     }
 
     /**
@@ -1370,25 +1376,6 @@
      * @param {string} [cursor='']
      * @param {AbortSignal} [signal]
      * @return {Promise<{items: Array, limit: number, has_more: boolean, next_cursor: string|null}>}
-     */
-    async getBaseGuns(limit = 20, cursor = "", signal = null) {
-      const endpoint = new URL("base-guns", this.baseUrl);
-      endpoint.searchParams.set("limit", limit);
-      if (cursor) {
-        endpoint.searchParams.set("cursor", cursor);
-      }
-
-      const res = await fetch(endpoint.toString(), {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        signal: signal || undefined,
-      });
-
-      if (!res.ok) {
-        throw new Error(`Catalog API error: HTTP ${res.status}`);
-      }
-      return await res.json();
-    }
 
     /**
      * Fetches dynamic Part Type taxonomy terms.
@@ -1805,8 +1792,8 @@
       this.sidebarBodyEl = root.querySelector("#tgb-sidebar-build-body");
 
       this.categories = []; // [{ id: 'base_gun', name: 'Base Platform' }, ...]
-      this.activeCategoryKey = "2661";
-      this.activeCategoryId = 120;
+      this.activeCategoryKey = "74";
+      this.activeCategoryId = 74;
 
       this.categoryCache = new Map(); // key => { items: [], has_more: false, next_cursor: null, loaded: false }
 
@@ -1870,7 +1857,7 @@
       this.buildState.subscribe(this.boundStateChange);
 
       // 6. Pre-seed registry from initial render Base Gun if present
-      const currentBase = this.buildState.getBaseGun();
+      const currentBase = this.buildState.loadBase();
       if (currentBase && currentBase.productId) {
         const existing = this.productRegistry.get(currentBase.productId) || {};
         this.productRegistry.set(
@@ -1980,16 +1967,16 @@
 
       try {
         let res;
-        if (categoryKey === "base_gun") {
-          res = await this.catalog.getBaseGuns(20, "", controller.signal);
-        } else {
-          res = await this.catalog.getPartsByType(
-            Number(categoryKey),
-            20,
-            "",
-            controller.signal,
-          );
-        }
+        // if (categoryKey === "base_gun") {
+        //   res = await this.catalog.getBaseGuns(20, "", controller.signal);
+        // } else {
+        res = await this.catalog.getPartsByType(
+          Number(categoryKey),
+          20,
+          "",
+          controller.signal,
+        );
+        //
 
         // If another category request started in the meantime, discard
         if (this.requestId !== currentToken) {
@@ -2056,20 +2043,20 @@
 
       try {
         let res;
-        if (this.activeCategoryKey === "base_gun") {
-          res = await this.catalog.getBaseGuns(
-            20,
-            cache.next_cursor,
-            controller.signal,
-          );
-        } else {
-          res = await this.catalog.getPartsByType(
-            Number(this.activeCategoryKey),
-            20,
-            cache.next_cursor,
-            controller.signal,
-          );
-        }
+        // if (this.activeCategoryKey === "base_gun") {
+        //   res = await this.catalog.getBaseGuns(
+        //     20,
+        //     cache.next_cursor,
+        //     controller.signal,
+        //   );
+        // } else {
+        //   res = await this.catalog.getPartsByType(
+        //     Number(this.activeCategoryKey),
+        //     20,
+        //     cache.next_cursor,
+        //     controller.signal,
+        //   );
+        // }
 
         if (this.requestId !== currentToken) {
           return;
@@ -3876,7 +3863,7 @@
           !baseProduct.builder_image
         ) {
           try {
-            const baseGunsRes = await catalogClient.getBaseGuns(100);
+            // const baseGunsRes = await catalogClient.getBaseGuns(100);
             const found = (baseGunsRes.items || []).find(
               (b) => b.id === persisted.baseProductId,
             );
@@ -4369,5 +4356,13 @@ document.querySelectorAll(".tgb-toggle").forEach((btn) => {
         card.closest(".tgb-product-card").style.display = "flex";
       });
     }
+  });
+});
+
+jQuery(document).ready(function ($) {
+  $(".customize-button").on("click", function () {
+    var productId = $(this).data("product-id");
+    // Redirect to a customization page with the product ID as a query parameter
+    window.location.href = "/gun-builder-test/product_id=" + productId;
   });
 });
