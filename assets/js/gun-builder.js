@@ -1845,6 +1845,7 @@
 
       // 3. Render Navigation Tabs
       this.renderCategoryNav();
+      this.renderSizeSlider();
 
       // 4. Attach Event Listeners
       this.navEl.addEventListener("click", this.boundHandleTabClick);
@@ -1880,6 +1881,20 @@
 
       // 8. Initial sync with current build state
       this.syncSidebar();
+    }
+
+    renderSizeSlider() {
+      const slider = document.getElementById("sizeSlider");
+      const label = document.getElementById("sizeValue");
+
+      slider.addEventListener("input", () => {
+        console.log(slider.value);
+        label.textContent = `${slider.value} pixel = 1cm`;
+        document.querySelectorAll(".tgb-layer").forEach((img) => {
+          img.style.width = slider.value * img.dataset.tgbWidth + "px";
+          img.style.height = slider.value * img.dataset.tgbHeight + "px";
+        });
+      });
     }
 
     /**
