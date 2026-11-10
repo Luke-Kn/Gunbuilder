@@ -1,0 +1,291 @@
+/**
+ * Taktik Gun Builder - Admin Product Data Styles
+ *
+ * Scoped styling for WooCommerce product data tab.
+ */
+
+#woocommerce-product-data ul.wc-tabs li.tgb_gun_builder_options a::before {
+	content: "\f147"; /* Dashicons hammer */
+	font-family: dashicons;
+}
+
+#tgb_gun_builder_data .form-field strong {
+	font-size: 13px;
+	color: #1d2327;
+}
+
+#tgb_gun_builder_data p.form-field {
+	padding: 10px 20px 10px 162px !important;
+	margin: 0 !important;
+}
+
+#tgb_gun_builder_data p.form-field label {
+	width: 150px !important;
+	margin-left: -162px !important;
+	float: left;
+}
+
+#tgb_gun_builder_data .tgb-mount-points-table th,
+#tgb_gun_builder_data .tgb-mount-points-table td {
+	padding: 8px 10px;
+	vertical-align: middle;
+}
+
+#tgb_gun_builder_data .tgb-remove-mount-point {
+	color: #b32d2e;
+	border-color: #b32d2e;
+	font-weight: bold;
+	line-height: 1;
+	padding: 0 6px;
+	height: 26px;
+}
+
+#tgb_gun_builder_data .tgb-remove-mount-point:hover {
+	background: #b32d2e;
+	color: #fff;
+}
+
+/* Part Accepted Mount Interfaces Checkbox Group */
+#tgb_gun_builder_data .tgb-interfaces-checkbox-group {
+	display: flex !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	gap: 10px 18px !important;
+	max-width: 650px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+#tgb_gun_builder_data .tgb-interfaces-checkbox-group label {
+	float: none !important;
+	width: auto !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 6px !important;
+	font-weight: normal !important;
+	line-height: 1.4 !important;
+	cursor: pointer !important;
+	white-space: nowrap !important;
+}
+
+#tgb_gun_builder_data .tgb-interfaces-checkbox-group label input[type="checkbox"] {
+	margin: 0 !important;
+	float: none !important;
+	position: static !important;
+	vertical-align: middle !important;
+}
+
+/* Part and Rail Position Checkbox Groups */
+#tgb_gun_builder_data .tgb-part-positions-group,
+#tgb_gun_builder_data .tgb-rail-positions-group {
+	display: flex !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	gap: 20px !important;
+	margin: 4px 0 6px 0 !important;
+	padding: 0 !important;
+}
+
+#tgb_gun_builder_data .tgb-part-positions-group label,
+#tgb_gun_builder_data .tgb-rail-positions-group label {
+	float: none !important;
+	width: auto !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 6px !important;
+	font-weight: normal !important;
+	line-height: 1.4 !important;
+	cursor: pointer !important;
+	white-space: nowrap !important;
+}
+
+#tgb_gun_builder_data .tgb-part-positions-group label input[type="checkbox"],
+#tgb_gun_builder_data .tgb-rail-positions-group label input[type="checkbox"] {
+	margin: 0 !important;
+	float: none !important;
+	position: static !important;
+	vertical-align: middle !important;
+}
+
+/* Base Gun Category Availability Policy Radios */
+#tgb_gun_builder_data .tgb-category-policy-group {
+	margin: 8px 0 12px 0 !important;
+	padding: 0 !important;
+	max-width: 780px !important;
+}
+
+#tgb_gun_builder_data .tgb-category-policy-row {
+	display: block !important;
+	margin: 0 0 10px 0 !important;
+	padding: 0 !important;
+	clear: both !important;
+}
+
+#tgb_gun_builder_data .tgb-category-policy-label {
+	float: none !important;
+	width: auto !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	display: inline-flex !important;
+	flex-wrap: wrap !important;
+	align-items: baseline !important;
+	gap: 6px 10px !important;
+	font-weight: normal !important;
+	line-height: 1.5 !important;
+	cursor: pointer !important;
+}
+
+#tgb_gun_builder_data .tgb-category-policy-label input[type="radio"] {
+	margin: 0 !important;
+	float: none !important;
+	position: static !important;
+	vertical-align: middle !important;
+	flex-shrink: 0 !important;
+	align-self: center !important;
+}
+
+#tgb_gun_builder_data .tgb-category-policy-title {
+	font-weight: 600 !important;
+	color: #1d2327 !important;
+	font-size: 13px !important;
+	flex-shrink: 0 !important;
+}
+
+#tgb_gun_builder_data .tgb-category-policy-desc {
+	color: #646970 !important;
+	font-size: 13px !important;
+	font-style: italic !important;
+	font-weight: normal !important;
+	white-space: normal !important;
+}
+
+/* Category Search and Checklist Container */
+#tgb_gun_builder_data #tgb_allowed_categories_container {
+	max-width: 680px !important;
+	margin-top: 14px !important;
+	margin-bottom: 12px !important;
+	clear: both !important;
+}
+
+#tgb_gun_builder_data .tgb-category-search-wrap {
+	margin-bottom: 8px !important;
+}
+
+#tgb_gun_builder_data #tgb_category_search_input {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+	height: 32px !important;
+	padding: 0 10px !important;
+	font-size: 13px !important;
+	border: 1px solid #8c8f94 !important;
+	border-radius: 4px !important;
+}
+
+#tgb_gun_builder_data .tgb-category-tree-desc {
+	display: block !important;
+	margin-top: 6px !important;
+	color: #646970 !important;
+	font-size: 12px !important;
+}
+
+/* Base Gun Category Checklist Box */
+#tgb_gun_builder_data .tgb-category-tree-box {
+	max-height: 240px;
+	overflow-y: auto;
+	border: 1px solid #c3c4c7;
+	background: #fff;
+	padding: 10px;
+	border-radius: 4px;
+}
+
+#tgb_gun_builder_data .tgb-category-item label {
+	float: none !important;
+	width: auto !important;
+	margin: 0 !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 6px !important;
+	font-weight: normal !important;
+	cursor: pointer !important;
+}
+
+#tgb_gun_builder_data .tgb-category-item input[type="checkbox"] {
+	margin: 0 !important;
+	float: none !important;
+	position: static !important;
+	vertical-align: middle !important;
+}
+
+/* Optional Additional Rail Positions Checkboxes */
+#tgb_gun_builder_data .tgb-rail-heading {
+	margin: 0 0 8px 0 !important;
+	padding: 0 !important;
+	font-size: 13px !important;
+	clear: both !important;
+}
+
+#tgb_gun_builder_data .tgb-rail-positions-group {
+	display: flex !important;
+	flex-wrap: wrap !important;
+	align-items: center !important;
+	gap: 28px !important;
+	margin: 8px 0 10px 0 !important;
+	padding: 0 !important;
+	clear: both !important;
+}
+
+#tgb_gun_builder_data .tgb-rail-position-label {
+	float: none !important;
+	width: auto !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 6px !important;
+	font-weight: normal !important;
+	line-height: 1.4 !important;
+	cursor: pointer !important;
+	white-space: nowrap !important;
+}
+
+#tgb_gun_builder_data .tgb-rail-position-label input[type="checkbox"] {
+	margin: 0 !important;
+	float: none !important;
+	position: static !important;
+	vertical-align: middle !important;
+}
+
+#tgb_gun_builder_data .tgb-rail-position-text {
+	font-weight: 500 !important;
+	font-size: 13px !important;
+	color: #1d2327 !important;
+}
+
+#tgb_gun_builder_data .tgb-rail-desc {
+	display: block !important;
+	margin-top: 6px !important;
+	color: #646970 !important;
+	font-size: 12px !important;
+}
+
+/* Responsive adjustment for narrower screens */
+@media screen and (max-width: 782px) {
+	#tgb_gun_builder_data .tgb-mounting-content {
+		padding-left: 12px !important;
+		padding-right: 12px !important;
+	}
+	#tgb_gun_builder_data .tgb-category-policy-label {
+		flex-direction: column !important;
+		align-items: flex-start !important;
+		gap: 2px !important;
+	}
+	#tgb_gun_builder_data .tgb-category-policy-desc {
+		margin-left: 24px !important;
+	}
+}
