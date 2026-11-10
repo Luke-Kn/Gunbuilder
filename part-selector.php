@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: Part Selector
  * Plugin URI: https://taktikairsoft.com
@@ -14,18 +15,18 @@
  * @package TaktikGunBuilder
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
 	exit;
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
-define( 'TGB_VERSION', '1.1.0-dev' );
-define( 'TGB_PLUGIN_FILE', __FILE__ );
-define( 'TGB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'TGB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'TGB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+define('TGB_VERSION', '1.1.0-dev');
+define('TGB_PLUGIN_FILE', __FILE__);
+define('TGB_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('TGB_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('TGB_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
 // =============================================================================
 // Foundational Subsystems
@@ -50,7 +51,17 @@ require_once TGB_PLUGIN_DIR . 'includes/class-tgb-cart.php';
  *
  * @return TGB_Core
  */
-function taktik_gun_builder() {
+
+add_action('woocommerce_after_add_to_cart_button', 'add_customize_button');
+
+function add_customize_button()
+{
+	global $product;
+	$product_id = $product->get_id();
+	echo '<button type="button" class="customize-button button alt" style="background-color: #f39c12; border-color: #e67e22; color: #fff; margin-left: 10px;" data-product-id="' . $product_id . '" onmouseover="this.style.backgroundColor=\'#e67e22\'; this.style.borderColor=\'#d35400\';" onmouseout="this.style.backgroundColor=\'#f39c12\'; this.style.borderColor=\'#e67e22\';">Customize</button>';
+}
+function taktik_gun_builder()
+{
 	return TGB_Core::instance();
 }
 

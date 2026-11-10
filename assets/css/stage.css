@@ -1,0 +1,76 @@
+
+#taktik-gun-builder .tgb-stage-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Physical Display Frame (Section 15) */
+#taktik-gun-builder .tgb-stage-frame {
+  position: relative;
+  margin: 0 auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Canonical Logical Stage (Section 15 & 30) */
+#taktik-gun-builder .tgb-stage {
+  position: absolute;
+  transform-origin: 0 0;
+  background-color: var(--tgb-bg-stage);
+  /* Real Logical Grid: Minor lines every 10 logical px (10mm = 1cm), Major lines every 100 logical px (100mm = 10cm) */
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size:
+    10px 10px,
+    10px 10px,
+    100px 100px,
+    100px 100px;
+  background-position: 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+/* Stage Loading State (Section 33) */
+#taktik-gun-builder .tgb-stage-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 30px;
+  text-align: center;
+}
+
+
+/* State Cards (Empty, Invalid, Error) */
+#taktik-gun-builder .tgb-stage-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 440px;
+  padding: 24px 16px;
+}
+
+#taktik-gun-builder .tgb-stage-state--error .tgb-state-icon {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+  border-color: rgba(231, 76, 60, 0.25);
+}
+
+#taktik-gun-builder .tgb-stage-state--invalid .tgb-state-icon {
+  color: #f39c12;
+  background: rgba(243, 156, 18, 0.08);
+  border-color: rgba(243, 156, 18, 0.25);
+}

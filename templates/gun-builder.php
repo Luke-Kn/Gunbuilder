@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Main template shell for the Taktik Gun Builder.
  *
@@ -24,7 +25,9 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 
 	<!-- Scoped Initial Render Data (Section 11) -->
 	<script type="application/json"
-		class="tgb-initial-render-data"><?php echo wp_json_encode($initial_render_data); ?></script>
+		class="tgb-initial-render-data">
+		<?php echo wp_json_encode($initial_render_data); ?>
+	</script>
 
 	<!-- Top Bar / Builder Header -->
 	<header class="tgb-header">
@@ -102,11 +105,13 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 						<p class="tgb-state-desc">
 							<?php esc_html_e('This product is not currently available in the Gun Builder. Choose a base platform below to start.', 'part-selector'); ?>
 						</p>
+						<div>
+						</div>
 					</div>
 
 					<!-- Physical Display Frame & Canonical Logical Stage (Section 15) -->
 					<div class="tgb-stage-frame" id="tgb-stage-frame" <?php echo ('ready' === $initial_render_data['status']) ? '' : 'style="display: none;"'; ?>>
-						<div class="tgb-stage" id="tgb-stage">
+						<div class="tgb-stage" id="tgb-stage" style="align-items:center;">
 							<!-- Layer elements are mounted here by the generic TGB Layered DOM Renderer -->
 						</div>
 					</div>
@@ -117,6 +122,10 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 					</div>
 
 				</div>
+			</div>
+			<div class="gb-size-control">
+				<label for="sizeSlider"><span id="sizeValue">1 pixel = 0.1cm</span></label>
+				<input type="range" id="sizeSlider" min="0.8" max="1.5" value="1" step="0.1">
 			</div>
 		</section>
 
@@ -179,7 +188,7 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 
 				</nav>
 				<div>
-				<input type="text" id="tgb-search-bar"  placeholder="Search">
+					<input type="text" id="tgb-search-bar" placeholder="Search">
 					<button type="button" class="tgb-toggle" role="switch" aria-checked="false"
 						id="tgb-compatible-toggle">
 						<span class="tgb-toggle__track" aria-hidden="true">
@@ -191,7 +200,7 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 
 				</div>
 
-				
+
 				<!-- Tray Status Notification (e.g. empty or error) -->
 				<div class="tgb-tray-status" id="tgb-tray-status" style="display: none;"></div>
 				<!-- Catalog Loading Skeletons -->

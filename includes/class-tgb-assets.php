@@ -44,15 +44,180 @@ class TGB_Assets {
 			'all'
 		);
 
+		wp_register_style(
+			'tgb-gun-build-list-css',
+			TGB_PLUGIN_URL . 'assets/css/build-list.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-cart-css',
+			TGB_PLUGIN_URL . 'assets/css/cart.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		
+		wp_register_style(
+			'tgb-gun-builder-category-css',
+			TGB_PLUGIN_URL . 'assets/css/category.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-compatibility-toggle-css',
+			TGB_PLUGIN_URL . 'assets/css/compatibility-toggle.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-header-css',
+			TGB_PLUGIN_URL . 'assets/css/header.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-item-card-css',
+			TGB_PLUGIN_URL . 'assets/css/item-card.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-mobile-css',
+			TGB_PLUGIN_URL . 'assets/css/mobile.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-root-css',
+			TGB_PLUGIN_URL . 'assets/css/root.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-search-bar-css',
+			TGB_PLUGIN_URL . 'assets/css/search-bar.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-size-slider-css',
+			TGB_PLUGIN_URL . 'assets/css/size-slider.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
+		wp_register_style(
+			'tgb-gun-builder-stage-css',
+			TGB_PLUGIN_URL . 'assets/css/stage.css',
+			array(),
+			TGB_VERSION,
+			'all'
+		);
+
 		// Lightweight Gun Builder JS foundation.
-		wp_register_script(
+		wp_register_script_module(
 			'tgb-gun-builder-js',
 			TGB_PLUGIN_URL . 'assets/js/gun-builder.js',
 			array(),
 			TGB_VERSION,
-			true
+			array()
+		);
+		
+		wp_register_script_module(
+			'tgb-build-state-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-BuildState.js',
+			array(),
+			TGB_VERSION,
+			array()
 		);
 
+		wp_register_script_module(
+			'tgb-cart-client-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-CartClient.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+		wp_register_script_module(
+			'tgb-catalog-client-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-CatalogClient.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+		wp_register_script_module(
+			'tgb-current-build-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-CurrentBuild.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+		wp_register_script_module(
+			'tgb-interactions-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-Interactions.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+
+		wp_register_script_module(
+			'tgb-persistence-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-Persistence.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+		wp_register_script_module(
+			'tgb-product-selection-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-ProductSelection.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+		wp_register_script_module(
+			'tgb-renderer-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-Renderer.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+
+		wp_register_script_module(
+			'tgb-utility-js',
+			TGB_PLUGIN_URL . 'assets/js/TGB-Utility.js',
+			array(),
+			TGB_VERSION,
+			array()
+		);
+
+
+		
 		// Localize parameters for AJAX / REST API integration.
 		wp_localize_script(
 			'tgb-gun-builder-js',
@@ -100,7 +265,28 @@ class TGB_Assets {
 		}
 
 		wp_enqueue_style( 'tgb-gun-builder-css' );
-		wp_enqueue_script( 'tgb-gun-builder-js' );
+		wp_enqueue_style('tgb-gun-builder-cart-css' );
+		wp_enqueue_style( 'tgb-gun-builder-category-css');
+		wp_enqueue_style( 'tgb-gun-builder-compatibility-toggle-css');
+		wp_enqueue_style( 'tgb-gun-builder-header-css' );
+		wp_enqueue_style( 'tgb-gun-builder-item-card-css');
+		wp_enqueue_style( 'tgb-gun-builder-mobile-css');
+		wp_enqueue_style( 'tgb-gun-builder-root-css');
+		wp_enqueue_style( 'tgb-gun-builder-search-bar-css');
+		wp_enqueue_style( 'tgb-gun-builder-size-slider-css' );
+		wp_enqueue_style( 'tgb-gun-builder-stage-css');
+		wp_enqueue_style( 'tgb-gun-build-list-css');
+
+		wp_enqueue_script_module( 'tgb-gun-builder-js' );
+		wp_enqueue_script_module( 'tgb-build-state-js' );
+		wp_enqueue_script_module( 'tgb-cart-client-js');
+		wp_enqueue_script_module( 'tgb-catalog-client-js');
+		wp_enqueue_script_module( 'tgb-current-build-js');
+		wp_enqueue_script_module( 'tgb-interactions-js' );
+		wp_enqueue_script_module( 'tgb-persistence-js');
+		wp_enqueue_script_module( 'tgb-product-selection-js' );
+		wp_enqueue_script_module( 'tgb-renderer-js');
+		wp_enqueue_script_module( 'tgb-utility-js');
 
 		self::$enqueued = true;
 	}

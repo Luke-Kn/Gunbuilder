@@ -1,0 +1,34 @@
+
+#taktik-gun-builder #tgb-search-bar {
+  background: var(--tgb-bg-surface-elevated);
+  color: var(--tgb-text-main);
+  border: 1px solid var(--tgb-border-subtle);
+  border-radius: 10px;
+  padding: 10px 10px;
+  font-size: 14px;
+  /* right-aligns the text inside the field */
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  margin-left: auto;
+  margin-bottom: 10px;
+  width: 90vw;
+}
+
+#taktik-gun-builder #tgb-search-bar::placeholder {
+  color: var(--tgb-text-muted);
+}
+
+#taktik-gun-builder #tgb-search-bar:focus {
+  outline: none;
+  border-color: var(--tgb-accent);
+  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.25);
+}
+
+@media (min-width: 767px) {
+  #taktik-gun-builder #tgb-search-bar {
+    margin-left: 0;
+    margin-right: auto;
+    width: 300px;
+  }
+}
