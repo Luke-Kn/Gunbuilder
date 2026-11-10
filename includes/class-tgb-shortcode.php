@@ -136,4 +136,34 @@ class TGB_Shortcode {
 			'weight_unit' => $store_weight_unit,
 		);
 	}
+
+	/**
+	 * Retrieves the canonical URL of the Gun Builder page.
+	 *
+	 * Dynamically resolves from published pages containing [part_selector].
+	 * Falls back gracefully to /test/.
+	 *
+	 * @return string
+	 */
+	public static function get_builder_page_url() {
+		static $cached_url = null;
+		if ( null !== $cached_url ) {
+			return $cached_url;
+		}
+
+		global $wpdb;
+		$page_id = (int) $wpdb->get_var(
+			"SELECT ID FROM {$wpdb->posts}
+			 WHERE post_type = 'page' AND post_status = 'publish' AND post_content LIKE '%[part_selector%'
+			 ORDER BY ID ASC LIMIT 1"
+		);
+
+		if ( $page_id > 0 ) {
+			$cached_url = get_permalink( $page_id );
+		} else {
+			$cached_url = home_url( '/test/' );
+		}
+
+		return $cached_url;
+	}
 }

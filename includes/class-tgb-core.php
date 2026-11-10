@@ -63,6 +63,8 @@ class TGB_Core {
 		TGB_Product_Data::init();
 		TGB_Catalog_API::init();
 		TGB_Cart::init();
+		TGB_Saved_Builds::init();
+		TGB_Shares::init();
 	}
 
 	/**

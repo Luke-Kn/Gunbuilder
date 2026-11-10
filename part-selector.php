@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Plugin Name: Part Selector
  * Plugin URI: https://taktikairsoft.com
@@ -15,18 +14,18 @@
  * @package TaktikGunBuilder
  */
 
-if (! defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
-define('TGB_VERSION', '1.1.0-dev');
-define('TGB_PLUGIN_FILE', __FILE__);
-define('TGB_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('TGB_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('TGB_PLUGIN_BASENAME', plugin_basename(__FILE__));
+define( 'TGB_VERSION', '1.1.0-dev' );
+define( 'TGB_PLUGIN_FILE', __FILE__ );
+define( 'TGB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'TGB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'TGB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 // =============================================================================
 // Foundational Subsystems
@@ -38,10 +37,13 @@ require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-integration.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-part-types.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-mount-interfaces.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-mounting.php';
+require_once TGB_PLUGIN_DIR . 'includes/class-tgb-rail-compatibility.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-config.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-product-data.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-catalog-api.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-cart.php';
+require_once TGB_PLUGIN_DIR . 'includes/class-tgb-saved-builds.php';
+require_once TGB_PLUGIN_DIR . 'includes/class-tgb-shares.php';
 
 // =============================================================================
 // Bootstrap
