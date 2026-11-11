@@ -20,7 +20,7 @@
 
 (function(window, document) {
 	'use strict';
-
+const slider = document.getElementById("sizeSlider");
 	/**
 	 * Canonical Scale Constants (Part 4)
 	 */
@@ -902,7 +902,7 @@
 			// Update internal debug HUD scale indicator if present
 			const hudScale = this.root.querySelector('#tgb-stage-hud-scale');
 			if (hudScale) {
-				hudScale.textContent = '1mm = 1px (Scale: ' + (scale * 100).toFixed(1) + '%)';
+				hudScale.textContent =  '1mm = 1px (Scale: ' + (scale * 100).toFixed(1) + '%)';
 			}
 		}
 
@@ -1070,7 +1070,7 @@
 			target.addEventListener('pointerup', this.boundPointerUp);
 			target.addEventListener('pointercancel', this.boundPointerCancel);
 
-			this.updateDebugHUD(instanceId, part.x, part.y, displayScale);
+			TGB_Interactions.updateDebugHUD(instanceId, part.x, part.y, displayScale);
 		}
 
 		/**
@@ -1122,7 +1122,7 @@
 					// Update authoritative Build State (Section 3)
 					this.buildState.updatePartPosition(this.activeDrag.instanceId, clampedX, clampedY);
 
-					this.updateDebugHUD(this.activeDrag.instanceId, clampedX, clampedY, this.activeDrag.displayScale);
+					TGB_Interactions.updateDebugHUD(this.activeDrag.instanceId, clampedX, clampedY, this.activeDrag.displayScale);
 				});
 			}
 		}
@@ -1211,11 +1211,11 @@
 		 * @param {number} y
 		 * @param {number} scale
 		 */
-		updateDebugHUD(instanceId, x, y, scale) {
-			const hudEl = this.renderer.root.querySelector('#tgb-stage-hud-scale');
+		static updateDebugHUD(instanceId, x, y, scale) {
+			const hudEl = document.getElementById('tgb-stage-hud-scale');
 			if (hudEl) {
 				const shortId = instanceId ? instanceId.substring(0, 14) : '';
-				hudEl.textContent = `1mm = 1px (Scale: ${(scale * 100).toFixed(1)}%) | Part [${shortId}] X: ${Math.round(x)} Y: ${Math.round(y)}`;
+				hudEl.textContent = `${scale}mm = 1px (Scale: ${(scale * 100).toFixed(1)}%) | Part [${shortId}] X: ${Math.round(x)} Y: ${Math.round(y)}`;
 			}
 		}
 
@@ -1714,6 +1714,9 @@
 			// 7. Load default category (Base Platform)
 			await this.switchCategory('base_gun');
 
+			
+			this.renderSizeSlider(currentBase);
+
 			// 8. Initial sync with current build state
 			this.syncSidebar();
 		}
@@ -1845,6 +1848,57 @@
 				}
 			}
 		}
+
+
+  renderSizeSlider(currentBase) {
+    
+    
+    let currentBaseGunGeometry =
+    	calculateProductGeometry(currentBase);
+    let currentStageGeometry = calculateStageGeometry(
+      currentBaseGunGeometry,
+    );
+
+    slider.addEventListener("input", () => {
+		currentBase = this.buildState.getBaseGun()
+      let imgWidth;
+      let imgHeight;
+      document.querySelectorAll(".tgb-layer").forEach((img) => {
+        let imgWidth = slider.value * img.dataset.tgbWidth;
+        let imgHeight = slider.value * img.dataset.tgbHeight;
+
+        img.style.width = imgWidth + "px";
+        img.style.height = imgHeight + "px";
+		
+        if (img.classList.contains("tgb-layer--base")) {
+          img.style.marginLeft =
+            ((currentStageGeometry.stageWidth - imgWidth) / 2 +170)+ "px";
+        TGB_Interactions.updateDebugHUD(
+           currentBase.name,
+            imgHeight,
+           imgWidth,
+           slider.value,
+         );
+        }
+      });
+
+    //   currentBase.mounting.points.forEach((point) => {
+    //     let tip = document.getElementById(point.id);
+
+    //     tip.style.left =
+    //       Math.round(parseFloat(point.x) + currentStageGeometry.baseX) + "px";
+    //     tip.style.top =
+    //       Math.round(parseFloat(point.y) + currentStageGeometry.baseY) + "px";
+
+    //     for (let index = 0; index < tip.children.length; index++) {
+    //       tip.children[index].style.left =
+    //         Math.round(parseFloat(point.x) + currentStageGeometry.baseX) + "px";
+    //       tip.children[index].style.top =
+    //         Math.round(parseFloat(point.y) + currentStageGeometry.baseY) + "px";
+    //     }
+    //   });
+    });
+  }
 
 		/**
 		 * Loads next batch for active category.
@@ -2124,6 +2178,7 @@
 				this.selectBaseGun(product);
 			} else if (action === 'add-part') {
 				this.addPartToBuild(product);
+				slider.dispatchEvent(new Event('input'))
 			}
 		}
 

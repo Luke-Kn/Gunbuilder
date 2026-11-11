@@ -434,6 +434,8 @@
 	max-height: 360px;
 	overflow-y: auto;
 	padding-right: 2px;
+		max-height: 150px;
+
 }
 
 /* Custom scrollbar for components list */
@@ -889,26 +891,36 @@
 }
 
 /* Internal Measurement HUD (Debug Mode Only) */
-#taktik-gun-builder .tgb-stage-hud {
-	display: none;
-	position: absolute;
-	bottom: 8px;
-	right: 8px;
-	background: rgba(11, 13, 19, 0.88);
-	border: 1px solid var(--tgb-border);
-	padding: 4px 10px;
-	border-radius: var(--tgb-radius-sm);
-	font-size: 11px;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-	color: var(--tgb-text-muted);
-	letter-spacing: 0.03em;
-	pointer-events: none;
-	z-index: 100;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+.tgb-stage-hud {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: rgba(11, 13, 19, 0.88);
+  border: 1px solid var(--tgb-border);
+  padding: 4px 10px;
+  border-radius: var(--tgb-radius-sm);
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+  color: var(--tgb-text-muted);
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  max-width: 300px;
+}
+.tgb-stage-hud {
+  display: block;
 }
 
-#taktik-gun-builder.tgb-debug .tgb-stage-hud {
-	display: block;
+@media (max-width: 768px) {
+	/* Internal Measurement HUD (Debug Mode Only) */
+.tgb-stage-hud {
+width: 60vw;
+}
+.tgb-stage-hud {
+  display: block;
+}
+#tgb-stage-hud-scale{
+	display: none;
+}
 }
 
 /* Mount Points Debug Overlay (Part 7) */
@@ -1344,6 +1356,13 @@
 	}
 }
 
+
+@media (max-width: 959px) {
+	#taktik-gun-builder .tgb-workspace {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+}
 /* Tablet Portrait & Small Tablets (<= 768px) */
 @media (max-width: 768px) {
 	#taktik-gun-builder {
@@ -1757,4 +1776,75 @@ width: 90vw;
 	.tgb-toggle__track,
 	.tgb-toggle__thumb,
 	.tgb-toggle__state { transition: none; }
+}
+#sizeSlider {
+  --accent: #ff6a00;
+  --track: #2a2d33;
+  --fill: 50%; /* updated by JS below */
+
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  outline: none;
+  cursor: grab;
+  background: var(--track);
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Thumb: WebKit/Blink */
+#sizeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1a1c20;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 0 rgba(255, 106, 0, 0.4);
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* Thumb: Firefox */
+#sizeSlider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1a1c20;
+  border: 2px solid var(--accent);
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* Firefox track */
+#sizeSlider::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--track);
+}
+#sizeSlider::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* Hover / focus / drag states */
+#sizeSlider:hover::-webkit-slider-thumb,
+#sizeSlider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(255, 106, 0, 0.25);
+}
+#sizeSlider:hover::-moz-range-thumb,
+#sizeSlider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 5px rgba(255, 106, 0, 0.25);
+}
+#sizeSlider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+#sizeSlider:active::-moz-range-thumb {
+  transform: scale(1.15);
 }

@@ -111,10 +111,11 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 						</div>
 					</div>
 
-					<!-- Measurement HUD (Internal / Debug mode only) -->
-					<div class="tgb-stage-hud" id="tgb-stage-hud" aria-hidden="true">
-						<span class="tgb-stage-hud__scale" id="tgb-stage-hud-scale"></span>
-					</div>
+									<!-- Measurement HUD (Internal / Debug mode only) -->
+							<div class="tgb-stage-hud" id="tgb-stage-hud">
+								<span class="tgb-stage-hud__scale" id="tgb-stage-hud-scale"></span>
+								<input type="range" id="sizeSlider" min="0.8" max="1.5" value="1" step="0.1">
+							</div>
 
 				</div>
 			</div>
