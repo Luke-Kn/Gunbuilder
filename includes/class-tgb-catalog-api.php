@@ -159,43 +159,6 @@ class TGB_Catalog_API {
 			)
 		);
 
-
-		// 4. GET /wp-json/tgb/v1/parts/search
-		register_rest_route(
-			self::NAMESPACE,
-			'/parts/search',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array(__CLASS__, 'search_parts'),
-				'permission_callback' => '__return_true',
-				'args'                => array(
-					'q'       => array(
-						'description'       => __('Search query string.', 'part-selector'),
-						'type'              => 'string',
-						'required'          => true,
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-					'type_id' => array(
-						'description'       => __('Dynamic Part Type taxonomy term ID.', 'part-selector'),
-						'type'              => 'integer',
-						'required'          => true,
-						'sanitize_callback' => 'absint',
-						'validate_callback' => array(__CLASS__, 'validate_type_id'),
-					),
-					'limit'   => array(
-						'description'       => __('Maximum number of items to return.', 'part-selector'),
-												'validate_callback' => array(__CLASS__, 'validate_limit'),
-					),
-					'cursor'  => array(
-						'description'       => __('Continuation cursor for pagination.', 'part-selector'),
-						'type'              => 'string',
-						'required'          => false,
-						'sanitize_callback' => 'sanitize_text_field',
-						'validate_callback' => array(__CLASS__, 'validate_cursor'),
-					)
-				)
-			)
-		);
 		// 5. GET /wp-json/tgb/v1/rails
 		register_rest_route(
 			self::NAMESPACE,
@@ -218,7 +181,7 @@ class TGB_Catalog_API {
 						'default'           => 20,
 						'minimum'           => 1,
 						'maximum'           => 100,
-						'sanitize_callback' => 'absint',					
+						'sanitize_callback' => 'absint',
 						'validate_callback' => array( __CLASS__, 'validate_limit' ),
 					),
 				),
@@ -774,36 +737,6 @@ class TGB_Catalog_API {
 		);
 	}
 
-
-	public static function search_parts($request)
-	{
-		$query   = $request->get_param('q') ? sanitize_text_field($request->get_param('q')) : '';
-		$type_id = absint($request->get_param('type_id'));
-		$limit   = $request->get_param('limit') ? absint($request->get_param('limit')) : 20;
-		$cursor  = $request->get_param('cursor') ? sanitize_text_field($request->get_param('cursor')) : null;
-
-		$query_args = array(
-			'limit'  => $limit,
-			'cursor' => $cursor,
-		);
-
-		$result = TGB_Product_Data::search_parts($query, $type_id, $query_args);
-
-		$serialized_items = array();
-		if (! empty($result['items']) && is_array($result['items'])) {
-			foreach ($result['items'] as $item) {
-				$serialized_items[] = self::serialize_product($item);
-			}
-		}
-						return rest_ensure_response(
-			array(
-				'items'       => $serialized_items,
-				'limit'       => (int) $result['limit'],
-				'has_more'    => (bool) $result['has_more'],
-				'next_cursor' => $result['next_cursor'],
-			)
-		);
-		}
 	/**
 	 * Endpoint handler for POST /wp-json/tgb/v1/validate-build.
 	 *
@@ -886,6 +819,7 @@ class TGB_Catalog_API {
 			)
 		);
 	}
+
 	// =========================================================================
 	// Public Product Serialization (Section 8)
 	// =========================================================================

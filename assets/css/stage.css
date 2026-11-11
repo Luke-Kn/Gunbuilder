@@ -1,4 +1,3 @@
-
 #taktik-gun-builder .tgb-stage-viewport {
   position: relative;
   width: 100%;
@@ -38,6 +37,7 @@
   border-radius: 8px;
   box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.6);
   overflow: hidden;
+ 
 }
 
 /* Stage Loading State (Section 33) */
@@ -50,7 +50,6 @@
   padding: 30px;
   text-align: center;
 }
-
 
 /* State Cards (Empty, Invalid, Error) */
 #taktik-gun-builder .tgb-stage-state {

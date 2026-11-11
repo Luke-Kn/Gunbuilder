@@ -317,7 +317,7 @@ export	class TGB_Persistence {
 				let baseProduct = productRegistry.get(persisted.baseProductId);
 				if (!baseProduct || baseProduct.role !== 'base_gun' || !baseProduct.builder_image) {
 					try {
-						const baseGunsRes = await catalogClient.getBaseGuns(100);
+						//const baseGunsRes = await catalogClient.getBaseGuns(100);
 						const found = (baseGunsRes.items || []).find(b => b.id === persisted.baseProductId);
 						if (found && found.role === 'base_gun' && found.builder_image && found.builder_image.url) {
 							baseProduct = found;
