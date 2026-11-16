@@ -28,6 +28,18 @@ class TGB_Part_Types {
 	 */
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register_taxonomy' ), 5 );
+		add_action( 'created_' . self::TAXONOMY, array( __CLASS__, 'on_taxonomy_changed' ) );
+		add_action( 'edited_' . self::TAXONOMY, array( __CLASS__, 'on_taxonomy_changed' ) );
+		add_action( 'delete_' . self::TAXONOMY, array( __CLASS__, 'on_taxonomy_changed' ) );
+	}
+
+	/**
+	 * Invalidate catalog cache when custom part types are created, modified, or deleted.
+	 */
+	public static function on_taxonomy_changed() {
+		if ( class_exists( 'TGB_Product_Data' ) ) {
+			TGB_Product_Data::bump_catalog_version();
+		}
 	}
 
 	/**

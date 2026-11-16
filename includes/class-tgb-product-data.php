@@ -508,8 +508,10 @@ class TGB_Product_Data {
 		$category_id     = absint( $category_id );
 		$normalized_args = self::normalize_query_args( $args );
 
-		// Validate term exists and belongs to product_cat taxonomy.
-		if ( $category_id <= 0 || ! term_exists( $category_id, 'product_cat' ) ) {
+		$taxonomy = ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) ? TGB_Part_Types::TAXONOMY : 'product_cat';
+
+		// Validate term exists and belongs to active taxonomy.
+		if ( $category_id <= 0 || ! term_exists( $category_id, $taxonomy ) ) {
 			return array(
 				'items'       => array(),
 				'limit'       => $normalized_args['limit'],
@@ -520,7 +522,7 @@ class TGB_Product_Data {
 
 		$tax_query = array(
 			array(
-				'taxonomy'         => 'product_cat',
+				'taxonomy'         => $taxonomy,
 				'field'            => 'term_id',
 				'terms'            => $category_id,
 				'include_children' => true,
@@ -651,15 +653,18 @@ class TGB_Product_Data {
 	 * @return string Transient cache key.
 	 */
 	public static function get_category_cache_key( $base_gun_id = 0, array $installed_rails = array() ) {
+		$source  = class_exists( 'TGB_Settings' ) ? TGB_Settings::get_category_source() : 'woocommerce';
 		$rfp     = self::get_rail_fingerprint( $installed_rails );
 		$version = self::get_catalog_version();
-		return 'tgb_ccat_' . absint( $base_gun_id ) . '_r' . $rfp . '_' . md5( $version );
+		return 'tgb_ccat_' . $source . '_' . absint( $base_gun_id ) . '_r' . $rfp . '_' . md5( $version );
 	}
 
 	public static function get_compatible_categories( $base_gun_id = 0, array $installed_rails = array() ) {
 		$base_gun_id = absint( $base_gun_id );
+		$source      = class_exists( 'TGB_Settings' ) ? TGB_Settings::get_category_source() : 'woocommerce';
+		$taxonomy    = ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) ? TGB_Part_Types::TAXONOMY : 'product_cat';
 		$rfp         = self::get_rail_fingerprint( $installed_rails );
-		$runtime_key = $base_gun_id . '_r' . $rfp;
+		$runtime_key = $source . '_' . $base_gun_id . '_r' . $rfp;
 
 		// 1. In-memory runtime cache check.
 		if ( isset( self::$runtime_categories_cache[ $runtime_key ] ) ) {
@@ -747,7 +752,7 @@ class TGB_Product_Data {
 		$is_selected_policy = ( $base_gun_id > 0 && TGB_Product_Config::POLICY_SELECTED === TGB_Product_Config::get_category_policy( $base_gun_id ) );
 
 		foreach ( $qualifying_parts as $part_id ) {
-			$terms = wp_get_post_terms( $part_id, 'product_cat' );
+			$terms = wp_get_post_terms( $part_id, $taxonomy );
 			if ( empty( $terms ) || is_wp_error( $terms ) ) {
 				continue;
 			}
@@ -768,13 +773,13 @@ class TGB_Product_Data {
 
 				// Include all parent ancestors so the full branch is connected.
 				if ( ! isset( $ancestor_cache[ $term->term_id ] ) ) {
-					$ancestor_cache[ $term->term_id ] = get_ancestors( $term->term_id, 'product_cat', 'taxonomy' );
+					$ancestor_cache[ $term->term_id ] = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
 				}
 				$ancestor_ids = $ancestor_cache[ $term->term_id ];
 
 				foreach ( $ancestor_ids as $ancestor_id ) {
 					if ( ! isset( $all_terms[ $ancestor_id ] ) ) {
-						$anc_term = get_term( $ancestor_id, 'product_cat' );
+						$anc_term = get_term( $ancestor_id, $taxonomy );
 						if ( $anc_term && ! is_wp_error( $anc_term ) ) {
 							$all_terms[ $ancestor_id ] = $anc_term;
 						}

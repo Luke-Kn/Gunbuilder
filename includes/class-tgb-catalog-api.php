@@ -266,6 +266,15 @@ class TGB_Catalog_API {
 			return true;
 		}
 
+		// Security: If WooCommerce mode is active, reject requests querying custom type_id
+		if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_woocommerce_source() ) {
+			return new WP_Error(
+				'tgb_source_mismatch',
+				__( 'Custom Part Types are disabled while WooCommerce Categories source is active.', 'part-selector' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		$term_id = absint( $param );
 		if ( $term_id <= 0 ) {
 			return new WP_Error(
@@ -275,7 +284,7 @@ class TGB_Catalog_API {
 			);
 		}
 
-		$term = get_term( $term_id, 'tgb_part_type' );
+		$term = get_term( $term_id, TGB_Part_Types::TAXONOMY );
 		if ( ! $term || is_wp_error( $term ) ) {
 			return new WP_Error(
 				'tgb_part_type_not_found',
@@ -288,7 +297,7 @@ class TGB_Catalog_API {
 	}
 
 	/**
-	 * Validates WooCommerce product_cat Category ID parameter.
+	 * Validates Category ID parameter against active category taxonomy.
 	 *
 	 * @param mixed           $param   Parameter value.
 	 * @param WP_REST_Request $request Request object.
@@ -308,12 +317,13 @@ class TGB_Catalog_API {
 			);
 		}
 
-		$term_id = absint( $param );
-		$term    = get_term( $term_id, 'product_cat' );
+		$term_id  = absint( $param );
+		$taxonomy = ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) ? TGB_Part_Types::TAXONOMY : 'product_cat';
+		$term     = get_term( $term_id, $taxonomy );
 		if ( ! $term || is_wp_error( $term ) ) {
 			return new WP_Error(
 				'tgb_category_not_found',
-				__( 'The requested Product Category does not exist.', 'part-selector' ),
+				__( 'The requested Category does not exist in the active category source.', 'part-selector' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -717,6 +727,20 @@ class TGB_Catalog_API {
 			}
 			$result = TGB_Product_Data::get_parts_by_category( $category_id, $query_args );
 		} else {
+			if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_woocommerce_source() ) {
+				return new WP_Error(
+					'tgb_source_mismatch',
+					__( 'Custom Part Types are disabled while WooCommerce Categories source is active.', 'part-selector' ),
+					array( 'status' => 400 )
+				);
+			}
+			if ( $base_gun_id > 0 && ! TGB_Product_Config::is_category_allowed_for_gun( $base_gun_id, $type_id ) ) {
+				return new WP_Error(
+					'tgb_category_disallowed',
+					__( 'Part Type is not permitted under Base Gun policy.', 'part-selector' ),
+					array( 'status' => 400 )
+				);
+			}
 			$result = TGB_Product_Data::get_parts_by_type( $type_id, $query_args );
 		}
 

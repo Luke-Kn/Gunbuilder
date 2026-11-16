@@ -23,6 +23,8 @@ class TGB_Product_Config {
 	const META_REFERENCE_MM            = '_tgb_reference_mm';
 	const META_CATEGORY_POLICY         = '_tgb_category_policy';
 	const META_ALLOWED_CATEGORIES      = '_tgb_allowed_categories';
+	const META_CUSTOM_CATEGORY_POLICY    = '_tgb_custom_category_policy';
+	const META_ALLOWED_CUSTOM_CATEGORIES = '_tgb_allowed_custom_categories';
 	const META_ALLOWED_RAIL_POSITIONS  = '_tgb_allowed_rail_positions';
 	const META_RAIL_INPUT_INTERFACES   = '_tgb_rail_input_interfaces';
 	const META_RAIL_OUTPUT_INTERFACES  = '_tgb_rail_output_interfaces';
@@ -114,8 +116,11 @@ class TGB_Product_Config {
 		$role         = get_post_meta( $product_id, self::META_ROLE, true );
 		$reference_mm = get_post_meta( $product_id, self::META_REFERENCE_MM, true );
 
-		$category_policy        = self::get_category_policy( $product_id );
-		$allowed_categories     = self::get_allowed_categories( $product_id );
+		$is_custom_source       = class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source();
+		$category_policy        = self::get_woocommerce_category_policy( $product_id );
+		$allowed_categories     = self::get_allowed_woocommerce_categories( $product_id );
+		$custom_category_policy = self::get_custom_category_policy( $product_id );
+		$allowed_custom_cats    = self::get_allowed_custom_categories( $product_id );
 		$allowed_rail_positions = self::get_allowed_rail_positions( $product_id );
 
 		$current_part_type = TGB_Part_Types::get_product_part_type( $product_id );
@@ -171,23 +176,46 @@ class TGB_Product_Config {
 				);
 				?>
 
-				<!-- 4. Product Categories (Part Role: Automatic grouping via native WooCommerce taxonomy) -->
-				<p class="form-field tgb-part-type-row" id="tgb_part_type_row">
-					<label><?php esc_html_e( 'Product Categories', 'part-selector' ); ?></label>
-					<span class="tgb-assigned-categories" style="display: inline-block; padding: 7px 0;">
-						<?php
-						$assigned_cats = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'names' ) );
-						if ( ! empty( $assigned_cats ) && ! is_wp_error( $assigned_cats ) ) {
-							echo '<strong>' . esc_html( implode( ', ', $assigned_cats ) ) . '</strong>';
-						} else {
-							echo '<em style="color: #d63638;">' . esc_html__( 'No categories assigned yet. Please assign at least one category in the Product categories box.', 'part-selector' ) . '</em>';
-						}
-						?>
-					</span>
-					<span class="description" style="display: block; margin-top: 4px;">
-						<?php esc_html_e( 'Gun Builder component grouping is automatically derived from the standard WooCommerce Product Categories assigned to this product.', 'part-selector' ); ?>
-					</span>
-				</p>
+				<!-- 4. Product Categories / Part Type (Source-Aware) -->
+				<?php if ( $is_custom_source ) : ?>
+					<p class="form-field tgb-part-type-row" id="tgb_part_type_row">
+						<label for="tgb_part_type_id"><?php esc_html_e( 'Gun Builder Category / Part Type', 'part-selector' ); ?></label>
+						<select name="tgb_part_type_id" id="tgb_part_type_id" class="select short" style="min-width: 250px;">
+							<option value="0"><?php esc_html_e( '-- Select Category --', 'part-selector' ); ?></option>
+							<?php foreach ( $available_types as $type ) : ?>
+								<option value="<?php echo esc_attr( $type->term_id ); ?>" <?php selected( $current_term_id, $type->term_id ); ?>>
+									<?php echo esc_html( $type->name ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+						<span class="description" style="display: block; margin-top: 4px;">
+							<?php
+							printf(
+								/* translators: %s: link to part types admin screen */
+								esc_html__( 'Assign this Part to a custom Gun Builder category (tgb_part_type). Manage categories under %s.', 'part-selector' ),
+								'<a href="' . esc_url( admin_url( 'edit-tags.php?taxonomy=' . TGB_Part_Types::TAXONOMY . '&post_type=product' ) ) . '" target="_blank"><strong>' . esc_html__( 'Gun Builder Part Types', 'part-selector' ) . ' &rarr;</strong></a>'
+							);
+							?>
+						</span>
+					</p>
+				<?php else : ?>
+					<p class="form-field tgb-part-type-row" id="tgb_part_type_row">
+						<label><?php esc_html_e( 'Product Categories', 'part-selector' ); ?></label>
+						<span class="tgb-assigned-categories" style="display: inline-block; padding: 7px 0;">
+							<?php
+							$assigned_cats = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'names' ) );
+							if ( ! empty( $assigned_cats ) && ! is_wp_error( $assigned_cats ) ) {
+								echo '<strong>' . esc_html( implode( ', ', $assigned_cats ) ) . '</strong>';
+							} else {
+								echo '<em style="color: #d63638;">' . esc_html__( 'No categories assigned yet. Please assign at least one category in the Product categories box.', 'part-selector' ) . '</em>';
+							}
+							?>
+						</span>
+						<span class="description" style="display: block; margin-top: 4px;">
+							<?php esc_html_e( 'Gun Builder component grouping is automatically derived from the standard WooCommerce Product Categories assigned to this product.', 'part-selector' ); ?>
+						</span>
+					</p>
+				<?php endif; ?>
 
 				<?php
 				// 5. Visual Reference Length (mm).
@@ -204,45 +232,85 @@ class TGB_Product_Config {
 				);
 				?>
 
-				<!-- 6. Component Category Availability (Conditional on Role = Base Gun) -->
+				<!-- 6. Component Category Availability (Conditional on Role = Base Gun, Source-Aware) -->
 				<div id="tgb_base_gun_categories_section" class="tgb-mounting-section" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
-					<p class="form-field">
-						<strong><?php esc_html_e( 'Component Category Availability', 'part-selector' ); ?></strong>
-						<span class="description" style="display: block; margin-top: 4px;">
-							<?php esc_html_e( 'Specify which WooCommerce product categories are permitted for this Base Gun. Mounting compatibility is checked separately.', 'part-selector' ); ?>
-						</span>
-					</p>
-
-					<div class="tgb-mounting-content" style="padding: 0 20px 10px 162px;">
-						<div class="tgb-category-policy-group">
-							<div class="tgb-category-policy-row">
-								<label class="tgb-category-policy-label">
-									<input type="radio" name="tgb_category_policy" value="<?php echo esc_attr( self::POLICY_ALL ); ?>" <?php checked( $category_policy, self::POLICY_ALL ); ?> />
-									<span class="tgb-category-policy-title"><?php esc_html_e( 'All eligible categories', 'part-selector' ); ?></span>
-									<span class="tgb-category-policy-desc"><?php esc_html_e( '(No category restrictions; all mount-compatible builder parts are available)', 'part-selector' ); ?></span>
-								</label>
-							</div>
-							<div class="tgb-category-policy-row">
-								<label class="tgb-category-policy-label">
-									<input type="radio" name="tgb_category_policy" value="<?php echo esc_attr( self::POLICY_SELECTED ); ?>" <?php checked( $category_policy, self::POLICY_SELECTED ); ?> />
-									<span class="tgb-category-policy-title"><?php esc_html_e( 'Selected categories only', 'part-selector' ); ?></span>
-									<span class="tgb-category-policy-desc"><?php esc_html_e( '(Only parts in selected categories or their descendants will be shown)', 'part-selector' ); ?></span>
-								</label>
-							</div>
-						</div>
-
-						<div id="tgb_allowed_categories_container" style="<?php echo ( self::POLICY_SELECTED === $category_policy ) ? '' : 'display: none;'; ?>">
-							<div class="tgb-category-search-wrap">
-								<input type="text" id="tgb_category_search_input" class="regular-text" placeholder="<?php esc_attr_e( 'Search categories...', 'part-selector' ); ?>" />
-							</div>
-							<div class="tgb-category-tree-box">
-								<?php self::render_category_checklist( $allowed_categories ); ?>
-							</div>
-							<span class="description tgb-category-tree-desc">
-								<?php esc_html_e( 'Selecting a parent category dynamically includes its descendants. Individual subcategories can also be selected independently.', 'part-selector' ); ?>
+					<?php if ( $is_custom_source ) : ?>
+						<p class="form-field">
+							<strong><?php esc_html_e( 'Component Category Availability (Custom Categories)', 'part-selector' ); ?></strong>
+							<span class="description" style="display: block; margin-top: 4px;">
+								<?php esc_html_e( 'Specify which custom Gun Builder categories are permitted for this Base Gun. Mounting compatibility is checked separately.', 'part-selector' ); ?>
 							</span>
+						</p>
+
+						<div class="tgb-mounting-content" style="padding: 0 20px 10px 162px;">
+							<div class="tgb-category-policy-group">
+								<div class="tgb-category-policy-row">
+									<label class="tgb-category-policy-label">
+										<input type="radio" name="tgb_custom_category_policy" value="<?php echo esc_attr( self::POLICY_ALL ); ?>" <?php checked( $custom_category_policy, self::POLICY_ALL ); ?> />
+										<span class="tgb-category-policy-title"><?php esc_html_e( 'All eligible categories', 'part-selector' ); ?></span>
+										<span class="tgb-category-policy-desc"><?php esc_html_e( '(No category restrictions; all mount-compatible builder parts are available)', 'part-selector' ); ?></span>
+									</label>
+								</div>
+								<div class="tgb-category-policy-row">
+									<label class="tgb-category-policy-label">
+										<input type="radio" name="tgb_custom_category_policy" value="<?php echo esc_attr( self::POLICY_SELECTED ); ?>" <?php checked( $custom_category_policy, self::POLICY_SELECTED ); ?> />
+										<span class="tgb-category-policy-title"><?php esc_html_e( 'Selected categories only', 'part-selector' ); ?></span>
+										<span class="tgb-category-policy-desc"><?php esc_html_e( '(Only parts in selected custom categories or their descendants will be shown)', 'part-selector' ); ?></span>
+									</label>
+								</div>
+							</div>
+
+							<div id="tgb_allowed_categories_container" style="<?php echo ( self::POLICY_SELECTED === $custom_category_policy ) ? '' : 'display: none;'; ?>">
+								<div class="tgb-category-search-wrap">
+									<input type="text" id="tgb_category_search_input" class="regular-text" placeholder="<?php esc_attr_e( 'Search categories...', 'part-selector' ); ?>" />
+								</div>
+								<div class="tgb-category-tree-box">
+									<?php self::render_category_checklist( $allowed_custom_cats, TGB_Part_Types::TAXONOMY ); ?>
+								</div>
+								<span class="description tgb-category-tree-desc">
+									<?php esc_html_e( 'Selecting a parent category dynamically includes its descendants. Individual subcategories can also be selected independently.', 'part-selector' ); ?>
+								</span>
+							</div>
 						</div>
-					</div>
+					<?php else : ?>
+						<p class="form-field">
+							<strong><?php esc_html_e( 'Component Category Availability (WooCommerce Categories)', 'part-selector' ); ?></strong>
+							<span class="description" style="display: block; margin-top: 4px;">
+								<?php esc_html_e( 'Specify which WooCommerce product categories are permitted for this Base Gun. Mounting compatibility is checked separately.', 'part-selector' ); ?>
+							</span>
+						</p>
+
+						<div class="tgb-mounting-content" style="padding: 0 20px 10px 162px;">
+							<div class="tgb-category-policy-group">
+								<div class="tgb-category-policy-row">
+									<label class="tgb-category-policy-label">
+										<input type="radio" name="tgb_category_policy" value="<?php echo esc_attr( self::POLICY_ALL ); ?>" <?php checked( $category_policy, self::POLICY_ALL ); ?> />
+										<span class="tgb-category-policy-title"><?php esc_html_e( 'All eligible categories', 'part-selector' ); ?></span>
+										<span class="tgb-category-policy-desc"><?php esc_html_e( '(No category restrictions; all mount-compatible builder parts are available)', 'part-selector' ); ?></span>
+									</label>
+								</div>
+								<div class="tgb-category-policy-row">
+									<label class="tgb-category-policy-label">
+										<input type="radio" name="tgb_category_policy" value="<?php echo esc_attr( self::POLICY_SELECTED ); ?>" <?php checked( $category_policy, self::POLICY_SELECTED ); ?> />
+										<span class="tgb-category-policy-title"><?php esc_html_e( 'Selected categories only', 'part-selector' ); ?></span>
+										<span class="tgb-category-policy-desc"><?php esc_html_e( '(Only parts in selected categories or their descendants will be shown)', 'part-selector' ); ?></span>
+									</label>
+								</div>
+							</div>
+
+							<div id="tgb_allowed_categories_container" style="<?php echo ( self::POLICY_SELECTED === $category_policy ) ? '' : 'display: none;'; ?>">
+								<div class="tgb-category-search-wrap">
+									<input type="text" id="tgb_category_search_input" class="regular-text" placeholder="<?php esc_attr_e( 'Search categories...', 'part-selector' ); ?>" />
+								</div>
+								<div class="tgb-category-tree-box">
+									<?php self::render_category_checklist( $allowed_categories, 'product_cat' ); ?>
+								</div>
+								<span class="description tgb-category-tree-desc">
+									<?php esc_html_e( 'Selecting a parent category dynamically includes its descendants. Individual subcategories can also be selected independently.', 'part-selector' ); ?>
+								</span>
+							</div>
+						</div>
+					<?php endif; ?>
 				</div>
 
 				<!-- 7. Base Gun Mounting Points (Conditional on Role = Base Gun) -->
@@ -655,11 +723,20 @@ class TGB_Product_Config {
 		$valid_rail_positions = array();
 
 		if ( self::ROLE_PART === $valid_role ) {
-			if ( $part_type_id > 0 && term_exists( $part_type_id, TGB_Part_Types::TAXONOMY ) ) {
+			if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+				if ( isset( $_POST['tgb_part_type_id'] ) ) {
+					$part_type_id = absint( $_POST['tgb_part_type_id'] );
+					if ( $part_type_id > 0 && term_exists( $part_type_id, TGB_Part_Types::TAXONOMY ) ) {
+						wp_set_object_terms( $post_id, array( $part_type_id ), TGB_Part_Types::TAXONOMY, false );
+					} else {
+						wp_set_object_terms( $post_id, array(), TGB_Part_Types::TAXONOMY, false );
+					}
+				}
+			} elseif ( $part_type_id > 0 && term_exists( $part_type_id, TGB_Part_Types::TAXONOMY ) ) {
 				// Assign term if submitted (legacy support).
 				wp_set_object_terms( $post_id, array( $part_type_id ), TGB_Part_Types::TAXONOMY, false );
 			}
-			// Note: Existing tgb_part_type terms are preserved for backward compatibility.
+			// Note: Existing tgb_part_type terms are preserved for backward compatibility when in WooCommerce mode.
 
 			// Save Part Accepted Mount Interfaces (tgb_mount_interface taxonomy).
 			$raw_interfaces = isset( $_POST['tgb_mount_interfaces'] ) && is_array( $_POST['tgb_mount_interfaces'] )
@@ -698,6 +775,8 @@ class TGB_Product_Config {
 			delete_post_meta( $post_id, TGB_Mounting::META_MOUNT_POINTS );
 			delete_post_meta( $post_id, self::META_CATEGORY_POLICY );
 			delete_post_meta( $post_id, self::META_ALLOWED_CATEGORIES );
+			delete_post_meta( $post_id, self::META_CUSTOM_CATEGORY_POLICY );
+			delete_post_meta( $post_id, self::META_ALLOWED_CUSTOM_CATEGORIES );
 			delete_post_meta( $post_id, self::META_ALLOWED_RAIL_POSITIONS );
 			delete_post_meta( $post_id, self::META_RAIL_INPUT_INTERFACES );
 			delete_post_meta( $post_id, self::META_RAIL_OUTPUT_INTERFACES );
@@ -724,26 +803,46 @@ class TGB_Product_Config {
 			$sanitized_points = TGB_Mounting::sanitize_mount_points( $raw_mount_points, $base_max_w );
 			update_post_meta( $post_id, TGB_Mounting::META_MOUNT_POINTS, wp_json_encode( $sanitized_points ) );
 
-			// Save Base Gun Category Policy.
-			$raw_policy      = isset( $_POST['tgb_category_policy'] ) ? sanitize_key( wp_unslash( $_POST['tgb_category_policy'] ) ) : self::POLICY_ALL;
-			$category_policy = ( self::POLICY_SELECTED === $raw_policy ) ? self::POLICY_SELECTED : self::POLICY_ALL;
-			update_post_meta( $post_id, self::META_CATEGORY_POLICY, $category_policy );
+			// Save Base Gun Category Policy depending on active source.
+			if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+				$raw_custom_policy      = isset( $_POST['tgb_custom_category_policy'] ) ? sanitize_key( wp_unslash( $_POST['tgb_custom_category_policy'] ) ) : self::POLICY_ALL;
+				$custom_category_policy = ( self::POLICY_SELECTED === $raw_custom_policy ) ? self::POLICY_SELECTED : self::POLICY_ALL;
+				update_post_meta( $post_id, self::META_CUSTOM_CATEGORY_POLICY, $custom_category_policy );
 
-			// Save Base Gun Allowed Categories.
-			$valid_allowed_cats = array();
-			if ( self::POLICY_SELECTED === $category_policy ) {
-				$raw_cats = isset( $_POST['tgb_allowed_categories'] ) && is_array( $_POST['tgb_allowed_categories'] )
-					? $_POST['tgb_allowed_categories']
-					: array();
-				foreach ( $raw_cats as $cid ) {
-					$cid = absint( $cid );
-					if ( $cid > 0 && term_exists( $cid, 'product_cat' ) ) {
-						$valid_allowed_cats[] = $cid;
+				$valid_allowed_custom_cats = array();
+				if ( self::POLICY_SELECTED === $custom_category_policy ) {
+					$raw_custom_cats = isset( $_POST['tgb_allowed_custom_categories'] ) && is_array( $_POST['tgb_allowed_custom_categories'] )
+						? $_POST['tgb_allowed_custom_categories']
+						: array();
+					foreach ( $raw_custom_cats as $cid ) {
+						$cid = absint( $cid );
+						if ( $cid > 0 && term_exists( $cid, TGB_Part_Types::TAXONOMY ) ) {
+							$valid_allowed_custom_cats[] = $cid;
+						}
 					}
+					$valid_allowed_custom_cats = array_values( array_unique( $valid_allowed_custom_cats ) );
 				}
-				$valid_allowed_cats = array_values( array_unique( $valid_allowed_cats ) );
+				update_post_meta( $post_id, self::META_ALLOWED_CUSTOM_CATEGORIES, $valid_allowed_custom_cats );
+			} else {
+				$raw_policy      = isset( $_POST['tgb_category_policy'] ) ? sanitize_key( wp_unslash( $_POST['tgb_category_policy'] ) ) : self::POLICY_ALL;
+				$category_policy = ( self::POLICY_SELECTED === $raw_policy ) ? self::POLICY_SELECTED : self::POLICY_ALL;
+				update_post_meta( $post_id, self::META_CATEGORY_POLICY, $category_policy );
+
+				$valid_allowed_cats = array();
+				if ( self::POLICY_SELECTED === $category_policy ) {
+					$raw_cats = isset( $_POST['tgb_allowed_categories'] ) && is_array( $_POST['tgb_allowed_categories'] )
+						? $_POST['tgb_allowed_categories']
+						: array();
+					foreach ( $raw_cats as $cid ) {
+						$cid = absint( $cid );
+						if ( $cid > 0 && term_exists( $cid, 'product_cat' ) ) {
+							$valid_allowed_cats[] = $cid;
+						}
+					}
+					$valid_allowed_cats = array_values( array_unique( $valid_allowed_cats ) );
+				}
+				update_post_meta( $post_id, self::META_ALLOWED_CATEGORIES, $valid_allowed_cats );
 			}
-			update_post_meta( $post_id, self::META_ALLOWED_CATEGORIES, $valid_allowed_cats );
 
 			// Save Base Gun Allowed Rail Positions.
 			$raw_rails   = isset( $_POST['tgb_allowed_rail_positions'] ) && is_array( $_POST['tgb_allowed_rail_positions'] )
@@ -772,6 +871,8 @@ class TGB_Product_Config {
 			delete_post_meta( $post_id, TGB_Mounting::META_MOUNT_POINTS );
 			delete_post_meta( $post_id, self::META_CATEGORY_POLICY );
 			delete_post_meta( $post_id, self::META_ALLOWED_CATEGORIES );
+			delete_post_meta( $post_id, self::META_CUSTOM_CATEGORY_POLICY );
+			delete_post_meta( $post_id, self::META_ALLOWED_CUSTOM_CATEGORIES );
 			delete_post_meta( $post_id, self::META_ALLOWED_RAIL_POSITIONS );
 
 			// Save Rail Input Interfaces.
@@ -821,6 +922,8 @@ class TGB_Product_Config {
 			delete_post_meta( $post_id, TGB_Mounting::META_MOUNT_POINTS );
 			delete_post_meta( $post_id, self::META_CATEGORY_POLICY );
 			delete_post_meta( $post_id, self::META_ALLOWED_CATEGORIES );
+			delete_post_meta( $post_id, self::META_CUSTOM_CATEGORY_POLICY );
+			delete_post_meta( $post_id, self::META_ALLOWED_CUSTOM_CATEGORIES );
 			delete_post_meta( $post_id, self::META_ALLOWED_RAIL_POSITIONS );
 			delete_post_meta( $post_id, self::META_RAIL_INPUT_INTERFACES );
 			delete_post_meta( $post_id, self::META_RAIL_OUTPUT_INTERFACES );
@@ -871,10 +974,17 @@ class TGB_Product_Config {
 			}
 
 			if ( self::ROLE_PART === $valid_role ) {
-				// V2 requirement: At least one native WooCommerce category
-				$assigned_cats = wp_get_object_terms( $post_id, 'product_cat' );
-				if ( empty( $assigned_cats ) || is_wp_error( $assigned_cats ) ) {
-					$errors[] = __( 'A product category is required before this Part can appear in the builder.', 'part-selector' );
+				if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+					$assigned_custom = wp_get_object_terms( $post_id, TGB_Part_Types::TAXONOMY );
+					if ( empty( $assigned_custom ) || is_wp_error( $assigned_custom ) ) {
+						$errors[] = __( 'A Gun Builder Part Type is required before this Part can appear in Custom category mode.', 'part-selector' );
+					}
+				} else {
+					// V2 requirement: At least one native WooCommerce category
+					$assigned_cats = wp_get_object_terms( $post_id, 'product_cat' );
+					if ( empty( $assigned_cats ) || is_wp_error( $assigned_cats ) ) {
+						$errors[] = __( 'A product category is required before this Part can appear in the builder.', 'part-selector' );
+					}
 				}
 
 				// V2 requirement: At least one accepted mounting interface
@@ -883,9 +993,17 @@ class TGB_Product_Config {
 					$errors[] = __( 'Select at least one accepted mounting interface.', 'part-selector' );
 				}
 			} elseif ( self::ROLE_BASE_GUN === $valid_role ) {
-				// Part 2 requirement: If Selected categories only is chosen, at least one category must be selected
-				if ( self::POLICY_SELECTED === $category_policy && empty( $valid_allowed_cats ) ) {
-					$errors[] = __( 'When "Selected categories only" is chosen, select at least one permitted category before marking Builder Ready.', 'part-selector' );
+				if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+					$custom_pol         = self::get_custom_category_policy( $post_id );
+					$custom_allowed_ids = self::get_allowed_custom_categories( $post_id );
+					if ( self::POLICY_SELECTED === $custom_pol && empty( $custom_allowed_ids ) ) {
+						$errors[] = __( 'When "Selected categories only" is chosen for Custom categories, select at least one permitted category before marking Builder Ready.', 'part-selector' );
+					}
+				} else {
+					// Part 2 requirement: If Selected categories only is chosen, at least one category must be selected
+					if ( self::POLICY_SELECTED === $category_policy && empty( $valid_allowed_cats ) ) {
+						$errors[] = __( 'When "Selected categories only" is chosen, select at least one permitted category before marking Builder Ready.', 'part-selector' );
+					}
 				}
 			} elseif ( self::ROLE_RAIL === $valid_role ) {
 				// Part 3A requirement: Rail readiness
@@ -1040,8 +1158,12 @@ class TGB_Product_Config {
 		}
 
 		if ( self::ROLE_PART === $role ) {
-			// Part requires positive reference mm, at least one WooCommerce category, and at least one mount interface.
-			$has_cat = has_term( '', 'product_cat', $product_id );
+			// Part requires positive reference mm, at least one category in the active taxonomy, and at least one mount interface.
+			if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+				$has_cat = has_term( '', TGB_Part_Types::TAXONOMY, $product_id );
+			} else {
+				$has_cat = has_term( '', 'product_cat', $product_id );
+			}
 			$ifaces  = TGB_Mount_Interfaces::get_product_interfaces( $product_id );
 			return ( $has_cat && ! empty( $ifaces ) );
 		}
@@ -1081,23 +1203,26 @@ class TGB_Product_Config {
 		$role = self::get_role( $product_id );
 
 		return array(
-			'product_id'             => $product_id,
-			'enabled'                => self::is_enabled( $product_id ),
-			'ready'                  => self::is_ready( $product_id ),
-			'configuration_valid'    => self::is_configuration_valid( $product_id ),
-			'role'                   => $role,
-			'reference_mm'           => self::get_reference_mm( $product_id ),
-			'categories'             => $categories,
-			'category_policy'        => ( self::ROLE_BASE_GUN === $role ) ? self::get_category_policy( $product_id ) : null,
-			'allowed_categories'     => ( self::ROLE_BASE_GUN === $role ) ? self::get_allowed_categories( $product_id ) : array(),
-			'allowed_rail_positions' => ( self::ROLE_BASE_GUN === $role ) ? self::get_allowed_rail_positions( $product_id ) : array(),
-			'rail_input_interfaces'  => ( self::ROLE_RAIL === $role ) ? self::get_rail_input_interfaces( $product_id ) : array(),
-			'rail_output_interfaces' => ( self::ROLE_RAIL === $role ) ? self::get_rail_output_interfaces( $product_id ) : array(),
-			'rail_positions'         => ( self::ROLE_RAIL === $role ) ? self::get_rail_supported_positions( $product_id ) : array(),
-			'part_mount_positions'   => ( self::ROLE_PART === $role ) ? self::get_part_mount_positions( $product_id ) : array(),
-			'part_type_term_id'      => $part_type ? $part_type->term_id : 0,
-			'part_type_name'         => $part_type ? $part_type->name : '',
-			'part_type_slug'         => $part_type ? $part_type->slug : '',
+			'product_id'                => $product_id,
+			'enabled'                   => self::is_enabled( $product_id ),
+			'ready'                     => self::is_ready( $product_id ),
+			'configuration_valid'       => self::is_configuration_valid( $product_id ),
+			'role'                      => $role,
+			'reference_mm'              => self::get_reference_mm( $product_id ),
+			'category_source'           => class_exists( 'TGB_Settings' ) ? TGB_Settings::get_category_source() : 'woocommerce',
+			'categories'                => $categories,
+			'category_policy'           => ( self::ROLE_BASE_GUN === $role ) ? self::get_category_policy( $product_id ) : null,
+			'allowed_categories'        => ( self::ROLE_BASE_GUN === $role ) ? self::get_allowed_categories( $product_id ) : array(),
+			'custom_category_policy'    => ( self::ROLE_BASE_GUN === $role ) ? self::get_custom_category_policy( $product_id ) : null,
+			'allowed_custom_categories' => ( self::ROLE_BASE_GUN === $role ) ? self::get_allowed_custom_categories( $product_id ) : array(),
+			'allowed_rail_positions'    => ( self::ROLE_BASE_GUN === $role ) ? self::get_allowed_rail_positions( $product_id ) : array(),
+			'rail_input_interfaces'     => ( self::ROLE_RAIL === $role ) ? self::get_rail_input_interfaces( $product_id ) : array(),
+			'rail_output_interfaces'    => ( self::ROLE_RAIL === $role ) ? self::get_rail_output_interfaces( $product_id ) : array(),
+			'rail_positions'            => ( self::ROLE_RAIL === $role ) ? self::get_rail_supported_positions( $product_id ) : array(),
+			'part_mount_positions'      => ( self::ROLE_PART === $role ) ? self::get_part_mount_positions( $product_id ) : array(),
+			'part_type_term_id'         => $part_type ? $part_type->term_id : 0,
+			'part_type_name'            => $part_type ? $part_type->name : '',
+			'part_type_slug'            => $part_type ? $part_type->slug : '',
 		);
 	}
 
@@ -1106,7 +1231,7 @@ class TGB_Product_Config {
 	// =========================================================================
 
 	/**
-	 * Returns the Category Policy for a Base Gun.
+	 * Returns the Category Policy for a Base Gun under the currently active category source.
 	 *
 	 * Safe default: If unconfigured or empty, returns 'all' (unrestricted).
 	 *
@@ -1114,8 +1239,45 @@ class TGB_Product_Config {
 	 * @return string 'all' or 'selected'.
 	 */
 	public static function get_category_policy( $product_id ) {
+		if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+			return self::get_custom_category_policy( $product_id );
+		}
+		return self::get_woocommerce_category_policy( $product_id );
+	}
+
+	/**
+	 * Returns the Category Policy for a Base Gun under WooCommerce categories.
+	 *
+	 * @param int $product_id Base Gun Product ID.
+	 * @return string 'all' or 'selected'.
+	 */
+	public static function get_woocommerce_category_policy( $product_id ) {
 		$policy = get_post_meta( $product_id, self::META_CATEGORY_POLICY, true );
 		return ( self::POLICY_SELECTED === $policy ) ? self::POLICY_SELECTED : self::POLICY_ALL;
+	}
+
+	/**
+	 * Returns the Category Policy for a Base Gun under Custom Gun Builder categories.
+	 *
+	 * @param int $product_id Base Gun Product ID.
+	 * @return string 'all' or 'selected'.
+	 */
+	public static function get_custom_category_policy( $product_id ) {
+		$policy = get_post_meta( $product_id, self::META_CUSTOM_CATEGORY_POLICY, true );
+		return ( self::POLICY_SELECTED === $policy ) ? self::POLICY_SELECTED : self::POLICY_ALL;
+	}
+
+	/**
+	 * Returns the list of permitted term IDs for a Base Gun under the active category source.
+	 *
+	 * @param int $product_id Base Gun Product ID.
+	 * @return int[] Array of sanitized term IDs in the active taxonomy.
+	 */
+	public static function get_allowed_categories( $product_id ) {
+		if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+			return self::get_allowed_custom_categories( $product_id );
+		}
+		return self::get_allowed_woocommerce_categories( $product_id );
 	}
 
 	/**
@@ -1124,7 +1286,7 @@ class TGB_Product_Config {
 	 * @param int $product_id Base Gun Product ID.
 	 * @return int[] Array of sanitized product_cat term IDs.
 	 */
-	public static function get_allowed_categories( $product_id ) {
+	public static function get_allowed_woocommerce_categories( $product_id ) {
 		$cats = get_post_meta( $product_id, self::META_ALLOWED_CATEGORIES, true );
 		if ( is_string( $cats ) ) {
 			$cats = json_decode( $cats, true );
@@ -1144,7 +1306,32 @@ class TGB_Product_Config {
 	}
 
 	/**
-	 * Checks whether a specific WooCommerce category is permitted for a Base Gun.
+	 * Returns the list of permitted tgb_part_type term IDs for a Base Gun.
+	 *
+	 * @param int $product_id Base Gun Product ID.
+	 * @return int[] Array of sanitized tgb_part_type term IDs.
+	 */
+	public static function get_allowed_custom_categories( $product_id ) {
+		$cats = get_post_meta( $product_id, self::META_ALLOWED_CUSTOM_CATEGORIES, true );
+		if ( is_string( $cats ) ) {
+			$cats = json_decode( $cats, true );
+		}
+		if ( ! is_array( $cats ) ) {
+			return array();
+		}
+
+		$valid = array();
+		foreach ( $cats as $cid ) {
+			$cid = absint( $cid );
+			if ( $cid > 0 && term_exists( $cid, TGB_Part_Types::TAXONOMY ) ) {
+				$valid[] = $cid;
+			}
+		}
+		return array_values( array_unique( $valid ) );
+	}
+
+	/**
+	 * Checks whether a specific category is permitted for a Base Gun in the active taxonomy.
 	 *
 	 * If the Base Gun policy is 'all' (or legacy unconfigured), all categories are allowed.
 	 * If the policy is 'selected', returns true if:
@@ -1152,7 +1339,7 @@ class TGB_Product_Config {
 	 * 2. An ancestor category is in the allowed list (parent selection includes descendants).
 	 *
 	 * @param int $base_gun_id Base Gun product ID.
-	 * @param int $category_id WooCommerce product_cat term ID.
+	 * @param int $category_id Taxonomy term ID.
 	 * @return bool True if permitted, false otherwise.
 	 */
 	public static function is_category_allowed_for_gun( $base_gun_id, $category_id ) {
@@ -1163,8 +1350,10 @@ class TGB_Product_Config {
 			return true;
 		}
 
-		// Non-existent or deleted categories are never allowed.
-		if ( ! term_exists( $category_id, 'product_cat' ) ) {
+		$taxonomy = ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) ? TGB_Part_Types::TAXONOMY : 'product_cat';
+
+		// Non-existent or deleted categories are never allowed in the active taxonomy.
+		if ( ! term_exists( $category_id, $taxonomy ) ) {
 			return false;
 		}
 
@@ -1184,7 +1373,7 @@ class TGB_Product_Config {
 		}
 
 		// Hierarchical descendant match: Is any parent ancestor in the allowed list?
-		$ancestors = get_ancestors( $category_id, 'product_cat', 'taxonomy' );
+		$ancestors = get_ancestors( $category_id, $taxonomy, 'taxonomy' );
 		foreach ( $ancestors as $anc_id ) {
 			if ( in_array( (int) $anc_id, $allowed_ids, true ) ) {
 				return true;
@@ -1195,10 +1384,11 @@ class TGB_Product_Config {
 	}
 
 	/**
-	 * Checks whether a Part product is eligible under a Base Gun's category policy.
+	 * Checks whether a Part product is eligible under a Base Gun's category policy in the active taxonomy.
 	 *
 	 * Multi-category rule: A Part is eligible if at least ONE of its assigned categories
 	 * falls within the Base Gun's permitted category tree.
+	 * In Custom mode: The part must have at least one valid custom Part Type assignment.
 	 *
 	 * @param int $base_gun_id Base Gun product ID.
 	 * @param int $part_id     Part product ID.
@@ -1207,6 +1397,22 @@ class TGB_Product_Config {
 	public static function is_part_category_allowed_for_gun( $base_gun_id, $part_id ) {
 		$base_gun_id = absint( $base_gun_id );
 		$part_id     = absint( $part_id );
+
+		// Rails are a special builder role. In Custom mode, custom categories represent Part Types;
+		// Rails do not require or use custom Part Types and are governed by physical mount capabilities.
+		if ( self::ROLE_RAIL === self::get_role( $part_id ) ) {
+			if ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) {
+				return true;
+			}
+		}
+
+		$taxonomy  = ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) ? TGB_Part_Types::TAXONOMY : 'product_cat';
+		$part_cats = wp_get_post_terms( $part_id, $taxonomy, array( 'fields' => 'ids' ) );
+
+		// A part without an assignment in the active category system cannot be eligible.
+		if ( empty( $part_cats ) || is_wp_error( $part_cats ) ) {
+			return false;
+		}
 
 		if ( $base_gun_id <= 0 ) {
 			return true;
@@ -1219,11 +1425,6 @@ class TGB_Product_Config {
 
 		$allowed_ids = self::get_allowed_categories( $base_gun_id );
 		if ( empty( $allowed_ids ) ) {
-			return false;
-		}
-
-		$part_cats = wp_get_post_terms( $part_id, 'product_cat', array( 'fields' => 'ids' ) );
-		if ( empty( $part_cats ) || is_wp_error( $part_cats ) ) {
 			return false;
 		}
 
@@ -1362,24 +1563,29 @@ class TGB_Product_Config {
 	}
 
 	/**
-	 * Renders a hierarchical, searchable checklist of WooCommerce product categories.
+	 * Renders a hierarchical, searchable checklist of categories for the given taxonomy.
 	 *
 	 * Preserves parent-child nesting with visual indentation.
 	 *
-	 * @param array $selected_ids Array of selected product_cat term IDs.
+	 * @param array  $selected_ids Array of selected term IDs.
+	 * @param string $taxonomy     Taxonomy slug ('product_cat' or 'tgb_part_type').
 	 */
-	public static function render_category_checklist( array $selected_ids = array() ) {
+	public static function render_category_checklist( array $selected_ids = array(), $taxonomy = 'product_cat' ) {
 		$all_cats = get_terms(
 			array(
-				'taxonomy'   => 'product_cat',
+				'taxonomy'   => $taxonomy,
 				'hide_empty' => false,
 			)
 		);
 
 		if ( empty( $all_cats ) || is_wp_error( $all_cats ) ) {
-			echo '<p class="description">' . esc_html__( 'No WooCommerce product categories found.', 'part-selector' ) . '</p>';
+			$tax_obj  = get_taxonomy( $taxonomy );
+			$tax_name = $tax_obj ? $tax_obj->labels->name : $taxonomy;
+			echo '<p class="description">' . sprintf( esc_html__( 'No %s found.', 'part-selector' ), esc_html( $tax_name ) ) . '</p>';
 			return;
 		}
+
+		$input_name = ( TGB_Part_Types::TAXONOMY === $taxonomy ) ? 'tgb_allowed_custom_categories[]' : 'tgb_allowed_categories[]';
 
 		$cats_by_parent = array();
 		foreach ( $all_cats as $cat ) {
@@ -1390,7 +1596,7 @@ class TGB_Product_Config {
 			$cats_by_parent[ $parent ][] = $cat;
 		}
 
-		$render_level = function( $parent_id, $depth ) use ( &$render_level, &$cats_by_parent, $selected_ids ) {
+		$render_level = function( $parent_id, $depth ) use ( &$render_level, &$cats_by_parent, $selected_ids, $input_name ) {
 			if ( empty( $cats_by_parent[ $parent_id ] ) ) {
 				return;
 			}
@@ -1405,7 +1611,7 @@ class TGB_Product_Config {
 				?>
 				<div class="tgb-category-item" data-name="<?php echo esc_attr( strtolower( $cat->name ) ); ?>" style="margin-left: <?php echo esc_attr( $indent ); ?>px; margin-bottom: 4px;">
 					<label style="display: inline-flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer;">
-						<input type="checkbox" name="tgb_allowed_categories[]" value="<?php echo esc_attr( $cat->term_id ); ?>" <?php checked( $is_checked ); ?> />
+						<input type="checkbox" name="<?php echo esc_attr( $input_name ); ?>" value="<?php echo esc_attr( $cat->term_id ); ?>" <?php checked( $is_checked ); ?> />
 						<span><?php echo esc_html( $cat->name ); ?></span>
 					</label>
 				</div>

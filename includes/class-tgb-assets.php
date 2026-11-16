@@ -72,9 +72,10 @@ class TGB_Assets {
 			'tgb-gun-builder-js',
 			'taktikGunBuilder',
 			array(
-				'version'  => TGB_VERSION,
-				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-				'restUrl'  => esc_url_raw( rest_url( 'tgb/v1/' ) ),
+				'version'        => TGB_VERSION,
+				'categorySource' => class_exists( 'TGB_Settings' ) ? TGB_Settings::get_category_source() : 'woocommerce',
+				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+				'restUrl'        => esc_url_raw( rest_url( 'tgb/v1/' ) ),
 				'siteUrl'   => home_url(),
 				'cartUrl'   => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/cart/' ),
 				'cartNonce' => wp_create_nonce( TGB_Cart::NONCE_ACTION ),
