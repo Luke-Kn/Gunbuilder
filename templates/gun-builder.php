@@ -167,14 +167,13 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 						</svg>
 						<span><?php esc_html_e('Share Build', 'part-selector'); ?></span>
 					</button>
-					<button type="button" class="tgb-btn-build tgb-btn-build--new" id="tgb-btn-new-build"
-						title="<?php esc_attr_e('Create a new build (up to 10)', 'part-selector'); ?>">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-							stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-							<line x1="12" y1="5" x2="12" y2="19"></line>
-							<line x1="5" y1="12" x2="19" y2="12"></line>
-						</svg>
-						<span><?php esc_html_e('New Build', 'part-selector'); ?></span>
+					<button type="button" class="tgb-btn-build tgb-btn-build--export" id="tgb-btn-export-png" title="<?php esc_attr_e( 'Download PNG of current build', 'part-selector' ); ?>">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+						<span><?php esc_html_e( 'Download PNG', 'part-selector' ); ?></span>
+					</button>
+					<button type="button" class="tgb-btn-build tgb-btn-build--new" id="tgb-btn-new-build" title="<?php esc_attr_e( 'Create a new build (up to 10)', 'part-selector' ); ?>">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+						<span><?php esc_html_e( 'New Build', 'part-selector' ); ?></span>
 					</button>
 					<button type="button" class="tgb-btn-build tgb-btn-build--rename" id="tgb-btn-rename-build"
 						title="<?php esc_attr_e('Rename this build', 'part-selector'); ?>">
@@ -472,6 +471,102 @@ $initial_render_data = isset($initial_render_data) && is_array($initial_render_d
 				</div>
 				<p class="tgb-share-expiration-note" id="tgb-share-expiration-note"></p>
 				<div class="tgb-share-feedback" id="tgb-share-feedback" style="display: none;" role="alert"></div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Export PNG Modal Dialog (Part 7) -->
+	<div class="tgb-modal-backdrop" id="tgb-export-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tgb-export-modal-title">
+		<div class="tgb-modal-panel tgb-modal-panel--export">
+			<div class="tgb-modal-header">
+				<h3 class="tgb-modal-title" id="tgb-export-modal-title"><?php esc_html_e( 'Download PNG Build Image', 'part-selector' ); ?></h3>
+				<button type="button" class="tgb-modal-close" id="tgb-export-modal-close" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">&times;</button>
+			</div>
+			<div class="tgb-modal-body" id="tgb-export-modal-body">
+				<!-- Build Summary -->
+				<div class="tgb-export-info">
+					<div class="tgb-export-info__name" id="tgb-export-build-name"></div>
+					<div class="tgb-export-info__meta" id="tgb-export-build-meta"></div>
+				</div>
+
+				<!-- Export Configuration Options -->
+				<div class="tgb-export-options">
+					<!-- Background Selection -->
+					<fieldset class="tgb-export-fieldset">
+						<legend class="tgb-export-legend"><?php esc_html_e( 'Background', 'part-selector' ); ?></legend>
+						<div class="tgb-export-radio-group">
+							<label class="tgb-export-radio-label">
+								<input type="radio" name="tgb_export_bg" value="transparent" checked class="tgb-export-radio" id="tgb-export-bg-transparent">
+								<span class="tgb-export-radio-custom"></span>
+								<span class="tgb-export-radio-text">
+									<strong><?php esc_html_e( 'Transparent (Alpha)', 'part-selector' ); ?></strong>
+									<small><?php esc_html_e( 'Clean cutout preserving alpha transparency', 'part-selector' ); ?></small>
+								</span>
+							</label>
+							<label class="tgb-export-radio-label">
+								<input type="radio" name="tgb_export_bg" value="white" class="tgb-export-radio" id="tgb-export-bg-white">
+								<span class="tgb-export-radio-custom"></span>
+								<span class="tgb-export-radio-text">
+									<strong><?php esc_html_e( 'White Background', 'part-selector' ); ?></strong>
+									<small><?php esc_html_e( 'Solid clean white background for documents & print', 'part-selector' ); ?></small>
+								</span>
+							</label>
+						</div>
+					</fieldset>
+
+					<!-- Quality / Resolution Selection -->
+					<fieldset class="tgb-export-fieldset">
+						<legend class="tgb-export-legend"><?php esc_html_e( 'Resolution / Quality', 'part-selector' ); ?></legend>
+						<div class="tgb-export-radio-group tgb-export-quality-group">
+							<label class="tgb-export-radio-label">
+								<input type="radio" name="tgb_export_quality" value="standard" class="tgb-export-radio" id="tgb-export-quality-standard">
+								<span class="tgb-export-radio-custom"></span>
+								<span class="tgb-export-radio-text">
+									<strong><?php esc_html_e( 'Standard (1×)', 'part-selector' ); ?></strong>
+									<small id="tgb-export-dims-standard"><?php esc_html_e( '1:1 canonical resolution', 'part-selector' ); ?></small>
+								</span>
+							</label>
+							<label class="tgb-export-radio-label">
+								<input type="radio" name="tgb_export_quality" value="high" checked class="tgb-export-radio" id="tgb-export-quality-high">
+								<span class="tgb-export-radio-custom"></span>
+								<span class="tgb-export-radio-text">
+									<strong><?php esc_html_e( 'High (2×) — Recommended', 'part-selector' ); ?></strong>
+									<small id="tgb-export-dims-high"><?php esc_html_e( 'Crisp high-definition export', 'part-selector' ); ?></small>
+								</span>
+							</label>
+							<label class="tgb-export-radio-label">
+								<input type="radio" name="tgb_export_quality" value="maximum" class="tgb-export-radio" id="tgb-export-quality-max">
+								<span class="tgb-export-radio-custom"></span>
+								<span class="tgb-export-radio-text">
+									<strong><?php esc_html_e( 'Maximum (3×)', 'part-selector' ); ?></strong>
+									<small id="tgb-export-dims-max"><?php esc_html_e( 'Ultra high-definition master export', 'part-selector' ); ?></small>
+								</span>
+							</label>
+						</div>
+					</fieldset>
+				</div>
+
+				<!-- Specification Sheet Option (Section 12) -->
+				<div class="tgb-export-spec-option">
+					<button type="button" class="tgb-btn-spec-sheet" id="tgb-btn-print-spec">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+						<span><?php esc_html_e( 'Print Build Spec Sheet (BOM)', 'part-selector' ); ?></span>
+					</button>
+				</div>
+
+				<!-- User Feedback / Error Alerts -->
+				<div class="tgb-export-feedback" id="tgb-export-feedback" style="display: none;" role="alert"></div>
+
+				<!-- Modal Actions -->
+				<div class="tgb-export-modal-actions">
+					<button type="button" class="tgb-btn tgb-btn--secondary" id="tgb-export-btn-cancel">
+						<?php esc_html_e( 'Cancel', 'part-selector' ); ?>
+					</button>
+					<button type="button" class="tgb-btn tgb-btn--primary tgb-btn--download-png" id="tgb-export-btn-download">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+						<span id="tgb-export-btn-label"><?php esc_html_e( 'Download PNG', 'part-selector' ); ?></span>
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>

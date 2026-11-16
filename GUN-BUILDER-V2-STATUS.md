@@ -2,7 +2,7 @@
 
 **Current Plugin Version:** `1.1.0-dev`<br>
 **Active Git Branch:** `gun-builder`<br>
-**Current Phase:** Part 6 Approved — Ready for Commit / Part 7 Next (Not Started)<br>
+**Current Phase:** Part 7 Implemented — Pending Human Approval / Part 8 Next (Not Started)<br>
 **Last Updated:** November 2026  
 
 ---
@@ -18,8 +18,8 @@
 | **Part 3B** | Interactive Rails & Secondary Component Unlocking | **APPROVED** | Nov 2026 | 105/105 Tests Passed across Groups A–G, Interactive Browser E2E Verified |
 | **Part 4** | Guest Multi-Build Session Persistence & Management | **APPROVED** | Nov 2026 | 102/102 Tests Passed (15 Browser + 32 PHP + 55 JS). Approved. |
 | **Part 5** | Registered Customer Cloud Persistence & Account Management | **APPROVED** | Nov 2026 | 85/85 Tests Passed (15 Puppeteer Browser + 70 Backend PHP & Security). Committed (`26113a9a`). |
-| **Part 6** | Build Sharing via Deep Links & Public Read-Only Preview | **APPROVED** | Nov 2026 | 97/97 Tests Passed (65 PHP Backend + 20 Browser E2E + 12 Lifecycle Assertions). Approved. |
-| **Part 7** | Client-Side Composite Image & Spec Sheet Export | **NEXT — NOT STARTED** | — | Unblocked by Part 6 approval |
+| **Part 6** | Build Sharing via Deep Links & Public Read-Only Preview | **APPROVED** | Nov 2026 | 97/97 Tests Passed (65 PHP Backend + 20 Browser E2E + 12 Lifecycle Assertions). Committed (`cbb1e011`, `2416a5df`). |
+| **Part 7** | Client-Side Composite Image & Spec Sheet Export | **IMPLEMENTED — PENDING APPROVAL** | Nov 2026 | 22/22 Tests Passed (Puppeteer Browser & PNG Inspection) |
 | **Part 8** | Viewport Controls: Pan & Zoom | *NOT STARTED* | — | Blocked by Part 7 |
 | **Part 9** | Production Hardening, Load Testing & 2.0.0 Release | *NOT STARTED* | — | Final Phase |
 
@@ -467,9 +467,62 @@ Part 6 delivers secure, public build sharing for both guest visitors and authent
 
 ---
 
-## 16. Part 7 Scope Boundaries (Next — Not Started)
+## 16. Part 7 Implementation Summary (Implemented — Pending Human Approval)
 
-Part 7 is unblocked following human approval of Part 6:
-1. **Client-Side Composite Image & Spec Sheet Export:** HTML5 canvas compositing of high-resolution gun configuration and downloadable specification sheet.
-2. **Scope Boundaries:** Part 7 does NOT include viewport pan/zoom controls (Part 8) or production release hardening (Part 9).
+Part 7 adds client-side high-resolution PNG rendering and specification sheet printing for custom airsoft gun builds directly in the browser.
+
+### Key Architecture & Implementation Details:
+1. **Engine Architecture (`assets/js/gun-builder-export.js`):**
+   - Implemented as modular `TGB_ExportManager` class bound to `window.TGB.exportManager`.
+   - Captures real-time build snapshots via `window.TGB.state.getState()` with fallbacks to guest / shared preview managers. Captures currently rendered positions without requiring prior server persistence.
+2. **Canonical Physical Scale & Bounding Geometry:**
+   - Evaluates canonical physical dimensions ($1\text{ mm} = 1\text{ logical px}$).
+   - Computes dynamic bounding envelope encompassing Base Gun, Rails, and all mounted Parts:
+     $$\min X = \min(l_i.x), \quad \max X = \max(l_i.x + l_i.width)$$
+     $$\min Y = \min(l_i.y), \quad \max Y = \max(l_i.y + l_i.height)$$
+   - Automatically accommodates extending muzzle devices (suppressors) and high-rise optics with 30px uniform padding.
+3. **Layer Stacking Order:**
+   - Ascending $z$-index ordering: Base Gun ($z=10$), Rails ($z > 10$), Parts ($z > 10$).
+4. **Resolution & Background Controls:**
+   - Quality options: Standard (1×), High (2×, default), Maximum (3×).
+   - Background options: Transparent (32-bit RGBA alpha channel, default) and White (`#ffffff`).
+5. **CORS Resilience & Tainted Canvas Safety:**
+   - `preloadImages()` preloads assets concurrently with `crossOrigin = 'anonymous'` and automatic fallback retry without CORS headers.
+   - `canvasToBlob()` catches security exceptions if tainted canvas occurs, providing user feedback.
+6. **Bill of Materials Specification Sheet:**
+   - Integrated "Print Specification Sheet" action formatting Base Gun, Rails, Parts, SKUs, individual pricing, total price, and build date into an optimized print view triggering `window.print()`.
+7. **Security & Filename Sanitization:**
+   - `sanitizeFilename()` strips punctuation, accents, and control characters to produce safe downloads: `taktik-{build-name}.png`.
+   - Empty state guard disables export controls when no Base Gun is loaded.
+8. **Automated Verification Matrix (22/22 PASS):**
+   - `TEST_1_EMPTY_GUARD`: Disabled toolbar button and modal blocked when no base platform is loaded — PASS
+   - `TEST_A_MOUNT`: Demo 4-component mount verification — PASS
+   - `TEST_A_BTN_ENABLED`: Toolbar button enables upon base platform load — PASS
+   - `TEST_A_MODAL_OPEN`: Export modal opens cleanly on toolbar click — PASS
+   - `TEST_A_DOWNLOAD_TRANSPARENT`: Transparent High (2×) downloaded to disk (1680×730px, 46.7 KB) — PASS
+   - `TEST_A_INSPECT_TRANSPARENT`: Magic bytes valid, RGBA alpha channel confirmed — PASS
+   - `TEST_A_DOWNLOAD_WHITE`: White Standard (1×) downloaded (840×365px, 11.4 KB) — PASS
+   - `TEST_A_INSPECT_WHITE`: Exactly 1:1 scale vs 2× High — PASS
+   - `TEST_A_INSPECT_MAXIMUM`: Maximum (3×) downloaded (2520×1095px) matching exact $3\times$ scale — PASS
+   - `TEST_B_COMPOSITION`: Prototype rifle (91635 + 91093 + 80030 + 77721) layer resolution — PASS
+   - `TEST_B_PROTOTYPE_PNG`: Prototype exported non-cropped (2040×830px, 626.1 KB) covering extending suppressors — PASS
+   - `TEST_C_BUILD1_ISOLATION`: Build 1 preserves prototype parts upon return — PASS
+   - `TEST_C_BUILD2_ISOLATION`: Build 2 has independent base 92020 and 0 parts — PASS
+   - `TEST_C_BUILD2_EXPORT`: Build 2 exports independently (1320×420px) — PASS
+   - `TEST_D_UNSAVED_POSITION`: Export captures currently moved unsaved coordinates (X: 105, Y: 461) — PASS
+   - `TEST_E_SHARE_CREATED`: Token generated via REST API — PASS
+   - `TEST_E_PREVIEW_MODE`: Read-only preview banner active for recipient — PASS
+   - `TEST_E_PREVIEW_EXPORT`: Recipient exports PNG directly from read-only preview (2040×900px, 618.1 KB) — PASS
+   - `TEST_E_CUSTOMIZED_COPY_EXPORT`: Customized copy reflects added part and exports independently — PASS
+   - `TEST_F_RESPONSIVE_CONSISTENCY`: Desktop (1280px) and Mobile (375px) produce identical pixel output (1930×860px) — PASS
+   - `TEST_G_SPEC_SHEET_BTN`: Print BOM button rendered and clickable in modal — PASS
+   - `TEST_G_ESC_KEY`: Escape key closes export modal cleanly — PASS
+
+---
+
+## 17. Part 8 Scope Boundaries (Next — Not Started)
+
+Part 8 is unblocked following human approval of Part 7:
+1. **Viewport Controls (Pan & Zoom):** Smooth mouse wheel / touch pinch-to-zoom, pan drag navigation, reset view button, stage coordinate translation mapping.
+2. **Scope Boundaries:** Part 8 focuses strictly on viewport interaction and coordinate transformations. Production hardening remains Part 9.
 3. **Execution Status:** NOT STARTED. Awaiting instruction to begin.
