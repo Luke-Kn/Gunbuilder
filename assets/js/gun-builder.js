@@ -239,6 +239,8 @@
 			const part = {
 				instanceId: instanceId,
 				productId: product.id || product.productId || 0,
+				sku: product.sku || '',
+				price: product.price || null,
 				partTypeId: (product.part_type && (product.part_type.id || product.part_type.term_id)) ? (product.part_type.id || product.part_type.term_id) : null,
 				partTypeName: (product.part_type && product.part_type.name) ? String(product.part_type.name) : '',
 				x: parseFloat(Number(initialX).toFixed(2)),
@@ -366,6 +368,7 @@
 			const rail = {
 				instanceId: instanceId,
 				productId: product.id || product.productId || 0,
+				sku: product.sku || '',
 				position: normPos,
 				x: parseFloat(Number(initialX).toFixed(2)),
 				y: parseFloat(Number(initialY).toFixed(2)),
@@ -850,6 +853,7 @@
 			if (this.buildState) {
 				this.buildState.setBaseGun({
 					productId: product.id,
+					sku: product.sku || '',
 					x: this.currentStageGeometry.baseX,
 					y: this.currentStageGeometry.baseY,
 					width: this.currentBaseGunGeometry.logicalWidth,
@@ -7207,6 +7211,7 @@
 		GuestBuildManager: window.TGB_GuestBuildManager,
 		AccountBuildManager: window.TGB_AccountBuildManager,
 		ShareManager: window.TGB_ShareManager,
+		ExportManager: window.TGB_ExportManager,
 		state: null,
 		renderer: null,
 		interactions: null,
@@ -7219,6 +7224,7 @@
 		guestBuildManager: null,
 		accountBuildManager: null,
 		shareManager: null,
+		exportManager: null,
 		registry: productRegistry,
 		productRegistry: productRegistry,
 		exportGuestBuilds: function() {
@@ -7489,6 +7495,23 @@
 
 		// Initialize Share Manager (Part 6)
 		shareManager.init();
+
+		// Initialize High-Quality PNG Export Manager (Part 7)
+		let exportManager = null;
+		if (typeof window.TGB_ExportManager === 'function') {
+			exportManager = new window.TGB_ExportManager({
+				root,
+				buildState,
+				renderer,
+				guestBuildManager,
+				accountBuildManager,
+				shareManager,
+				currentBuild
+			});
+			window.TGB_ExportManager.instance = exportManager;
+			window.TGB.exportManager = exportManager;
+			exportManager.init();
+		}
 
 		// 1. Deep Link vs Share vs Persistence Restoration Precedence (Section 14, Parts 4, 5 & 6)
 		const urlParams = new URLSearchParams(window.location.search);

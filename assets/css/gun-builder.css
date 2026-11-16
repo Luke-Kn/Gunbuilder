@@ -2587,7 +2587,230 @@
 	border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-/* Accessibility: Reduced Motion (Part 10 Refinement) */
+/* ==========================================================================
+   Part 7 — High-Quality PNG Export & Specification Sheet Styles
+   ========================================================================== */
+
+/* Toolbar Export Button */
+.tgb-btn-build--export {
+	color: #38bdf8 !important;
+}
+.tgb-btn-build--export:hover:not(:disabled) {
+	background: rgba(56, 189, 248, 0.12) !important;
+	border-color: rgba(56, 189, 248, 0.4) !important;
+	color: #7dd3fc !important;
+}
+.tgb-btn-build--export.is-disabled,
+.tgb-btn-build--export:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	pointer-events: auto;
+}
+
+/* Export Modal Dialog */
+.tgb-modal-panel--export {
+	max-width: 520px;
+	width: 100%;
+}
+
+.tgb-export-info {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 6px;
+	padding: 12px 16px;
+	margin-bottom: 16px;
+}
+
+.tgb-export-info__name {
+	font-size: 16px;
+	font-weight: 700;
+	color: #f8fafc;
+	letter-spacing: 0.2px;
+}
+
+.tgb-export-info__meta {
+	font-size: 13px;
+	color: #94a3b8;
+	margin-top: 3px;
+}
+
+.tgb-export-options {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.tgb-export-fieldset {
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 6px;
+	padding: 12px 14px;
+	margin: 0;
+}
+
+.tgb-export-legend {
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.6px;
+	color: #cbd5e1;
+	padding: 0 6px;
+}
+
+.tgb-export-radio-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.tgb-export-radio-label {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 8px 10px;
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	position: relative;
+}
+
+.tgb-export-radio-label:hover {
+	background: rgba(255, 255, 255, 0.06);
+	border-color: rgba(255, 255, 255, 0.15);
+}
+
+.tgb-export-radio {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+	margin: 0;
+}
+
+.tgb-export-radio-custom {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid #64748b;
+	background: transparent;
+	margin-top: 2px;
+	flex-shrink: 0;
+	transition: all 0.15s ease;
+	position: relative;
+}
+
+.tgb-export-radio:checked + .tgb-export-radio-custom {
+	border-color: #38bdf8;
+	background: #38bdf8;
+	box-shadow: inset 0 0 0 3px #0f172a;
+}
+
+.tgb-export-radio:focus-visible + .tgb-export-radio-custom {
+	outline: 2px solid #38bdf8;
+	outline-offset: 2px;
+}
+
+.tgb-export-radio-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.tgb-export-radio-text strong {
+	font-size: 13px;
+	font-weight: 600;
+	color: #f1f5f9;
+}
+
+.tgb-export-radio-text small {
+	font-size: 11px;
+	color: #94a3b8;
+	margin-top: 2px;
+}
+
+/* Specification Sheet Option */
+.tgb-export-spec-option {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tgb-btn-spec-sheet {
+	width: 100%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 9px 14px;
+	background: transparent;
+	border: 1px dashed rgba(255, 255, 255, 0.2);
+	border-radius: 6px;
+	color: #94a3b8;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.tgb-btn-spec-sheet:hover {
+	border-color: #38bdf8;
+	color: #38bdf8;
+	background: rgba(56, 189, 248, 0.05);
+}
+
+/* Export Feedback Alert */
+.tgb-export-feedback {
+	margin-top: 14px;
+	padding: 8px 12px;
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
+.tgb-export-feedback--success {
+	background: rgba(34, 197, 94, 0.15);
+	border: 1px solid rgba(34, 197, 94, 0.3);
+	color: #4ade80;
+}
+
+.tgb-export-feedback--error {
+	background: rgba(239, 68, 68, 0.15);
+	border: 1px solid rgba(239, 68, 68, 0.3);
+	color: #f87171;
+}
+
+.tgb-export-feedback--info {
+	background: rgba(56, 189, 248, 0.15);
+	border: 1px solid rgba(56, 189, 248, 0.3);
+	color: #38bdf8;
+}
+
+/* Modal Actions */
+.tgb-export-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 20px;
+	padding-top: 14px;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tgb-btn--download-png {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.tgb-btn--download-png.is-loading {
+	opacity: 0.7;
+	cursor: wait;
+	pointer-events: none;
+}
+
+/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
 	#taktik-gun-builder,
 	#taktik-gun-builder *,

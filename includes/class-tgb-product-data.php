@@ -359,6 +359,7 @@ class TGB_Product_Data {
 
 		return array(
 			'id'                     => $product_id,
+			'sku'                    => (string) $wc_product->get_sku(),
 			'name'                   => (string) $wc_product->get_name(),
 			'slug'                   => (string) $wc_product->get_slug(),
 			'permalink'              => (string) $wc_product->get_permalink(),

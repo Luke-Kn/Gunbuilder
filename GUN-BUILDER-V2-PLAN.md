@@ -45,9 +45,9 @@ Based on the Part 0 comprehensive audit, Gun Builder V2 **extends and selectivel
 | **Part 3A** | Purchasable Rail Products & Dynamic Compatibility Backend | **Approved** | Rail product role (`rail`), input/output interface metadata, supported rail positions (`top`, `bottom`), optional part mount positions, dynamic active interface pool (`TGB_Rail_Compatibility`), instance identity, deletion safeguards, read-only `/rails` REST catalog. Completed and approved. |
 | **Part 3B** | Interactive Rail Customization & Dependency Management | **Approved** | Visual rail selection, mounting rails to Base Gun mount points in frontend builder, dynamic updating of `/categories` and `/parts` with Base Gun category policy enforcement and safe `tgb_catalog_version` caching with rail fingerprinting (`_r{rfp}_`), aggregate Rail stock validation across multiple instances and cart quantities, automatic dependent-part removal with toast notification, browser visual verification (fulfilling Test 79), authoritative `/validate-build` REST endpoint, and rail-aware WooCommerce cart integration. (105/105 Tests PASS) |
 | **Part 4** | Guest Multi-Build Persistence & Session Management | **Approved** | Multi-build management in sessionStorage (`tgb_guest_builds_v2`, schemaVersion 2), max 10 builds, active build switching with race condition protection, build creation, renaming, resetting, deleting (disabled when only 1 draft remains), legacy localStorage single-build migration, 4 retained local demo products (92020, 92022, 92024, 92026), and clean Part 5 export handoff. (102/102 Tests PASS: 15 browser + 32 PHP + 55 JS) |
-| **Part 5** | Registered Customer Saved Builds & Account Management | **Implemented — Pending Human Approval** | Private CPT `tgb_saved_build`, strict customer ownership isolation, atomic 10-build account limit, authenticated REST API under `tgb/v1/saved-builds`, WooCommerce My Account "My Gun Builds" endpoint (`gun-builder-builds`), builder toolbar Save/Save-As-New controls, dirty-state badge, in-builder modal browsing, and automatic idempotent guest-to-account transfer. (85 Tests: 70 Backend PHP + 15 Real Browser E2E PASS) |
-| **Part 6** | Build Sharing via Deep Links & Tokens | *Not Started* | Lightweight encrypted/tokenized URL hash encoding, public read-only build restoration, fork & customize workflow. |
-| **Part 7** | Client-Side Image Compositing & Spec Sheet Export | *Not Started* | Off-screen HTML5 Canvas renderer, 1:1 scale PNG/JPEG composite download, part bill-of-materials summary. |
+| **Part 5** | Registered Customer Saved Builds & Account Management | **Approved** | Private CPT `tgb_saved_build`, strict customer ownership isolation, atomic 10-build account limit, authenticated REST API under `tgb/v1/saved-builds`, WooCommerce My Account "My Gun Builds" endpoint (`gun-builder-builds`), builder toolbar Save/Save-As-New controls, dirty-state badge, in-builder modal browsing, and automatic idempotent guest-to-account transfer. (Committed `26113a9a`) |
+| **Part 6** | Build Sharing via Deep Links & Tokens | **Approved** | Cryptographically secure SHA-256 hashed 64-character tokens, dedicated `tgb_shared_build` CPT, allowlisted public REST restoration under `tgb/v1/shares`, rate-limited share creation (25/hr), read-only preview mode with banner and "Customize a Copy" cloning workflow. (Committed `cbb1e011`, `2416a5df`) |
+| **Part 7** | Client-Side Image Compositing & Spec Sheet Export | **Implemented — Pending Human Approval** | Off-screen HTML5 Canvas renderer, 1:1 physical mm scale ($1\text{ mm} = 1\text{ logical px}$), transparent RGBA & white background options, 1× (Standard), 2× (High, default), 3× (Maximum) resolutions, dynamic envelope calculation accommodating extended muzzle devices (suppressors) and optics, printable Section 12 BOM spec sheet, sanitizeFilename, 22/22 browser/PNG tests PASS. |
 | **Part 8** | Viewport Controls: Pan, Zoom & Stage Navigation | *Not Started* | Smooth wheel and pinch-to-zoom, pan navigation, reset viewport button, coordinate translation mapping. |
 | **Part 9** | Production Hardening, Load Testing & Final Release | *Not Started* | Final security review, query optimization under full catalog load, automated end-to-end regression, bump to 2.0.0. |
 
@@ -282,9 +282,32 @@ Based on the Part 0 comprehensive audit, Gun Builder V2 **extends and selectivel
   - Title XSS neutralization via `sanitize_text_field()` and `esc_html()`.
   - Payload schema validation: strict Base Gun verification, max 10 rails, max 30 parts, coordinate/z-index bounds, unique instance IDs.
 
-### Part 7: Client-Side Composite Image & Spec Sheet Export (Next — Not Started)
-- **Status:** Next — Not Started (Unblocked by Part 6 approval).
-- **Core Scope:**
-  - HTML5 canvas compositing of high-resolution airsoft gun build visual image.
-  - Printable / downloadable specification sheet with active component breakdown and live store specs.
-  - Viewport pan/zoom controls remain deferred to Part 8. Production release hardening remains Part 9.
+### Part 7: Client-Side Composite Image & Spec Sheet Export (Implemented — Pending Human Approval)
+- **Status:** Implemented — Pending Human Approval.
+- **Architectural Implementation:**
+  - **`TGB_ExportManager` (`assets/js/gun-builder-export.js`):** Client-side modular export engine wired to `window.TGB.exportManager`.
+  - **State Snapshot Capture (`captureBuildSnapshot`):** Takes point-in-time snapshot of active build state directly from in-memory `window.TGB.state.getState()` or fallback to guest / shared preview managers. Captures currently rendered positions without requiring prior server persistence.
+  - **Dynamic Bounding Box Geometry (`computeComposition`):** Computes canonical envelope across Base Gun, Rails, and Parts in mm coordinates ($1\text{ mm} = 1\text{ logical px}$). Iterates all layers:
+    $$\min X = \min(l_i.x), \quad \max X = \max(l_i.x + l_i.width)$$
+    $$\min Y = \min(l_i.y), \quad \max Y = \max(l_i.y + l_i.height)$$
+    Adds 30px uniform breathing margin to prevent clipping extending muzzle devices (suppressors) or high-rise optics.
+  - **Layer Stacking Order:** Strictly ordered by ascending $z$-index. Base Gun rendered first at $z=10$, followed by Rails and Parts ($z > 10$).
+  - **Image Preloading & CORS Resilience (`preloadImages`):** Preloads all image URLs concurrently using `HTMLImageElement` with `crossOrigin = 'anonymous'`. Implements a graceful fallback retry without CORS headers to handle cross-origin or local asset restrictions without breaking the export pipeline.
+  - **Multi-Resolution Off-Screen HTML5 Canvas Rendering (`renderToCanvas`):**
+    - Standard (1×): Canonical logical dimensions ($W \times H$).
+    - High (2×, Default): $2W \times 2H$ crisp rendering for customer sharing.
+    - Maximum (3×): $3W \times 3H$ ultra-crisp render for desktop/print.
+  - **Background Channel Support:**
+    - Transparent (Default): Preserves full 32-bit RGBA alpha channel.
+    - White: Fills canvas context with solid `#ffffff` before drawing layers.
+  - **Export Modal UI (`templates/gun-builder.php`, `assets/css/gun-builder.css`):**
+    - Toolbar action button `#tgb-btn-export-png` with dynamic disable state when no Base Gun selected.
+    - Export dialog `#tgb-export-modal` with format options (Transparent / White), resolution radios (Standard / High / Maximum), calculated pixel dimensions display, inline progress spinner, and status notifications.
+    - Keyboard accessibility (Escape key dismiss, focus trap, accessible ARIA attributes).
+  - **Download Trigger & Sanitization (`downloadBlob`, `sanitizeFilename`):**
+    - Converts canvas via `toBlob('image/png')` with tainted-canvas exception handling.
+    - Strips special characters, accents, and excessive punctuation to generate clean filenames: `taktik-{sanitized-build-name}.png`.
+    - Triggers native browser download via programmatic anchor click.
+  - **Bill of Materials Spec Sheet (`handlePrintSpecClick`):**
+    - Formats active build breakdown (Base Gun, Rails, Parts, SKUs, individual prices, total price, build date, and build name) into a dedicated print-optimized window triggering `window.print()`.
+  - **Test Matrix Verification:** 22/22 automated Puppeteer browser tests PASS (magic bytes, alpha channel, 1:1 scale, extending attachments, multi-build isolation, unsaved coordinate fidelity, shared preview export, responsive consistency across 1280px & 375px viewports, BOM button, ESC dismissal).

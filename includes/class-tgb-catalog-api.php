@@ -836,6 +836,7 @@ class TGB_Catalog_API {
 	public static function serialize_product( array $product ) {
 		return array(
 			'id'           => (int) ( $product['id'] ?? 0 ),
+			'sku'          => (string) ( $product['sku'] ?? '' ),
 			'name'         => (string) ( $product['name'] ?? '' ),
 			'slug'         => (string) ( $product['slug'] ?? '' ),
 			'permalink'    => (string) ( $product['permalink'] ?? '' ),

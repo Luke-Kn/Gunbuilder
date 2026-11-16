@@ -47,11 +47,22 @@ class TGB_Assets {
 			'all'
 		);
 
+		$export_ver = file_exists( TGB_PLUGIN_DIR . 'assets/js/gun-builder-export.js' ) ? filemtime( TGB_PLUGIN_DIR . 'assets/js/gun-builder-export.js' ) : TGB_VERSION;
+
+		// Part 7 High-Quality PNG Export module.
+		wp_register_script(
+			'tgb-gun-builder-export-js',
+			TGB_PLUGIN_URL . 'assets/js/gun-builder-export.js',
+			array(),
+			$export_ver,
+			true
+		);
+
 		// Lightweight Gun Builder JS foundation.
 		wp_register_script(
 			'tgb-gun-builder-js',
 			TGB_PLUGIN_URL . 'assets/js/gun-builder.js',
-			array(),
+			array( 'tgb-gun-builder-export-js' ),
 			$js_ver,
 			true
 		);
@@ -119,6 +130,7 @@ class TGB_Assets {
 		}
 
 		wp_enqueue_style( 'tgb-gun-builder-css' );
+		wp_enqueue_script( 'tgb-gun-builder-export-js' );
 		wp_enqueue_script( 'tgb-gun-builder-js' );
 
 		self::$enqueued = true;
