@@ -44,6 +44,7 @@ require_once TGB_PLUGIN_DIR . 'includes/class-tgb-catalog-api.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-cart.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-saved-builds.php';
 require_once TGB_PLUGIN_DIR . 'includes/class-tgb-shares.php';
+require_once TGB_PLUGIN_DIR . 'includes/class-tgb-settings.php';
 
 // =============================================================================
 // Bootstrap

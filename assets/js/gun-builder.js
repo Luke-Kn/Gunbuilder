@@ -8,7 +8,7 @@ import { TGB_Persistence } from "./TGB-Persistence.js";
 import { TGB_ProductSelection } from "./TGB-ProductSelection.js";
 import { TGB_Renderer } from "./TGB-Renderer.js";
 import { TGB_ShareManager } from "./TGB-ShareManager.js";
-import { TGB_Export } from "./gun-builder-export.js";
+import { TGB_ExportManager } from "./gun-builder-export.js";
 /**
  * Taktik Gun Builder - Canonical 2D Layered DOM Renderer + Unified Build State + Pointer Dragging (Parts 4 & 5)
  *
@@ -509,7 +509,7 @@ import { TGB_Export } from "./gun-builder-export.js";
         });
         persistence.guestBuildManager = guestBuildManager;
 
-        export_manager = new TGB_Export();
+        let export_manager = new TGB_ExportManager();
         export_manager.init();
         // Wire up global references
         // window.TGB_BuildState.instance = buildState;
