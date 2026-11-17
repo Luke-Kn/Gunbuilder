@@ -31,6 +31,7 @@ class TGB_Assets
 	{
 		add_action('wp_enqueue_scripts', array(__CLASS__, 'register_assets'), 10);
 		add_action('wp_enqueue_scripts', array(__CLASS__, 'maybe_enqueue_for_post'), 20);
+	
 	}
 
 	/**
@@ -38,8 +39,9 @@ class TGB_Assets
 	 */
 	public static function register_assets()
 	{
-		$js_ver = file_exists(TGB_PLUGIN_DIR . 'assets/js/gun-builder.js') ? filemtime(TGB_PLUGIN_DIR . 'assets/js/gun-builder.js') : TGB_VERSION;
+	$js_ver = file_exists(TGB_PLUGIN_DIR . 'assets/js/gun-builder.js') ? filemtime(TGB_PLUGIN_DIR . 'assets/js/gun-builder.js') : TGB_VERSION;
 		$css_ver = file_exists(TGB_PLUGIN_DIR . 'assets/css/gun-builder.css') ? filemtime(TGB_PLUGIN_DIR . 'assets/css/gun-builder.css') : TGB_VERSION;
+
 
 		// Scoped Gun Builder CSS.
 		wp_register_style(

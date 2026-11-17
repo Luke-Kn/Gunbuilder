@@ -247,11 +247,10 @@ export class TGB_CatalogClient {
      * @param {AbortSignal} [signal]
      * @return {Promise<{items: Array, limit: number, has_more: boolean, next_cursor: string|null}>}
      */
-    async searchPartsCategory(query, typeId, limit = 20, cursor = "", signal = null) {
+    async searchPartsCategory(query, typeId, cursor = "", signal = null) {
         const endpoint = new URL(`parts/search`, this.baseUrl);
-        endpoint.searchParams.set("type_id", typeId);
-        endpoint.searchParams.set("query", query);
-        endpoint.searchParams.set("limit", limit);
+        endpoint.searchParams.set("q", query);
+
         if (cursor) {
             endpoint.searchParams.set("cursor", cursor);
         }

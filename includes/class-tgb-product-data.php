@@ -245,6 +245,7 @@ class TGB_Product_Data {
 	 */
 	public static function get_product_data( $product ) {
 		$wc_product = self::resolve_wc_product( $product );
+		//wp_send_json_success( $wc_product->get_children());
 		if ( ! $wc_product ) {
 			return null;
 		}
@@ -357,6 +358,15 @@ class TGB_Product_Data {
 			}
 		}
 
+		$variants =  [];
+		
+		$main_product = wc_get_product( $product_id );
+
+			if( $main_product->is_type('variable') ) { // checking if a product has variations
+				$variants = $main_product->get_available_variations();
+		}
+		
+
 		return array(
 			'id'                     => $product_id,
 			'sku'                    => (string) $wc_product->get_sku(),
@@ -378,6 +388,7 @@ class TGB_Product_Data {
 			'woo'                    => $woo_data,
 			'mounting'               => $mounting_data,
 			'catalog_eligible'       => $is_eligible,
+			'variants'               => $variants,
 		);
 	}
 
@@ -408,6 +419,35 @@ class TGB_Product_Data {
 					'key'   => TGB_Product_Config::META_ROLE,
 					'value' => TGB_Product_Config::ROLE_BASE_GUN,
 				),
+				array(
+					'key'   => TGB_Product_Config::META_ENABLED,
+					'value' => 'yes',
+				),
+				array(
+					'key'   => TGB_Product_Config::META_READY,
+					'value' => 'yes',
+				),
+				array(
+					'key'     => '_product_image_gallery',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		return self::query_catalog_products( $base_query_args, $normalized_args );
+	}
+
+
+		public static function search( string $query ,array $args = array() ) {
+
+		$normalized_args = self::normalize_query_args( $args );
+
+		$base_query_args = array(
+			's' 		  => $query,
+			'post_type'   => 'product',
+			'post_status' => 'publish',
+			'meta_query'  => array(
 				array(
 					'key'   => TGB_Product_Config::META_ENABLED,
 					'value' => 'yes',
@@ -1108,6 +1148,7 @@ class TGB_Product_Data {
 			}
 		}
 
+		
 		return array(
 			'items'       => array_values( $items ),
 			'limit'       => $limit,

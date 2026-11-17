@@ -219,7 +219,12 @@ export class TGB_ProductSelection {
 
         search_bar.addEventListener("change", async () => {
             let search_data = await this.catalog.searchPartsCategory(search_bar.value, this.activeCategoryKey);
-            console.log(search_data);
+        
+
+             const items = Array.isArray(search_data.items) ? search_data.items : [];
+
+                 this.renderProducts(items)
+            
         });
     }
     /**
@@ -524,8 +529,22 @@ export class TGB_ProductSelection {
             return;
         }
 
-        visibleItems.forEach(product => {
-            const card = this.createProductCard(product);
+        visibleItems.forEach(product => {     
+              let card;  
+                    
+            if(product["variants"].length > 0){
+                    product["variants"].forEach(variant => {
+                        let variant_product = product;
+                        variant_product.id = variant.product_id;
+                        variant_product.name = variant_product.name+": "+variant.name;
+                        variant_product.builder_image.url = variant.image;
+                        this.productRegistry.set(variant_product.id,variant_product)
+                         card = this.createProductCard(variant_product);
+                                this.gridEl.appendChild(card);
+                    });
+            }else{
+               card = this.createProductCard(product);
+            }
             this.gridEl.appendChild(card);
         });
     }

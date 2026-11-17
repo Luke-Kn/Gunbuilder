@@ -63,6 +63,39 @@ class TGB_Catalog_API {
 				),
 			)
 		);
+		// 1. GET /wp-json/tgb/v1/base-guns
+		register_rest_route(
+			self::NAMESPACE,
+			'parts/search',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'search' ),
+				'permission_callback' => '__return_true', // Public storefront data.
+				'args'                => array(
+					'q'         => array(
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'limit'  => array(
+						'description'       => __( 'Maximum number of items to return.', 'part-selector' ),
+						'type'              => 'integer',
+						'default'           => 20,
+						'minimum'           => 1,
+						'maximum'           => 100,
+						'sanitize_callback' => 'absint',
+						'validate_callback' => array( __CLASS__, 'validate_limit' ),
+					),
+					'cursor' => array(
+						'description'       => __( 'Continuation cursor for pagination.', 'part-selector' ),
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => array( __CLASS__, 'validate_cursor' ),
+					),
+				),
+			)
+		);
 
 		// 2. GET /wp-json/tgb/v1/categories (V2 Native WooCommerce Categories)
 		register_rest_route(
@@ -616,6 +649,36 @@ class TGB_Catalog_API {
 		);
 	}
 
+
+		public static function search( $request ) {
+		$limit  = $request->get_param( 'limit' ) ? absint( $request->get_param( 'limit' ) ) : 20;
+		$cursor = $request->get_param( 'cursor' ) ? sanitize_text_field( $request->get_param( 'cursor' ) ) : null;
+		$query  = $request->get_param( 'q' ) ? sanitize_text_field( $request->get_param( 'q') ) : null;
+		
+
+		$query_args = array(
+			'limit'  => $limit,
+			'cursor' => $cursor,
+		);
+
+		$result = TGB_Product_Data::search( $query, $query_args );
+		$serialized_items = array();
+		if ( ! empty( $result['items'] ) && is_array( $result['items'] ) ) {
+			foreach ( $result['items'] as $item ) {
+				$serialized_items[] = self::serialize_product( $item );
+			}
+		}
+		
+	
+		return rest_ensure_response(
+			array(
+				'items'       => $serialized_items,
+				'limit'       => (int) $result['limit'],
+				'has_more'    => (bool) $result['has_more'],
+				'next_cursor' => $result['next_cursor'],
+			)
+		);
+	}
 	/**
 	 * Retrieves all active Part Types from dynamic taxonomy.
 	 *
@@ -858,12 +921,22 @@ class TGB_Catalog_API {
 	 * @return array Clean public representation.
 	 */
 	public static function serialize_product( array $product ) {
+
+		$variants = array();
+		if (isset($product['variants'])) {
+
+			foreach ($product['variants'] as $variant) {
+				$attributes = implode(' - ', $variant['attributes'] );
+						array_push($variants, ['product_id' => $variant['variation_id'], 'image' => $variant['image']['src'], 'name' => $attributes]);
+			}
+		}
 		return array(
 			'id'           => (int) ( $product['id'] ?? 0 ),
 			'sku'          => (string) ( $product['sku'] ?? '' ),
 			'name'         => (string) ( $product['name'] ?? '' ),
 			'slug'         => (string) ( $product['slug'] ?? '' ),
 			'permalink'    => (string) ( $product['permalink'] ?? '' ),
+			'variants'	   => (array) ($variants ?? []),
 			'role'         => (string) ( $product['role'] ?? '' ),
 			'part_type'    => ! empty( $product['part_type'] ) ? array(
 				'id'   => (int) ( $product['part_type']['id'] ?? 0 ),
