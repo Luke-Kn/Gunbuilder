@@ -19,7 +19,7 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
  * 4. Whole-Stage Responsive Display Scale System (displayScale = min(1, viewportWidth / stageWidth))
  * 5. Unified In-Memory Build State (Single Source of Truth)
  * 6. Generic Part Instances with Unique Instance IDs
- * 7. Pointer Events Dragging (mouse, touch, pen) with Pointer Capture
+ * 7. Pointer Events Dragging (mouse, toexportuch, pen) with Pointer Capture
  * 8. Physical-to-Logical Coordinate Conversion (delta / displayScale)
  * 9. Stage Boundary Enforcement (clamping)
  * 10. ResizeObserver Responsive Recalculation & Drag Safety

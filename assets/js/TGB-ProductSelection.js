@@ -30,9 +30,15 @@ export class TGB_ProductSelection {
 
         this.categories = []; // [{ id: 'base_gun', name: 'Base Platform', children: [] }, ...]
         this.categoryTree = [];
+<<<<<<< HEAD
         this.activeCategoryKey = "base_gun";
         this.activeSubcategoryKey = null;
         this.activeQueryKey = "base_gun";
+=======
+        this.activeCategoryKey = "64";
+        this.activeSubcategoryKey = null;
+        this.activeQueryKey = "64";
+>>>>>>> 692479821c1c0abe59f6d5f9670f1d0b23aefa04
         this.categoryCache = new Map(); // key => { items: [], has_more: false, next_cursor: null, loaded: false }
 
         this.activeAbortController = null;
@@ -90,6 +96,7 @@ export class TGB_ProductSelection {
 
         // 5. Load default category (Base Platform)
         await this.switchCategory("base_gun");
+<<<<<<< HEAD
 
         this.renderSizeSlider(this.buildState.getBaseGun());
 
@@ -138,6 +145,53 @@ export class TGB_ProductSelection {
         this.categoryTree = [];
         this.categoryCache.clear();
 
+=======
+
+        this.renderSizeSlider(this.buildState.getBaseGun());
+
+        this.enableSearchBar();
+        if(typeof(this.navEl.children[0]) != 'undefined'){
+            this.navEl.children[0].click()
+        }
+
+        // 6. Initial sync with current build state
+        this.syncSidebar();
+    }
+
+    /**
+     * Serializes currently installed rails for REST requests.
+     *
+     * @return {Array<{instance_id: string, product_id: number, position: string}>}
+     */
+    getInstalledRailsForApi() {
+        const rails = this.buildState.getRails ? this.buildState.getRails() : this.buildState.rails || [];
+        return rails.map(r => ({
+            instance_id: r.instanceId,
+            product_id: r.productId,
+            position: r.position || "bottom",
+        }));
+    }
+
+    /**
+     * Loads compatible categories from the REST API for a specified Base Gun and installed Rails.
+     *
+     * @param {number} [baseGunId=0]
+     */
+    async loadCategories(baseGunId = 0) {
+        this.categories = [
+        ];
+        if (baseGunId > 0) {
+            this.categories.push({
+                id: "rails",
+                name: "Rails / Adapters",
+                slug: "rails",
+                children: [],
+            });
+        }
+        this.categoryTree = [];
+        this.categoryCache.clear();
+
+>>>>>>> 692479821c1c0abe59f6d5f9670f1d0b23aefa04
         try {
             const installedRails = this.getInstalledRailsForApi();
             const tree = await this.catalog.getCategories(baseGunId, installedRails);
@@ -155,6 +209,7 @@ export class TGB_ProductSelection {
             }
         } catch (err) {
             console.warn("[TGB] Failed to fetch categories from API:", err);
+<<<<<<< HEAD
         }
 
         this.renderCategoryNav();
@@ -243,6 +298,96 @@ export class TGB_ProductSelection {
             return;
         }
 
+=======
+        }
+        this.renderCategoryNav();
+    }
+
+    /**
+     * Renders the category navigation tab buttons.
+     */
+    renderCategoryNav() {
+        if (!this.navEl) return;
+        this.navEl.textContent = "";
+        console
+        this.categories.forEach(cat => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+                "tgb-category-btn" + (String(cat.id) === String(this.activeCategoryKey) ? " is-active" : "");
+            btn.setAttribute("role", "tab");
+            btn.setAttribute("aria-selected", String(cat.id) === String(this.activeCategoryKey) ? "true" : "false");
+            btn.setAttribute("data-category-key", String(cat.id));
+            btn.textContent = cat.name;
+            this.navEl.appendChild(btn);
+        });
+        this.renderSubcategoryNav();
+    }
+
+    renderSizeSlider(currentBase) {
+        //console.log(currentBase.mounting.points);
+        const slider = document.getElementById("sizeSlider");
+        let currentBaseGunGeometry = TGB_Utility.calculateProductGeometry(currentBase);
+        let currentStageGeometry = TGB_Utility.calculateStageGeometry(currentBaseGunGeometry);
+
+        slider.addEventListener("input", () => {
+            let imgWidth;
+            let imgHeight;
+            document.querySelectorAll(".tgb-layer").forEach(img => {
+                let imgWidth = slider.value * img.dataset.tgbWidth;
+                let imgHeight = slider.value * img.dataset.tgbHeight;
+
+                img.style.width = imgWidth + "px";
+                img.style.height = imgHeight + "px";
+
+                if (img.classList.contains("tgb-layer--base")) {
+                    img.style.marginLeft = (currentStageGeometry.stageWidth - imgWidth) / 2 - 160 + "px";
+                    TGB_Interactions.updateDebugHUD(currentBase.name, imgHeight, imgWidth, slider.value);
+                }
+            });
+
+            currentBase.mounting.points.forEach(point => {
+                let tip = document.getElementById(point.id);
+
+                tip.style.left = Math.round(parseFloat(point.x) + currentStageGeometry.baseX) + "px";
+                tip.style.top = Math.round(parseFloat(point.y) + currentStageGeometry.baseY) + "px";
+
+                for (let index = 0; index < tip.children.length; index++) {
+                    tip.children[index].style.left =
+                        Math.round(parseFloat(point.x) + currentStageGeometry.baseX) + "px";
+                    tip.children[index].style.top = Math.round(parseFloat(point.y) + currentStageGeometry.baseY) + "px";
+                }
+            });
+        });
+    }
+
+    async enableSearchBar() {
+       let search_bar = document.getElementById("tgb-search-bar");
+
+        search_bar.addEventListener("change", async () => {
+            let search_data = await this.catalog.searchPartsCategory(search_bar.value, this.activeCategoryKey);
+            console.log(search_data);
+        });
+    }
+    /**
+     * Renders hierarchical subcategory pills for the active category.
+     */
+    renderSubcategoryNav() {
+        if (!this.subnavEl) return;
+        const activeCat = this.categories.find(c => String(c.id) === String(this.activeCategoryKey));
+        if (
+            !activeCat ||
+            activeCat.id === "base_gun" ||
+            activeCat.id === "rails" ||
+            !activeCat.children ||
+            activeCat.children.length === 0
+        ) {
+            this.subnavEl.style.display = "none";
+            this.subnavEl.textContent = "";
+            return;
+        }
+
+>>>>>>> 692479821c1c0abe59f6d5f9670f1d0b23aefa04
         this.subnavEl.textContent = "";
         this.subnavEl.style.display = "flex";
 

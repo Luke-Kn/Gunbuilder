@@ -147,7 +147,11 @@ class TGB_Assets
 			'tgb-gun-builder-export-js',
 			TGB_PLUGIN_URL . 'assets/js/gun-builder-export.js',
 			array(),
+<<<<<<< HEAD
 			$export_ver,
+=======
+			TGB_VERSION,
+>>>>>>> 692479821c1c0abe59f6d5f9670f1d0b23aefa04
 			array()
 		);
 
