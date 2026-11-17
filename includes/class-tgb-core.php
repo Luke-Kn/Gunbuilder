@@ -65,6 +65,7 @@ class TGB_Core {
 		TGB_Cart::init();
 		TGB_Saved_Builds::init();
 		TGB_Shares::init();
+		TGB_Settings::init();
 	}
 
 	/**

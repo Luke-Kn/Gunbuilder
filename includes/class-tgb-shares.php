@@ -556,14 +556,27 @@ class TGB_Shares {
 			if ( $wc_gun && 'publish' === $wc_gun->get_status() ) {
 				$pdata = TGB_Product_Data::get_product_data( $base_pid );
 				$gun_price = (float) $wc_gun->get_price();
-				$base_product_available = $wc_gun->is_purchasable() && $wc_gun->is_in_stock();
+				$is_eligible = TGB_Product_Data::is_catalog_eligible( $wc_gun );
+				$base_product_available = $wc_gun->is_purchasable() && $wc_gun->is_in_stock() && $is_eligible;
 
 				if ( $pdata ) {
 					$pdata['available']   = $base_product_available;
 					$pdata['in_stock']    = $wc_gun->is_in_stock();
 					$pdata['purchasable'] = $wc_gun->is_purchasable();
-					$total_price_raw     += (float) ( isset( $pdata['price']['raw'] ) ? $pdata['price']['raw'] : $gun_price );
+					if ( $base_product_available ) {
+						$total_price_raw     += (float) ( isset( $pdata['price']['raw'] ) ? $pdata['price']['raw'] : $gun_price );
+					}
 					$resolved_base_product = $pdata;
+				}
+
+				if ( ! $base_product_available ) {
+					$unavailable_items[] = array(
+						'type'       => 'base_gun',
+						'product_id' => $base_pid,
+						'message'    => ! $is_eligible
+							? __( 'The base weapon is not available under the active category system.', 'part-selector' )
+							: __( 'The base weapon is currently out of stock.', 'part-selector' ),
+					);
 				}
 			} else {
 				$unavailable_items[] = array(
@@ -586,15 +599,29 @@ class TGB_Shares {
 
 			if ( $wc_rail && 'publish' === $wc_rail->get_status() ) {
 				$r_price = (float) $wc_rail->get_price();
-				$rail_available = $wc_rail->is_purchasable() && $wc_rail->is_in_stock();
+				$is_eligible = TGB_Product_Data::is_catalog_eligible( $wc_rail );
+				$rail_available = $wc_rail->is_purchasable() && $wc_rail->is_in_stock() && $is_eligible;
 				$rpdata = TGB_Product_Data::get_product_data( $r_pid );
 
 				if ( $rpdata ) {
 					$rpdata['available']   = $rail_available;
 					$rpdata['in_stock']    = $wc_rail->is_in_stock();
 					$rpdata['purchasable'] = $wc_rail->is_purchasable();
-					$total_price_raw      += (float) ( isset( $rpdata['price']['raw'] ) ? $rpdata['price']['raw'] : $r_price );
+					if ( $rail_available ) {
+						$total_price_raw      += (float) ( isset( $rpdata['price']['raw'] ) ? $rpdata['price']['raw'] : $r_price );
+					}
 					$rail_info             = $rpdata;
+				}
+
+				if ( ! $rail_available ) {
+					$unavailable_items[] = array(
+						'type'        => 'rail',
+						'instance_id' => isset( $r['instanceId'] ) ? $r['instanceId'] : '',
+						'product_id'  => $r_pid,
+						'message'     => ! $is_eligible
+							? __( 'An installed rail is not available under the active category system.', 'part-selector' )
+							: __( 'An installed rail is currently out of stock.', 'part-selector' ),
+					);
 				}
 			} else {
 				$unavailable_items[] = array(
@@ -629,15 +656,29 @@ class TGB_Shares {
 
 			if ( $wc_part && 'publish' === $wc_part->get_status() ) {
 				$p_price = (float) $wc_part->get_price();
-				$part_available = $wc_part->is_purchasable() && $wc_part->is_in_stock();
+				$is_eligible = TGB_Product_Data::is_catalog_eligible( $wc_part );
+				$part_available = $wc_part->is_purchasable() && $wc_part->is_in_stock() && $is_eligible;
 				$ppdata = TGB_Product_Data::get_product_data( $p_pid );
 
 				if ( $ppdata ) {
 					$ppdata['available']   = $part_available;
 					$ppdata['in_stock']    = $wc_part->is_in_stock();
 					$ppdata['purchasable'] = $wc_part->is_purchasable();
-					$total_price_raw      += (float) ( isset( $ppdata['price']['raw'] ) ? $ppdata['price']['raw'] : $p_price );
+					if ( $part_available ) {
+						$total_price_raw      += (float) ( isset( $ppdata['price']['raw'] ) ? $ppdata['price']['raw'] : $p_price );
+					}
 					$part_info             = $ppdata;
+				}
+
+				if ( ! $part_available ) {
+					$unavailable_items[] = array(
+						'type'        => 'part',
+						'instance_id' => isset( $p['instanceId'] ) ? $p['instanceId'] : '',
+						'product_id'  => $p_pid,
+						'message'     => ! $is_eligible
+							? __( 'An attached component is not available under the active category system.', 'part-selector' )
+							: __( 'An attached component is currently out of stock.', 'part-selector' ),
+					);
 				}
 			} else {
 				$unavailable_items[] = array(

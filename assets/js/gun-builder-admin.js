@@ -20,7 +20,7 @@
 		var $mountTableBody      = $('#tgb_mount_points_table tbody');
 		var $addMountBtn         = $('#tgb_add_mount_point_btn');
 		var $templateEl          = $('#tgb_mount_point_template');
-		var $catPolicyRadios     = $('input[name="tgb_category_policy"]');
+		var $catPolicyRadios     = $('input[name="tgb_category_policy"], input[name="tgb_custom_category_policy"]');
 		var $allowedCatsBox      = $('#tgb_allowed_categories_container');
 		var $catSearchInput      = $('#tgb_category_search_input');
 
@@ -67,9 +67,10 @@
 		// Change listener on Role select.
 		$roleSelect.on('change', updateConditionalFields);
 
-		// Category Policy radio change listener.
-		$catPolicyRadios.on('change', function() {
-			if ($('input[name="tgb_category_policy"]:checked').val() === 'selected') {
+		// Category Policy radio change listener (supports both WooCommerce and Custom policy radios).
+		$(document).on('change', 'input[name="tgb_category_policy"], input[name="tgb_custom_category_policy"]', function() {
+			var isSelected = $('input[name="tgb_category_policy"]:checked, input[name="tgb_custom_category_policy"]:checked').val() === 'selected';
+			if (isSelected) {
 				$allowedCatsBox.slideDown(150);
 			} else {
 				$allowedCatsBox.slideUp(150);

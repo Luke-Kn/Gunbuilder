@@ -45,9 +45,10 @@ Based on the Part 0 comprehensive audit, Gun Builder V2 **extends and selectivel
 | **Part 3A** | Purchasable Rail Products & Dynamic Compatibility Backend | **Approved** | Rail product role (`rail`), input/output interface metadata, supported rail positions (`top`, `bottom`), optional part mount positions, dynamic active interface pool (`TGB_Rail_Compatibility`), instance identity, deletion safeguards, read-only `/rails` REST catalog. Completed and approved. |
 | **Part 3B** | Interactive Rail Customization & Dependency Management | **Approved** | Visual rail selection, mounting rails to Base Gun mount points in frontend builder, dynamic updating of `/categories` and `/parts` with Base Gun category policy enforcement and safe `tgb_catalog_version` caching with rail fingerprinting (`_r{rfp}_`), aggregate Rail stock validation across multiple instances and cart quantities, automatic dependent-part removal with toast notification, browser visual verification (fulfilling Test 79), authoritative `/validate-build` REST endpoint, and rail-aware WooCommerce cart integration. (105/105 Tests PASS) |
 | **Part 4** | Guest Multi-Build Persistence & Session Management | **Approved** | Multi-build management in sessionStorage (`tgb_guest_builds_v2`, schemaVersion 2), max 10 builds, active build switching with race condition protection, build creation, renaming, resetting, deleting (disabled when only 1 draft remains), legacy localStorage single-build migration, 4 retained local demo products (92020, 92022, 92024, 92026), and clean Part 5 export handoff. (102/102 Tests PASS: 15 browser + 32 PHP + 55 JS) |
-| **Part 5** | Registered Customer Saved Builds & Account Management | **Implemented — Pending Human Approval** | Private CPT `tgb_saved_build`, strict customer ownership isolation, atomic 10-build account limit, authenticated REST API under `tgb/v1/saved-builds`, WooCommerce My Account "My Gun Builds" endpoint (`gun-builder-builds`), builder toolbar Save/Save-As-New controls, dirty-state badge, in-builder modal browsing, and automatic idempotent guest-to-account transfer. (85 Tests: 70 Backend PHP + 15 Real Browser E2E PASS) |
-| **Part 6** | Build Sharing via Deep Links & Tokens | *Not Started* | Lightweight encrypted/tokenized URL hash encoding, public read-only build restoration, fork & customize workflow. |
-| **Part 7** | Client-Side Image Compositing & Spec Sheet Export | *Not Started* | Off-screen HTML5 Canvas renderer, 1:1 scale PNG/JPEG composite download, part bill-of-materials summary. |
+| **Part 5** | Registered Customer Saved Builds & Account Management | **Approved** | Private CPT `tgb_saved_build`, strict customer ownership isolation, atomic 10-build account limit, authenticated REST API under `tgb/v1/saved-builds`, WooCommerce My Account "My Gun Builds" endpoint (`gun-builder-builds`), builder toolbar Save/Save-As-New controls, dirty-state badge, in-builder modal browsing, and automatic idempotent guest-to-account transfer. (Committed `26113a9a`) |
+| **Part 6** | Build Sharing via Deep Links & Tokens | **Approved** | Cryptographically secure SHA-256 hashed 64-character tokens, dedicated `tgb_shared_build` CPT, allowlisted public REST restoration under `tgb/v1/shares`, rate-limited share creation (25/hr), read-only preview mode with banner and "Customize a Copy" cloning workflow. (Committed `cbb1e011`, `2416a5df`) |
+| **Part 7** | Client-Side Image Compositing & Spec Sheet Export | **Approved** | Off-screen HTML5 Canvas renderer, 1:1 physical mm scale ($1\text{ mm} = 1\text{ logical px}$), transparent RGBA & white background options, 1× (Standard), 2× (High, default), 3× (Maximum) resolutions, dynamic envelope calculation accommodating extended muzzle devices (suppressors) and optics, printable Section 12 BOM spec sheet, sanitizeFilename, 22/22 browser/PNG tests PASS. (Committed `4e55a4d0`) |
+| **Switchable Category Source** | Switchable Category Source System | **Implemented — Pending Human Approval** | Dual taxonomy support (Custom `tgb_part_type` & WooCommerce `product_cat`), admin settings screen under Products menu (`tgb_category_source`), live readiness preview table, source-aware product configuration tab & validation, independent Base Gun category permissions, source-prefixed caching, server-side cart & compatibility enforcement. (25/25 Tests PASS) |
 | **Part 8** | Viewport Controls: Pan, Zoom & Stage Navigation | *Not Started* | Smooth wheel and pinch-to-zoom, pan navigation, reset viewport button, coordinate translation mapping. |
 | **Part 9** | Production Hardening, Load Testing & Final Release | *Not Started* | Final security review, query optimization under full catalog load, automated end-to-end regression, bump to 2.0.0. |
 
@@ -282,9 +283,66 @@ Based on the Part 0 comprehensive audit, Gun Builder V2 **extends and selectivel
   - Title XSS neutralization via `sanitize_text_field()` and `esc_html()`.
   - Payload schema validation: strict Base Gun verification, max 10 rails, max 30 parts, coordinate/z-index bounds, unique instance IDs.
 
-### Part 7: Client-Side Composite Image & Spec Sheet Export (Next — Not Started)
-- **Status:** Next — Not Started (Unblocked by Part 6 approval).
-- **Core Scope:**
-  - HTML5 canvas compositing of high-resolution airsoft gun build visual image.
-  - Printable / downloadable specification sheet with active component breakdown and live store specs.
-  - Viewport pan/zoom controls remain deferred to Part 8. Production release hardening remains Part 9.
+### Part 7: Client-Side Composite Image & Spec Sheet Export (Implemented — Pending Human Approval)
+- **Status:** Implemented — Pending Human Approval.
+- **Architectural Implementation:**
+  - **`TGB_ExportManager` (`assets/js/gun-builder-export.js`):** Client-side modular export engine wired to `window.TGB.exportManager`.
+  - **State Snapshot Capture (`captureBuildSnapshot`):** Takes point-in-time snapshot of active build state directly from in-memory `window.TGB.state.getState()` or fallback to guest / shared preview managers. Captures currently rendered positions without requiring prior server persistence.
+  - **Dynamic Bounding Box Geometry (`computeComposition`):** Computes canonical envelope across Base Gun, Rails, and Parts in mm coordinates ($1\text{ mm} = 1\text{ logical px}$). Iterates all layers:
+    $$\min X = \min(l_i.x), \quad \max X = \max(l_i.x + l_i.width)$$
+    $$\min Y = \min(l_i.y), \quad \max Y = \max(l_i.y + l_i.height)$$
+    Adds 30px uniform breathing margin to prevent clipping extending muzzle devices (suppressors) or high-rise optics.
+  - **Layer Stacking Order:** Strictly ordered by ascending $z$-index. Base Gun rendered first at $z=10$, followed by Rails and Parts ($z > 10$).
+  - **Image Preloading & CORS Resilience (`preloadImages`):** Preloads all image URLs concurrently using `HTMLImageElement` with `crossOrigin = 'anonymous'`. Implements a graceful fallback retry without CORS headers to handle cross-origin or local asset restrictions without breaking the export pipeline.
+  - **Multi-Resolution Off-Screen HTML5 Canvas Rendering (`renderToCanvas`):**
+    - Standard (1×): Canonical logical dimensions ($W \times H$).
+    - High (2×, Default): $2W \times 2H$ crisp rendering for customer sharing.
+    - Maximum (3×): $3W \times 3H$ ultra-crisp render for desktop/print.
+  - **Background Channel Support:**
+    - Transparent (Default): Preserves full 32-bit RGBA alpha channel.
+    - White: Fills canvas context with solid `#ffffff` before drawing layers.
+  - **Export Modal UI (`templates/gun-builder.php`, `assets/css/gun-builder.css`):**
+    - Toolbar action button `#tgb-btn-export-png` with dynamic disable state when no Base Gun selected.
+    - Export dialog `#tgb-export-modal` with format options (Transparent / White), resolution radios (Standard / High / Maximum), calculated pixel dimensions display, inline progress spinner, and status notifications.
+    - Keyboard accessibility (Escape key dismiss, focus trap, accessible ARIA attributes).
+  - **Download Trigger & Sanitization (`downloadBlob`, `sanitizeFilename`):**
+    - Converts canvas via `toBlob('image/png')` with tainted-canvas exception handling.
+    - Strips special characters, accents, and excessive punctuation to generate clean filenames: `taktik-{sanitized-build-name}.png`.
+    - Triggers native browser download via programmatic anchor click.
+  - **Bill of Materials Spec Sheet (`handlePrintSpecClick`):**
+    - Formats active build breakdown (Base Gun, Rails, Parts, SKUs, individual prices, total price, build date, and build name) into a dedicated print-optimized window triggering `window.print()`.
+  - **Test Matrix Verification:** 22/22 automated Puppeteer browser tests PASS (magic bytes, alpha channel, 1:1 scale, extending attachments, multi-build isolation, unsaved coordinate fidelity, shared preview export, responsive consistency across 1280px & 375px viewports, BOM button, ESC dismissal).
+
+---
+
+## 11. Switchable Category Source Architecture (Implemented — Pending Human Approval)
+
+- **Objective:** Provide a permanent administrator-configurable setting enabling switching between Custom Gun Builder Categories (`tgb_part_type` taxonomy) and WooCommerce Website Categories (`product_cat` taxonomy) without rewriting code, recreating categories, or losing product assignments.
+- **Dedicated Admin Settings Screen:**
+  - Menu location: **Products → Gun Builder Settings** (`edit.php?post_type=product&page=tgb-settings`).
+  - Option key: `tgb_category_source` (allowed values: `woocommerce`, `custom`; default: `woocommerce`).
+  - Security: Protected by `manage_woocommerce` capability, `wp_nonce_field('tgb_settings_action', 'tgb_settings_nonce')`, and explicit server-side sanitization.
+  - Live Readiness Preview Table: Dynamically evaluates real catalog counts: Total Eligible Parts, Parts assigned to WooCommerce Categories, Parts assigned to Custom Part Types, Parts missing custom assignments, and Custom categories containing eligible parts.
+- **Custom Taxonomy Preservation & Administration:**
+  - Preserves hierarchical custom taxonomy `tgb_part_type` under **Products → Gun Builder Part Types**.
+  - Taxonomy mutation hooks (`created_tgb_part_type`, `edited_tgb_part_type`, `delete_tgb_part_type`) trigger automated catalog cache busting.
+- **Product Configuration Panel Integration (`TGB_Product_Config`):**
+  - Displays source-aware category interface: Custom category `<select>` dropdown in Custom mode, WooCommerce hierarchical category list in WooCommerce mode.
+  - Preserves dual taxonomy assignments on product save without data loss or mutual interference.
+  - Builder Ready validation adapts dynamically: requires `tgb_part_type` assignment in Custom mode, or `product_cat` in WooCommerce mode.
+- **Base Gun Category Permissions:**
+  - Independent metadata storage: WooCommerce mode uses `_tgb_category_policy` and `_tgb_allowed_categories`; Custom mode uses `_tgb_custom_category_policy` and `_tgb_allowed_custom_categories`.
+  - Prevents numeric taxonomy ID collisions across `product_cat` and `tgb_part_type`.
+  - Full parent/child descendant tree evaluation supported in both modes.
+- **Frontend Category Navigation & Role Preservation:**
+  - Special roles **Base Platform** and **Rails / Adapters** strictly preserved in both modes.
+  - Rails are role-based and not bound to `tgb_part_type` in Custom mode.
+  - Category buttons dynamically rendered from active taxonomy via localized configuration.
+- **Server-Side Compatibility & Cart Revalidation:**
+  - Server-side cart validation (`TGB_Cart::process_add_build` and `TGB_Cart::validate_request`) checks mounting rules and category eligibility against the active source.
+  - Inactive taxonomy IDs cannot bypass category restrictions.
+- **Source-Prefixed Caching & Invalidation:**
+  - Transient cache keys include active source: `tgb_ccat_{source}_{baseGunId}_r{rfp}_{hash}`.
+  - Catalog version bumped automatically on setting change, term modification, or product assignment change.
+- **Automated Verification:** 25/25 automated browser and backend tests PASS across Tests A through H.
+
