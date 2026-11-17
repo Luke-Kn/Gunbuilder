@@ -1,0 +1,110 @@
+/* Header */
+#taktik-gun-builder .tgb-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--tgb-border-subtle);
+}
+
+#taktik-gun-builder .tgb-header-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#taktik-gun-builder .tgb-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--tgb-text-main);
+    line-height: 1.25;
+}
+
+#taktik-gun-builder .tgb-subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tgb-text-muted);
+    line-height: 1.4;
+}
+
+/* Layer Elements (Section 20 & 48) */
+#taktik-gun-builder .tgb-layer {
+    position: absolute;
+    display: block;
+    max-width: none;
+    max-height: none;
+    height: auto;
+    margin-left: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    transition:
+        filter 0.15s ease,
+        opacity 0.2s ease-in;
+}
+
+/* Base Gun Layer: Fixed (Section 7 & 49) */
+#taktik-gun-builder .tgb-layer--base {
+    transform-origin: 150 150;
+    pointer-events: none;
+    cursor: default;
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5));
+}
+
+/* Part Layers: Draggable via Pointer Events (Section 12, 26, 29, 30) */
+#taktik-gun-builder .tgb-layer--part {
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none; /* Prevents mobile scroll while dragging part */
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
+}
+
+#taktik-gun-builder .tgb-layer--part.is-dragging {
+    cursor: grabbing;
+    filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 8px rgba(230, 126, 34, 0.45));
+    z-index: 999 !important;
+}
+
+#taktik-gun-builder .tgb-state-title {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--tgb-text-main);
+    line-height: 1.3;
+}
+
+#taktik-gun-builder .tgb-state-desc {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--tgb-text-muted);
+}
+
+/* Structural Panels (Sidebar & Tray) */
+#taktik-gun-builder .tgb-panel {
+    background: var(--tgb-bg-surface);
+    border: 1px solid var(--tgb-border);
+    border-radius: var(--tgb-radius-md);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#taktik-gun-builder .tgb-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--tgb-border-subtle);
+    background: var(--tgb-bg-surface-elevated);
+}
+
+#taktik-gun-builder .tgb-panel-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--tgb-text-main);
+}

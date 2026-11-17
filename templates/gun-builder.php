@@ -198,10 +198,11 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 						</div>
 					</div>
 
-					<!-- Measurement HUD (Internal / Debug mode only) -->
-					<div class="tgb-stage-hud" id="tgb-stage-hud" aria-hidden="true">
-						<span class="tgb-stage-hud__scale" id="tgb-stage-hud-scale"></span>
-					</div>
+<!-- Measurement HUD (Internal / Debug mode only) -->
+							<div class="tgb-stage-hud" id="tgb-stage-hud">
+								<span class="tgb-stage-hud__scale" id="tgb-stage-hud-scale"></span>
+								<input type="range" id="sizeSlider" min="0.8" max="1.5" value="1" step="0.1">
+							</div>
 
 				</div>
 			</div>
@@ -260,6 +261,10 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 				<nav class="tgb-subcategory-nav" id="tgb-subcategory-nav" aria-label="<?php esc_attr_e( 'Subcategories', 'part-selector' ); ?>" style="display: none;">
 					<!-- Dynamically populated with child categories -->
 				</nav>
+
+				<div>
+					<input type="text" id="tgb-search-bar" placeholder="Search">
+				</div>
 
 				<!-- Tray Status Notification (e.g. empty or error) -->
 				<div class="tgb-tray-status" id="tgb-tray-status" style="display: none;"></div>
