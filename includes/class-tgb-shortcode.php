@@ -137,11 +137,13 @@ class TGB_Shortcode {
 		);
 	}
 
+	
 	/**
 	 * Retrieves the canonical URL of the Gun Builder page.
 	 *
-	 * Dynamically resolves from published pages containing [part_selector].
-	 * Falls back gracefully to /test/.
+	 * Prefer the dedicated Gun Builder test page, including when private.
+	 * Otherwise, find a published or private page with the shortcode.
+	 * Keep the existing /test/ fallback for local installations.
 	 *
 	 * @return string
 	 */
@@ -151,18 +153,30 @@ class TGB_Shortcode {
 			return $cached_url;
 		}
 
+		$preferred_page = get_page_by_path( 'gun-builder-test', OBJECT, 'page' );
+
+		if (
+			$preferred_page instanceof WP_Post &&
+			in_array( $preferred_page->post_status, array( 'publish', 'private' ), true ) &&
+			has_shortcode( $preferred_page->post_content, 'part_selector' )
+		) {
+			$cached_url = get_permalink( $preferred_page->ID );
+			return $cached_url;
+		}
+
 		global $wpdb;
+
 		$page_id = (int) $wpdb->get_var(
 			"SELECT ID FROM {$wpdb->posts}
-			 WHERE post_type = 'page' AND post_status = 'publish' AND post_content LIKE '%[part_selector%'
+			 WHERE post_type = 'page'
+			 AND post_status IN ('publish', 'private')
+			 AND post_content LIKE '%[part_selector%'
 			 ORDER BY ID ASC LIMIT 1"
 		);
 
-		if ( $page_id > 0 ) {
-			$cached_url = get_permalink( $page_id );
-		} else {
-			$cached_url = home_url( '/test/' );
-		}
+		$cached_url = $page_id > 0
+			? get_permalink( $page_id )
+			: home_url( '/test/' );
 
 		return $cached_url;
 	}
