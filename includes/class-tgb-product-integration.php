@@ -37,18 +37,19 @@ class TGB_Product_Integration {
 		 *
 		 * @param bool $enabled Whether the button is enabled. Defaults to false during Stage 1.
 		 */
-		// $is_enabled = apply_filters( 'tgb_enable_product_customize_button', false );
-
-		//  if ( ! $is_enabled ) {
-		//  	return;
-		//  }
-
 		global $product;
 		// if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
 		// 	return;
 		// }
 
 		 $product_id  = $product->get_id();
+		$is_enabled = 'yes' === get_post_meta( $product_id, '_tgb_enabled', true );
+
+
+
+		  if ( ! $is_enabled ) {
+		  	return;
+		  }
 
 		$target_url = add_query_arg( 'product_id', $product_id, TGB_PLUGIN_PAGE);
 		?>
