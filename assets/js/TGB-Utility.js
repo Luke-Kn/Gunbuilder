@@ -149,6 +149,97 @@ export class TGB_Utility {
      * mount points, and computes canonical initial placement coordinates.
      */
     static TGB_Mounting = {
+        checkPartCompatibilityWithPool(partProduct, pool) {
+            if (!partProduct || !Array.isArray(pool)) {
+                return { status: "unconfigured", supportingSources: [] };
+            }
+
+            const partInterfaces =
+                partProduct.mounting && Array.isArray(partProduct.mounting.interfaces)
+                    ? partProduct.mounting.interfaces
+                    : [];
+            const partAnchor = partProduct.mounting && partProduct.mounting.anchor ? partProduct.mounting.anchor : null;
+
+            if (
+                partInterfaces.length === 0 ||
+                !partAnchor ||
+                typeof partAnchor.x_percent !== "number" ||
+                typeof partAnchor.y_percent !== "number"
+            ) {
+                return { status: "unconfigured", supportingSources: [] };
+            }
+
+            const partInterfaceIds = partInterfaces
+                .map(iface => iface.id)
+                .filter(id => typeof id === "number" && id > 0);
+
+            const partPositions =
+                partProduct.mounting && Array.isArray(partProduct.mounting.positions)
+                    ? partProduct.mounting.positions
+                    : [];
+
+            const supportingSources = [];
+
+            for (const cap of pool) {
+                if (!partInterfaceIds.includes(cap.interface_id)) {
+                    continue;
+                }
+
+                // Position check:
+                // If Part has no explicit positions: matches ANY capability position (legacy behavior).
+                // If Part specifies explicit positions: capability position must match.
+                if (partPositions.length > 0 && !partPositions.includes(cap.position)) {
+                    continue;
+                }
+
+                supportingSources.push(cap);
+            }
+
+            return {
+                status: supportingSources.length > 0 ? "compatible" : "incompatible",
+                supportingSources: supportingSources,
+            };
+        },
+
+        buildCapabilityPool(baseProduct, installedRails = []) {
+            const pool = [];
+
+            if (baseProduct && baseProduct.mounting && Array.isArray(baseProduct.mounting.points)) {
+                for (const pt of baseProduct.mounting.points) {
+                    const ifaceId = pt.interface ? pt.interface.id : 0;
+                    if (ifaceId > 0) {
+                        pool.push({
+                            interface_id: ifaceId,
+                            position: pt.position || "unspecified",
+                            source_type: "base_gun",
+                            source_id: pt.id || "",
+                        });
+                    }
+                }
+            }
+
+            if (Array.isArray(installedRails)) {
+                for (const rail of installedRails) {
+                    const railMeta = rail.rail || {};
+                    const outputIfaces = railMeta.output_interfaces || [];
+                    const pos = rail.position || "bottom";
+                    for (const iface of outputIfaces) {
+                        const ifaceId = typeof iface === "object" ? iface.id : iface;
+                        if (ifaceId > 0) {
+                            pool.push({
+                                interface_id: ifaceId,
+                                position: pos,
+                                source_type: "rail",
+                                source_id: rail.instanceId || String(rail.productId),
+                            });
+                        }
+                    }
+                }
+            }
+
+            return pool;
+        },
+
         /**
          * Evaluates compatibility status between a Base Gun and a Part product.
          *

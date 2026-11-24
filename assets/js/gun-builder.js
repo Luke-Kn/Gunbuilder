@@ -577,7 +577,6 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
 
         // Initialize Account Build Manager (Part 5)
         accountBuildManager.init();
-
         // Initialize Share Manager (Part 6)
         shareManager.init();
 
