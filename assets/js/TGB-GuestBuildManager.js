@@ -61,6 +61,7 @@
 				if (typeof window === 'undefined' || !('localStorage' in window) || window.localStorage === null) {
 					return false;
 				}
+			
 				const testKey = '__tgb_test_local__';
 				window.localStorage.setItem(testKey, '1');
 				window.localStorage.removeItem(testKey);

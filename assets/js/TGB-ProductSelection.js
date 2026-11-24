@@ -100,6 +100,8 @@ export class TGB_ProductSelection {
 
         // 6. Initial sync with current build state
         this.syncSidebar();
+        console.log(this.productRegistry);
+        
     }
 
     /**
@@ -399,6 +401,8 @@ export class TGB_ProductSelection {
                 next_cursor: nextCursor,
                 loaded: true,
             });
+            
+            sessionStorage.setItem('product_registry', JSON.stringify(Object.fromEntries(this.productRegistry)))
 
             this.hideLoading();
             this.renderProducts(items);

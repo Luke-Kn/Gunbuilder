@@ -306,6 +306,7 @@ export	class TGB_Persistence {
 		 */
 		async restoreBuild(catalogClient, productSelection, buildState, renderer, productRegistry, explicitBuildData = null) {
 			const persisted = explicitBuildData || this.load();
+			
 			if (!persisted) {
 				return { restored: false, reason: 'none' };
 			}
@@ -314,7 +315,9 @@ export	class TGB_Persistence {
 
 			try {
 				// 1. Resolve and validate Base Gun from authoritative catalog
-				let baseProduct = productRegistry.get(persisted.baseProductId);
+				let baseProduct = productRegistry.get(persisted.baseProductId.toString());
+				
+
 				if (!baseProduct || baseProduct.role !== 'base_gun' || !baseProduct.builder_image) {
 					try {
 						//const baseGunsRes = await catalogClient.getBaseGuns(100);

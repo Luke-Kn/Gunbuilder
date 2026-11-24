@@ -201,9 +201,16 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
 //     });
 // });
 (function (window, document) {
-    "use strict";
+      
+       
+        const productRegistry = new Map(Object.entries(JSON.parse(sessionStorage.getItem('product_registry'))?? new Object())) ?? new Map();
+
+        console.log(productRegistry);
+
+    // Restore state on refresh
+
+
     //document.addEventListener("click", (e) => console.log(e.target), true);
-    const productRegistry = new Map();
 
     // window.TGB_BuildState = {
     //     Class: TGB_BuildState,
