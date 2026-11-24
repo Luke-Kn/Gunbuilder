@@ -25,6 +25,7 @@ define( 'TGB_VERSION', '1.1.0-dev' );
 define( 'TGB_PLUGIN_FILE', __FILE__ );
 define( 'TGB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'TGB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'TGB_PLUGIN_PAGE', $_SERVER['SERVER_NAME'].'/gun-builder-test/');
 define( 'TGB_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 
 // =============================================================================

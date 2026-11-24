@@ -37,25 +37,20 @@ class TGB_Product_Integration {
 		 *
 		 * @param bool $enabled Whether the button is enabled. Defaults to false during Stage 1.
 		 */
-		$is_enabled = apply_filters( 'tgb_enable_product_customize_button', false );
+		// $is_enabled = apply_filters( 'tgb_enable_product_customize_button', false );
 
-		if ( ! $is_enabled ) {
-			return;
-		}
+		//  if ( ! $is_enabled ) {
+		//  	return;
+		//  }
 
 		global $product;
-		if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
-			return;
-		}
+		// if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
+		// 	return;
+		// }
 
-		$product_id  = $product->get_id();
-		$builder_url = apply_filters( 'tgb_builder_page_url', '' );
+		 $product_id  = $product->get_id();
 
-		if ( empty( $builder_url ) ) {
-			return;
-		}
-
-		$target_url = add_query_arg( 'product_id', $product_id, $builder_url );
+		$target_url = add_query_arg( 'product_id', $product_id, TGB_PLUGIN_PAGE);
 		?>
 		<a href="<?php echo esc_url( $target_url ); ?>"
 		   class="button alt taktik-builder-launch-button"
