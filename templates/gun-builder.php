@@ -143,7 +143,9 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 			</div>
 		</div>
 	</section>
+			<div class="tgb-workspace" id="notifications">
 
+			</div>			
 	<!-- Main Builder Workspace -->
 	<div class="tgb-workspace">
 

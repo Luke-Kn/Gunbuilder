@@ -201,9 +201,15 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
 //     });
 // });
 (function (window, document) {
-    "use strict";
+      
+       
+        const productRegistry = new Map(Object.entries(JSON.parse(sessionStorage.getItem('product_registry'))?? new Object())) ?? new Map();
+
+
+    // Restore state on refresh
+
+
     //document.addEventListener("click", (e) => console.log(e.target), true);
-    const productRegistry = new Map();
 
     // window.TGB_BuildState = {
     //     Class: TGB_BuildState,
@@ -685,6 +691,7 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
                 console.warn("[TGB GuestBuildManager] Auto-persist error suppressed:", err);
             }
         });
+        
     }
 
     if (document.readyState === "loading") {

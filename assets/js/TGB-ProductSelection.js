@@ -88,8 +88,6 @@ export class TGB_ProductSelection {
         // 4. Subscribe to Build State
         this.buildState.subscribe(this.boundStateChange);
 
-        // 5. Load default category (Base Platform)
-        await this.switchCategory("base_gun");
 
         this.renderSizeSlider(this.buildState.getBaseGun());
 
@@ -100,6 +98,11 @@ export class TGB_ProductSelection {
 
         // 6. Initial sync with current build state
         this.syncSidebar();
+        
+        this.switchCategory(64)
+       ;
+        console.log( this.fetchCategoryProducts(64));
+        
     }
 
     /**
@@ -278,7 +281,6 @@ export class TGB_ProductSelection {
      */
     async switchCategory(categoryKey, forceRefresh = false) {
         categoryKey = String(categoryKey);
-
         // Cancel any pending in-flight request
         if (this.activeAbortController) {
             this.activeAbortController.abort();
@@ -392,17 +394,22 @@ export class TGB_ProductSelection {
                 this.productRegistry.set(p.id, p);
             });
 
-            // Save in cache
-            this.categoryCache.set(cacheKey, {
-                items: items,
-                has_more: hasMore,
-                next_cursor: nextCursor,
-                loaded: true,
-            });
+            // // Save in cache
+            // this.categoryCache.set(cacheKey, {
+            //     items: items,
+            //     has_more: hasMore,
+            //     next_cursor: nextCursor,
+            //     loaded: true,
+            // });
+            
 
+          
+            
             this.hideLoading();
             this.renderProducts(items);
             this.updateLoadMoreAction(hasMore);
+                
+           sessionStorage.setItem('product_registry', JSON.stringify(Object.fromEntries(this.productRegistry)))
         } catch (err) {
             if (err.name === "AbortError") {
                 // Intentionally cancelled by rapid switching
@@ -514,16 +521,25 @@ export class TGB_ProductSelection {
      * @param {Array} items
      */
     renderProducts(items) {
+    
+        
         this.gridEl.textContent = "";
         const currentBase = this.buildState.getBaseGun();
-        const baseProduct = currentBase ? this.productRegistry.get(currentBase.productId) : null;
+        let baseProduct = currentBase ? this.productRegistry.get(currentBase.productId):null
+        if(!baseProduct){         
+         baseProduct =  this.productRegistry.get(currentBase.productId.toString())
+        }
         const installedRails = this.buildState && this.buildState.getRails ? this.buildState.getRails() : [];
-
+        
+        
         // Strict filtering: only display compatible components / rails
         const visibleItems = (items || []).filter(product => {
+            
             if (product.role === "base_gun") return true;
             if (!baseProduct) return false;
+            
             const status = TGB_Utility.TGB_Mounting.getCompatibility(baseProduct, product, installedRails);
+            
             return status === "compatible";
         });
 
@@ -531,6 +547,7 @@ export class TGB_ProductSelection {
             this.showStatus("No compatible products are available in this category.", false);
             return;
         }
+
 
         visibleItems.forEach(product => {
             let card;
@@ -544,6 +561,8 @@ export class TGB_ProductSelection {
             } else {
                 card = this.createProductCard(product);
             }
+           
+            
             this.gridEl.appendChild(card);
         });
     }
@@ -586,7 +605,10 @@ export class TGB_ProductSelection {
         const isBaseGun = product.role === "base_gun";
         const isRail = product.role === "rail";
         const currentBase = this.buildState.getBaseGun();
-        const baseProduct = currentBase ? this.productRegistry.get(currentBase.productId) : null;
+        let baseProduct = currentBase ? this.productRegistry.get(currentBase.productId) : null;
+         if(!baseProduct){         
+         baseProduct =  this.productRegistry.get(currentBase.productId.toString())
+        }
         const isCurrentBaseSelected = isBaseGun && currentBase && currentBase.productId === product.id;
 
         if (isCurrentBaseSelected) {
@@ -728,7 +750,7 @@ export class TGB_ProductSelection {
             }
         } else if (isRail) {
             btn.setAttribute("data-action", "add-rail");
-            const hasBase = Boolean(currentBase);
+            const hasBase = Boolean(currentBase ?? baseProduct);
             const inStock = !product.stock || product.stock.in_stock !== false;
 
             if (!inStock) {
@@ -828,7 +850,7 @@ export class TGB_ProductSelection {
 
         if (action === "select-base") {
             this.selectBaseGun(product);
-        } else if (action === "add-part") {
+        } else if (action === "add-part") {            
             this.addPartToBuild(product);
         } else if (action === "add-rail") {
             const card = btn.closest(".tgb-product-card");
@@ -903,7 +925,9 @@ export class TGB_ProductSelection {
      * @param {Object} product Normalized Part product.
      */
     addPartToBuild(product) {
+        
         const currentBase = this.buildState.getBaseGun();
+        
         if (!currentBase) {
             this.showStatus("Choose a base platform first.", false);
             return;
@@ -919,7 +943,10 @@ export class TGB_ProductSelection {
             return;
         }
 
-        const baseProduct = this.productRegistry.get(currentBase.productId);
+        let baseProduct = this.productRegistry.get(currentBase.productId);
+        if(!baseProduct){
+         baseProduct = this.productRegistry.get(currentBase.productId.toString());
+        }
         const installedRails = this.buildState && this.buildState.getRails ? this.buildState.getRails() : [];
         const compatStatus = TGB_Utility.TGB_Mounting.getCompatibility(baseProduct, product, installedRails);
         if (compatStatus !== "compatible") {
@@ -1164,7 +1191,11 @@ export class TGB_ProductSelection {
                     btn.disabled = false;
                 }
             } else if (isRail) {
-                const baseProduct = hasBase ? this.productRegistry.get(currentBase.productId) : null;
+                let baseProduct = hasBase ? this.productRegistry.get(currentBase.productId) : null;
+                if(!baseProduct){
+                    baseProduct = hasBase ? this.productRegistry.get(currentBase.productId.toString()) : null;
+                }
+
                 const inStock = !product.stock || product.stock.in_stock !== false;
                 const validPositions = baseProduct
                     ? TGB_Utility.TGB_Mounting.getRailCompatiblePositions(baseProduct, product)
@@ -1194,7 +1225,11 @@ export class TGB_ProductSelection {
             } else {
                 // Part button & compatibility badge (Part 7)
                 const compatBadge = card.querySelector(".tgb-card-compat-badge");
-                const baseProduct = hasBase ? this.productRegistry.get(currentBase.productId) : null;
+                let baseProduct = hasBase ? this.productRegistry.get(currentBase.productId) : null;
+                 if(!baseProduct){
+                    baseProduct =  this.productRegistry.get(currentBase.productId.toString());
+                }
+                
                 const inStock = !product.stock || product.stock.in_stock !== false;
                 const compatStatus = baseProduct
                     ? TGB_Utility.TGB_Mounting.getCompatibility(baseProduct, product, installedRails)
@@ -1318,7 +1353,7 @@ export class TGB_ProductSelection {
      * @param {number} [autoDismissMs=8000]
      */
     showNotice(message, type = "info", autoDismissMs = 8000) {
-        const container = this.root.querySelector(".tgb-workspace") || this.root;
+        const container = document.getElementById("notifications") || this.root;
         let notice = this.root.querySelector(".tgb-restore-notice");
         if (!notice) {
             notice = document.createElement("div");
