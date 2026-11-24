@@ -1318,7 +1318,7 @@ export class TGB_ProductSelection {
      * @param {number} [autoDismissMs=8000]
      */
     showNotice(message, type = "info", autoDismissMs = 8000) {
-        const container = this.root.querySelector(".tgb-workspace") || this.root;
+        const container = document.getElementById("notifications") || this.root;
         let notice = this.root.querySelector(".tgb-restore-notice");
         if (!notice) {
             notice = document.createElement("div");
