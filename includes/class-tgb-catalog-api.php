@@ -927,8 +927,63 @@ class TGB_Catalog_API {
 
 			foreach ($product['variants'] as $variant) {
 				$attributes = implode(' - ', $variant['attributes'] );
-						array_push($variants, ['product_id' => $variant['variation_id'], 'image' => $variant['image']['src'], 'name' => $attributes]);
+						array_push(
+							$variants, [
+								'id' => $variant['variation_id'], 
+								'image' => $variant['image']['src'], 
+								'name' => $product['name']." (".$attributes.")",
+								'reference_mm' => (float) ( $product['reference_mm'] ?? 0 ),
+								'builder_image'=> ! empty($variant['image']['src']) ? array(
+									'attachment_id' => (int) ( $product['builder_image']['attachment_id'] ?? 0 ),
+									'url'           => (string) ( $variant['image']['src'] ?? '' ),
+									'width'         => (int) ( $product['builder_image']['width'] ?? 0 ),
+									'height'        => (int) ( $product['builder_image']['height'] ?? 0 ),
+									'aspect_ratio'  => (float) ( $product['builder_image']['aspect_ratio'] ?? 1.0 ),
+									'alt'           => (string) ( $product['builder_image']['alt'] ?? '' ),
+								) : null,
+								'price'        => ! empty( $product['price'] ) ? array(
+									'raw'         => (float) ( $product['price']['raw'] ?? 0.0 ),
+									'unit_amount' => isset( $product['price']['unit_amount'] ) && null !== $product['price']['unit_amount']
+										? (float) $product['price']['unit_amount']
+										: null,
+									'display'     => (string) wp_strip_all_tags( html_entity_decode( (string) ( $product['price']['display'] ?? '' ), ENT_QUOTES, 'UTF-8' ) ),
+									'on_sale'     => (bool) ( $product['price']['on_sale'] ?? false ),
+									'regular'     => isset( $product['price']['regular'] ) && null !== $product['price']['regular']
+										? (float) $product['price']['regular']
+										: null,
+								) : null,
+								'weight'       => $product['weight'] ?? null,
+								'woo'          => ! empty( $product['woo'] ) ? array(
+									'purchasable' => (bool) ( $product['woo']['purchasable'] ?? false ),
+									'type'        => (string) ( $product['woo']['type'] ?? 'simple' ),
+								) : null,
+								'category_policy'        => ( 'base_gun' === ( $product['role'] ?? '' ) ) ? (string) ( $product['category_policy'] ?? 'all' ) : null,
+								'allowed_rail_positions' => ( 'base_gun' === ( $product['role'] ?? '' ) && ! empty( $product['allowed_rail_positions'] ) ) ? array_values( (array) $product['allowed_rail_positions'] ) : array(),
+								'rail'                   => ( 'rail' === ( $product['role'] ?? '' ) ) ? self::serialize_rail( $product ) : null,
+								'mounting'               => self::serialize_mounting( $product ),
+											'role'         => (string) ( $product['role'] ?? '' ),
+								'part_type'    => ! empty( $product['part_type'] ) ? array(
+									'id'   => (int) ( $product['part_type']['id'] ?? 0 ),
+									'slug' => (string) ( $product['part_type']['slug'] ?? '' ),
+									'name' => (string) ( $product['part_type']['name'] ?? '' ),
+								) : null,
+								'categories'   => ! empty( $product['categories'] ) && is_array( $product['categories'] ) ? array_values( array_map( function( $cat ) {
+									return array(
+										'id'     => (int) ( $cat['id'] ?? 0 ),
+										'name'   => (string) ( $cat['name'] ?? '' ),
+										'slug'   => (string) ( $cat['slug'] ?? '' ),
+										'parent' => (int) ( $cat['parent'] ?? 0 ),
+									);
+								}, $product['categories'] ) ) : array(),
+								
+								],
+								
+								
+								
+								);
+		
 			}
+			
 		}
 		return array(
 			'id'           => (int) ( $product['id'] ?? 0 ),

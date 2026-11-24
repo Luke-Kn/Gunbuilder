@@ -94,8 +94,8 @@ export class TGB_ProductSelection {
         this.renderSizeSlider(this.buildState.getBaseGun());
 
         this.enableSearchBar();
-        if(typeof(this.navEl.children[0]) != 'undefined'){
-            this.navEl.children[0].click()
+        if (typeof this.navEl.children[0] != "undefined") {
+            this.navEl.children[0].click();
         }
 
         // 6. Initial sync with current build state
@@ -122,8 +122,7 @@ export class TGB_ProductSelection {
      * @param {number} [baseGunId=0]
      */
     async loadCategories(baseGunId = 0) {
-        this.categories = [
-        ];
+        this.categories = [];
         if (baseGunId > 0) {
             this.categories.push({
                 id: "rails",
@@ -162,7 +161,7 @@ export class TGB_ProductSelection {
     renderCategoryNav() {
         if (!this.navEl) return;
         this.navEl.textContent = "";
-        console
+        console;
         this.categories.forEach(cat => {
             const btn = document.createElement("button");
             btn.type = "button";
@@ -215,16 +214,20 @@ export class TGB_ProductSelection {
     }
 
     async enableSearchBar() {
-       let search_bar = document.getElementById("tgb-search-bar");
+        let search_bar = document.getElementById("tgb-search-bar");
 
         search_bar.addEventListener("change", async () => {
+            this.showLoading();
+            this.gridEl.textContent = "";
+            if (this.actionsEl) {
+                this.actionsEl.style.display = "none";
+            }
+
             let search_data = await this.catalog.searchPartsCategory(search_bar.value, this.activeCategoryKey);
-        
 
-             const items = Array.isArray(search_data.items) ? search_data.items : [];
-
-                 this.renderProducts(items)
-            
+            const items = Array.isArray(search_data.items) ? search_data.items : [];
+            this.hideLoading();
+            this.renderProducts(items);
         });
     }
     /**
@@ -529,21 +532,17 @@ export class TGB_ProductSelection {
             return;
         }
 
-        visibleItems.forEach(product => {     
-              let card;  
-                    
-            if(product["variants"].length > 0){
-                    product["variants"].forEach(variant => {
-                        let variant_product = product;
-                        variant_product.id = variant.product_id;
-                        variant_product.name = variant_product.name+": "+variant.name;
-                        variant_product.builder_image.url = variant.image;
-                        this.productRegistry.set(variant_product.id,variant_product)
-                         card = this.createProductCard(variant_product);
-                                this.gridEl.appendChild(card);
-                    });
-            }else{
-               card = this.createProductCard(product);
+        visibleItems.forEach(product => {
+            let card;
+
+            if (product["variants"].length > 0) {
+                product["variants"].forEach(variant => {
+                    this.productRegistry.set(variant.id, variant);
+                    card = this.createProductCard(variant);
+                    this.gridEl.appendChild(card);
+                });
+            } else {
+                card = this.createProductCard(product);
             }
             this.gridEl.appendChild(card);
         });
@@ -1053,7 +1052,6 @@ export class TGB_ProductSelection {
         // 2. Re-evaluate remaining installed parts
         const remainingRails = this.buildState.getRails();
         const pool = TGB_Utility.TGB_Mounting.buildCapabilityPool(baseProduct, remainingRails);
-
         const installedParts = [...this.buildState.parts];
         const prunedPartNames = [];
 
@@ -1132,6 +1130,7 @@ export class TGB_ProductSelection {
         cards.forEach(card => {
             const productId = parseInt(card.getAttribute("data-product-id"), 10);
             const product = this.productRegistry.get(productId);
+
             if (!product) return;
 
             const isBaseGun = product.role === "base_gun";

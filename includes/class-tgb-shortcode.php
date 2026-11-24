@@ -174,9 +174,11 @@ class TGB_Shortcode {
 			 ORDER BY ID ASC LIMIT 1"
 		);
 
-		$cached_url = $page_id > 0
-			? get_permalink( $page_id )
-			: home_url( '/test/' );
+		if ( $page_id > 0 ) {
+			$cached_url = get_permalink( $page_id );
+		} else {
+			$cached_url = home_url( '/gun-builder-test/' );
+		}
 
 		return $cached_url;
 	}
