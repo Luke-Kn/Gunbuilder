@@ -1,3 +1,4 @@
+import { TGB_BuildState } from "./TGB-BuildState.js";
 import { TGB_Utility } from "./TGB-Utility.js";
 
 export	class TGB_Persistence {
@@ -316,7 +317,7 @@ export	class TGB_Persistence {
 			try {
 				// 1. Resolve and validate Base Gun from authoritative catalog
 				let baseProduct = productRegistry.get(persisted.baseProductId.toString());
-				
+				buildState.setBaseGun(baseProduct)
 
 				if (!baseProduct || baseProduct.role !== 'base_gun' || !baseProduct.builder_image) {
 					try {

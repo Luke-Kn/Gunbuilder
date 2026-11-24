@@ -248,6 +248,7 @@ export class TGB_Utility {
          * @return {'compatible'|'incompatible'|'unconfigured'}
          */
         getCompatibility(baseProduct, partProduct) {
+                
             if (!baseProduct || !partProduct) {
                 return "unconfigured";
             }

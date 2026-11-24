@@ -205,7 +205,6 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
        
         const productRegistry = new Map(Object.entries(JSON.parse(sessionStorage.getItem('product_registry'))?? new Object())) ?? new Map();
 
-        console.log(productRegistry);
 
     // Restore state on refresh
 
@@ -692,6 +691,7 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
                 console.warn("[TGB GuestBuildManager] Auto-persist error suppressed:", err);
             }
         });
+        
     }
 
     if (document.readyState === "loading") {
