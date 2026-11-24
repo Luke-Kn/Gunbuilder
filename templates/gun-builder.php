@@ -12,12 +12,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$raw_product_id      = ! empty( $atts['product_id'] ) ? absint( $atts['product_id'] ) : 0;
+$raw_product_id      = ! empty( $atts['product_id']) ? absint( $atts['product_id'] ) : 0;
 $initial_render_data = isset( $initial_render_data ) && is_array( $initial_render_data )
 	? $initial_render_data
 	: TGB_Shortcode::resolve_initial_render_data( $raw_product_id );
 ?>
 
+<a href="<?=get_permalink( $_GET['product_id'] ?? '4' )?>" class="tk-return-btn">
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+    <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"/>
+  </svg>
+  <span>Return</span>
+</a>
 <div id="taktik-gun-builder" class="tgb-root" data-version="<?php echo esc_attr( TGB_VERSION ); ?>" data-product-id="<?php echo esc_attr( $raw_product_id ); ?>" data-render-status="<?php echo esc_attr( $initial_render_data['status'] ); ?>">
 
 	<!-- Scoped Initial Render Data (Section 11) -->

@@ -108,3 +108,37 @@
     font-weight: 600;
     color: var(--tgb-text-main);
 }
+.tk-return-btn {
+  --tk-orange: #ff6a00;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px 10px 16px;
+  background: #151515;
+  color: #e8e8e8;
+  border: 1px solid #333;
+  border-left: 3px solid var(--tk-orange);
+  font: 700 13px/1 "Share Tech Mono", "Courier New", monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  transition: background .2s, color .2s, border-color .2s, transform .2s;
+}
+.tk-return-btn svg { transition: transform .2s; }
+
+.tk-return-btn:hover,
+.tk-return-btn:focus-visible {
+  background: var(--tk-orange);
+  border-color: var(--tk-orange);
+  color: #0d0d0d;
+  outline: none;
+}
+.tk-return-btn:hover svg,
+.tk-return-btn:focus-visible svg { transform: translateX(-4px); }
+
+.tk-return-btn:active { transform: translateY(1px); }
+
+@media (max-width: 600px) {
+  .tk-return-btn { padding: 12px 18px 12px 14px; }
+}
