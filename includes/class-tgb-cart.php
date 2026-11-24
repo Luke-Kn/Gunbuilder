@@ -130,6 +130,179 @@ class TGB_Cart {
 	 * @param array $payload Sanitized input payload.
 	 * @return array|WP_Error Response payload array on success, WP_Error on failure.
 	 */
+	/**
+	 * Validates the cart payload structure, base gun, rails, and parts.
+	 *
+	 * @param array $payload Proposed build payload.
+	 * @return true|WP_Error True if valid, WP_Error otherwise.
+	 */
+	public static function validate_request( array $payload ) {
+		if ( ! isset( $payload['base_product_id'] ) || ! is_numeric( $payload['base_product_id'] ) || (int) $payload['base_product_id'] <= 0 ) {
+			return new WP_Error(
+				'tgb_invalid_base_id',
+				__( 'A valid base platform is required.', 'part-selector' ),
+				400
+			);
+		}
+
+		$base_id   = (int) $payload['base_product_id'];
+		$base_prod = wc_get_product( $base_id );
+		if ( ! $base_prod || TGB_Product_Config::get_role( $base_id ) !== TGB_Product_Config::ROLE_BASE_GUN ) {
+			return new WP_Error(
+				'tgb_invalid_base_role',
+				__( 'Base product must have the Base Gun role.', 'part-selector' ),
+				400
+			);
+		}
+
+		$raw_rails = isset( $payload['rails'] )
+			? $payload['rails']
+			: ( isset( $payload['installed_rails'] ) ? $payload['installed_rails'] : array() );
+
+		if ( ! is_array( $raw_rails ) ) {
+			return new WP_Error( 'tgb_malformed_rails', __( 'Invalid rails format.', 'part-selector' ), 400 );
+		}
+
+		if ( count( $raw_rails ) > 10 ) {
+			return new WP_Error( 'tgb_too_many_rails', __( 'Maximum 10 rails allowed.', 'part-selector' ), 400 );
+		}
+
+		foreach ( $raw_rails as $r ) {
+			if ( ! is_array( $r ) || empty( $r['product_id'] ) ) {
+				return new WP_Error( 'tgb_malformed_rail_entry', __( 'Malformed rail entry.', 'part-selector' ), 400 );
+			}
+			$r_pid = absint( $r['product_id'] );
+			$r_pos = isset( $r['position'] ) ? sanitize_key( $r['position'] ) : '';
+
+			$r_prod = wc_get_product( $r_pid );
+			if ( ! $r_prod || ! $r_prod->is_purchasable() || TGB_Product_Config::get_role( $r_pid ) !== TGB_Product_Config::ROLE_RAIL ) {
+				return new WP_Error( 'tgb_invalid_rail_role', __( 'Product is not a valid purchasable rail.', 'part-selector' ), 400 );
+			}
+
+			$val_pos = TGB_Rail_Compatibility::validate_rail_installation( $base_id, $r_pid, $r_pos );
+			if ( ! $val_pos['valid'] ) {
+				return new WP_Error( 'tgb_invalid_rail_position', sprintf( 'Rail installation invalid: %s', $val_pos['reason'] ), 400 );
+			}
+		}
+
+		$raw_parts = isset( $payload['parts'] ) ? $payload['parts'] : array();
+		if ( ! is_array( $raw_parts ) ) {
+			return new WP_Error( 'tgb_malformed_parts', __( 'Invalid parts format.', 'part-selector' ), 400 );
+		}
+
+		if ( count( $raw_parts ) > self::MAX_PARTS_PER_BUILD ) {
+			return new WP_Error( 'tgb_too_many_parts', __( 'Maximum parts limit exceeded.', 'part-selector' ), 400 );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Validates aggregate stock demand across Base Gun, Rails, and Parts against inventory and cart.
+	 *
+	 * @param int   $base_product_id Base Gun product ID.
+	 * @param array $rails           Sanitized or raw rails array.
+	 * @param array $parts           Sanitized or raw parts array.
+	 * @return true|WP_Error
+	 */
+	public static function validate_aggregate_stock( $base_product_id, array $rails = array(), array $parts = array() ) {
+		$base_product = wc_get_product( $base_product_id );
+		if ( ! $base_product ) {
+			return new WP_Error( 'tgb_invalid_base_id', __( 'Base product not found.', 'part-selector' ) );
+		}
+
+		$requested_quantities = array();
+		$requested_quantities[ $base_product_id ] = ( $requested_quantities[ $base_product_id ] ?? 0 ) + 1;
+
+		foreach ( $rails as $rail_item ) {
+			$r_pid = is_array( $rail_item ) ? ( $rail_item['product_id'] ?? 0 ) : (int) $rail_item;
+			if ( $r_pid > 0 ) {
+				$requested_quantities[ $r_pid ] = ( $requested_quantities[ $r_pid ] ?? 0 ) + 1;
+			}
+		}
+
+		foreach ( $parts as $part_item ) {
+			$p_pid = is_array( $part_item ) ? ( $part_item['product_id'] ?? 0 ) : (int) $part_item;
+			if ( $p_pid > 0 ) {
+				$requested_quantities[ $p_pid ] = ( $requested_quantities[ $p_pid ] ?? 0 ) + 1;
+			}
+		}
+
+		// Ensure cart exists
+		if ( null === WC()->cart ) {
+			WC()->cart = new WC_Cart();
+		}
+
+		foreach ( $requested_quantities as $product_id => $requested_qty ) {
+			$product = ( $product_id === $base_product_id ) ? $base_product : wc_get_product( $product_id );
+			if ( ! $product ) {
+				continue;
+			}
+
+			// If product is sold individually, cannot add more than 1 in total.
+			if ( $product->is_sold_individually() ) {
+				$in_cart = 0;
+				if ( WC()->cart && ! empty( WC()->cart->get_cart() ) ) {
+					foreach ( WC()->cart->get_cart() as $cart_item ) {
+						if ( (int) $cart_item['product_id'] === $product_id ) {
+							$in_cart += (int) $cart_item['quantity'];
+						}
+					}
+				}
+				if ( ( $requested_qty + $in_cart ) > 1 ) {
+					return new WP_Error(
+						'tgb_sold_individually',
+						sprintf(
+							__( '"%s" can only be purchased once.', 'part-selector' ),
+							$product->get_name()
+						),
+						409
+					);
+				}
+			}
+
+			// General in-stock check.
+			if ( ! $product->is_in_stock() && ! $product->backorders_allowed() ) {
+				return new WP_Error(
+					'tgb_insufficient_stock',
+					sprintf(
+						__( '"%s" is currently out of stock.', 'part-selector' ),
+						$product->get_name()
+					),
+					409
+				);
+			}
+
+			// Managing stock check with existing cart aggregation.
+			if ( $product->managing_stock() && ! $product->backorders_allowed() ) {
+				$available_stock = (int) $product->get_stock_quantity();
+				$already_in_cart = 0;
+
+				if ( WC()->cart && ! empty( WC()->cart->get_cart() ) ) {
+					foreach ( WC()->cart->get_cart() as $cart_item ) {
+						if ( (int) $cart_item['product_id'] === $product_id ) {
+							$already_in_cart += (int) $cart_item['quantity'];
+						}
+					}
+				}
+
+				$total_needed = $requested_qty + $already_in_cart;
+				if ( $total_needed > $available_stock ) {
+					return new WP_Error(
+						'tgb_insufficient_stock',
+						sprintf(
+							__( 'Insufficient stock for "%s". Not enough inventory available.', 'part-selector' ),
+							$product->get_name()
+						),
+						409
+					);
+				}
+			}
+		}
+
+		return true;
+	}
+
 	public static function process_add_build( array $payload ) {
 		// Ensure WooCommerce Cart and Session are available.
 		if ( ! self::ensure_cart_session() ) {
@@ -180,7 +353,19 @@ class TGB_Cart {
 			);
 		}
 
-		// Bounded Part Count (Abuse protection, Requirement 69).
+		$raw_rails = isset( $payload['rails'] )
+			? $payload['rails']
+			: ( isset( $payload['installed_rails'] ) ? $payload['installed_rails'] : array() );
+
+		if ( ! is_array( $raw_rails ) ) {
+			return new WP_Error(
+				'tgb_malformed_rails',
+				__( 'Invalid rails list format.', 'part-selector' ),
+				400
+			);
+		}
+
+		// Bounded Part and Rail Counts (Abuse protection, Requirement 69 & Part 3B 9.5).
 		if ( count( $raw_parts ) > self::MAX_PARTS_PER_BUILD ) {
 			return new WP_Error(
 				'tgb_too_many_parts',
@@ -190,6 +375,72 @@ class TGB_Cart {
 					self::MAX_PARTS_PER_BUILD
 				),
 				400
+			);
+		}
+
+		if ( count( $raw_rails ) > 10 ) {
+			return new WP_Error(
+				'tgb_too_many_rails',
+				__( 'Build exceeds the maximum allowable rails limit (10).', 'part-selector' ),
+				400
+			);
+		}
+
+		// Sanitize rails list.
+		$sanitized_rails   = array();
+		$seen_rail_instances = array();
+		foreach ( $raw_rails as $raw_rail ) {
+			if ( ! is_array( $raw_rail ) || empty( $raw_rail['product_id'] ) || ! is_numeric( $raw_rail['product_id'] ) ) {
+				return new WP_Error(
+					'tgb_malformed_rail_item',
+					__( 'One of the rails in the build payload is malformed.', 'part-selector' ),
+					400
+				);
+			}
+
+			$rail_pid = (int) $raw_rail['product_id'];
+			if ( $rail_pid <= 0 ) {
+				return new WP_Error(
+					'tgb_invalid_rail_id',
+					__( 'Invalid rail product ID.', 'part-selector' ),
+					400
+				);
+			}
+
+			$instance_id = ! empty( $raw_rail['instance_id'] )
+				? sanitize_key( substr( (string) $raw_rail['instance_id'], 0, 64 ) )
+				: '';
+
+			if ( '' === $instance_id ) {
+				return new WP_Error(
+					'tgb_missing_rail_instance_id',
+					__( 'Rail instance ID is missing.', 'part-selector' ),
+					400
+				);
+			}
+
+			if ( in_array( $instance_id, $seen_rail_instances, true ) ) {
+				return new WP_Error(
+					'tgb_duplicate_rail_instance_id',
+					__( 'Duplicate rail instance ID detected.', 'part-selector' ),
+					400
+				);
+			}
+			$seen_rail_instances[] = $instance_id;
+
+			$position = ! empty( $raw_rail['position'] ) ? sanitize_key( (string) $raw_rail['position'] ) : '';
+			if ( ! in_array( $position, array( 'top', 'bottom' ), true ) ) {
+				return new WP_Error(
+					'tgb_invalid_rail_position',
+					__( 'Rail position must be "top" or "bottom".', 'part-selector' ),
+					400
+				);
+			}
+
+			$sanitized_rails[] = array(
+				'product_id'  => $rail_pid,
+				'instance_id' => $instance_id,
+				'position'    => $position,
 			);
 		}
 
@@ -260,7 +511,59 @@ class TGB_Cart {
 			);
 		}
 
-		// 4. Server-Side Parts Revalidation & Compatibility (Requirements 10, 11, 12, 40).
+		// 4. Server-Side Rails Revalidation and Capability Pool Generation.
+		$resolved_rails = array();
+		if ( ! empty( $sanitized_rails ) ) {
+			// Build active capability pool using authoritative service.
+			$pool_result = TGB_Rail_Compatibility::build_active_capability_pool( $base_product_id, $sanitized_rails );
+
+			if ( ! empty( $pool_result['invalid_rails'] ) ) {
+				$first_err = $pool_result['invalid_rails'][0];
+				return new WP_Error(
+					'tgb_rail_installation_invalid',
+					sprintf(
+						/* translators: 1: rail ID, 2: failure reason */
+						__( 'Rail installation failed for product #%1$d (Reason: %2$s).', 'part-selector' ),
+						(int) ( $first_err['product_id'] ?? 0 ),
+						(string) ( $first_err['reason'] ?? 'incompatible' )
+					),
+					409
+				);
+			}
+
+			foreach ( $sanitized_rails as $rail_entry ) {
+				$rail_pid     = $rail_entry['product_id'];
+				$rail_product = wc_get_product( $rail_pid );
+
+				if ( ! $rail_product || ! ( $rail_product instanceof WC_Product ) ) {
+					return new WP_Error(
+						'tgb_rail_not_found',
+						__( 'One of the selected rails could not be found.', 'part-selector' ),
+						409
+					);
+				}
+
+				if ( ! $rail_product->is_purchasable() ) {
+					return new WP_Error(
+						'tgb_rail_not_purchasable',
+						__( 'One of the selected rails cannot be purchased at this time.', 'part-selector' ),
+						409
+					);
+				}
+
+				$resolved_rails[] = array(
+					'product'     => $rail_product,
+					'product_id'  => $rail_pid,
+					'instance_id' => $rail_entry['instance_id'],
+					'position'    => $rail_entry['position'],
+				);
+			}
+		} else {
+			// Zero rails: capability pool contains built-in base gun mounts only.
+			$pool_result = TGB_Rail_Compatibility::build_active_capability_pool( $base_product_id, array() );
+		}
+
+		// 5. Server-Side Parts Revalidation & Position-Aware Compatibility with Pool.
 		$resolved_parts = array();
 		foreach ( $sanitized_parts as $part_entry ) {
 			$part_pid     = $part_entry['product_id'];
@@ -301,12 +604,21 @@ class TGB_Cart {
 				);
 			}
 
-			// Structured Mount Compatibility (Requirement 11 & 40).
-			$compat_status = TGB_Mounting::check_compatibility( $base_product_id, $part_pid );
-			if ( TGB_Mounting::STATUS_COMPATIBLE !== $compat_status ) {
+			// Category policy enforcement (Part 2 Feature A).
+			if ( ! TGB_Product_Config::is_part_category_allowed_for_gun( $base_product_id, $part_pid ) ) {
+				return new WP_Error(
+					'tgb_part_category_disallowed',
+					__( 'This build contains a component whose category is not permitted for the selected weapon platform.', 'part-selector' ),
+					409
+				);
+			}
+
+			// Position-Aware Mount Compatibility against Active Capability Pool (Part 3B).
+			$compat_result = TGB_Rail_Compatibility::check_part_compatibility_with_pool( $part_pid, $pool_result, $base_product_id );
+			if ( TGB_Rail_Compatibility::STATUS_COMPATIBLE !== $compat_result['status'] ) {
 				return new WP_Error(
 					'tgb_part_incompatible',
-					__( 'This build contains a component that is not compatible with the selected platform.', 'part-selector' ),
+					__( 'This build contains a component that is not compatible with the selected platform and installed rails.', 'part-selector' ),
 					409
 				);
 			}
@@ -318,13 +630,18 @@ class TGB_Cart {
 			);
 		}
 
-		// 5. Stock Revalidation & Aggregate Duplicate Stock (Requirements 17, 18, 19, 48, 49).
+		// 6. Stock Revalidation & Aggregate Duplicate Stock (Requirements 17, 18, 19, 48, 49, Part 3B Feature I).
 		$requested_quantities = array();
-		$requested_quantities[ $base_product_id ] = 1;
+		$requested_quantities[ $base_product_id ] = ( $requested_quantities[ $base_product_id ] ?? 0 ) + 1;
+
+		foreach ( $resolved_rails as $rail_item ) {
+			$r_pid = $rail_item['product_id'];
+			$requested_quantities[ $r_pid ] = ( $requested_quantities[ $r_pid ] ?? 0 ) + 1;
+		}
 
 		foreach ( $resolved_parts as $part_item ) {
-			$pid = $part_item['product_id'];
-			$requested_quantities[ $pid ] = ( $requested_quantities[ $pid ] ?? 0 ) + 1;
+			$p_pid = $part_item['product_id'];
+			$requested_quantities[ $p_pid ] = ( $requested_quantities[ $p_pid ] ?? 0 ) + 1;
 		}
 
 		// Check each requested product against managed stock and cart quantities.
@@ -391,15 +708,15 @@ class TGB_Cart {
 			}
 		}
 
-		// 6. Build ID & Human-Friendly Reference Generation (Requirements 20 & 21).
+		// 7. Build ID & Human-Friendly Reference Generation (Requirements 20 & 21).
 		$build_id        = wp_generate_uuid4();
 		$build_reference = 'GB-' . strtoupper( substr( md5( $build_id ), 0, 6 ) );
 
-		// 7. Atomic Cart Insertion with Rollback Protection (Requirements 13, 14, 22, 23, 50).
+		// 8. Atomic Cart Insertion with Rollback Protection (Requirements 13, 14, 22, 23, 50, Part 3B 13.5).
 		$added_cart_keys = array();
 
 		try {
-			// Testing hook to force simulated failure if required by testing suite (Requirement 50).
+			// Testing hook to force simulated failure if required by testing suite.
 			if ( ! apply_filters( 'tgb_test_force_cart_insert_allowed', true, 'base_gun', $base_product_id ) ) {
 				throw new Exception( __( 'Simulated insertion failure for Base Gun.', 'part-selector' ) );
 			}
@@ -408,7 +725,9 @@ class TGB_Cart {
 			$base_cart_item_data = array(
 				'_tgb_build_id'        => $build_id,
 				'_tgb_build_reference' => $build_reference,
+				'_tgb_build_ref'       => $build_reference,
 				'_tgb_build_role'      => 'base_gun',
+				'_tgb_role'            => 'base_gun',
 				'_tgb_line_id'         => wp_generate_uuid4(), // Guarantees distinct cart line.
 			);
 
@@ -418,11 +737,37 @@ class TGB_Cart {
 			}
 			$added_cart_keys[] = $base_cart_key;
 
+			// Add each Rail instance.
+			foreach ( $resolved_rails as $rail_data ) {
+				$rail_pid = $rail_data['product_id'];
+
+				if ( ! apply_filters( 'tgb_test_force_cart_insert_allowed', true, 'rail', $rail_pid ) ) {
+					throw new Exception( __( 'Simulated insertion failure for Rail component.', 'part-selector' ) );
+				}
+
+				$rail_cart_item_data = array(
+					'_tgb_build_id'           => $build_id,
+					'_tgb_build_reference'    => $build_reference,
+					'_tgb_build_ref'          => $build_reference,
+					'_tgb_build_role'         => 'rail',
+					'_tgb_role'               => 'rail',
+					'_tgb_rail_position'      => $rail_data['position'],
+					'_tgb_client_instance_id' => $rail_data['instance_id'],
+					'_tgb_line_id'            => wp_generate_uuid4(), // Guarantees distinct cart line for multiple rail instances.
+				);
+
+				$rail_cart_key = WC()->cart->add_to_cart( $rail_pid, 1, 0, array(), $rail_cart_item_data );
+				if ( ! $rail_cart_key ) {
+					throw new Exception( __( 'Failed to add rail to WooCommerce cart.', 'part-selector' ) );
+				}
+				$added_cart_keys[] = $rail_cart_key;
+			}
+
 			// Add each Part instance individually.
 			foreach ( $resolved_parts as $part_data ) {
 				$part_pid = $part_data['product_id'];
 
-				// Testing hook to force mid-insert failure if requested by test fixture (Requirement 50).
+				// Testing hook to force mid-insert failure if requested by test fixture.
 				if ( ! apply_filters( 'tgb_test_force_cart_insert_allowed', true, 'part', $part_pid ) ) {
 					throw new Exception( __( 'Simulated insertion failure for Part component.', 'part-selector' ) );
 				}
@@ -432,7 +777,9 @@ class TGB_Cart {
 				$part_cart_item_data = array(
 					'_tgb_build_id'        => $build_id,
 					'_tgb_build_reference' => $build_reference,
+					'_tgb_build_ref'       => $build_reference,
 					'_tgb_build_role'      => 'part',
+					'_tgb_role'            => 'part',
 					'_tgb_line_id'         => wp_generate_uuid4(), // Guarantees distinct cart line for identical products.
 				);
 
@@ -452,7 +799,7 @@ class TGB_Cart {
 			}
 
 		} catch ( Exception $e ) {
-			// Rollback ONLY the cart lines created during this request (Requirements 13 & 14).
+			// Rollback ONLY the cart lines created during this request (preserving unrelated pre-existing cart items).
 			foreach ( $added_cart_keys as $key_to_remove ) {
 				WC()->cart->remove_cart_item( $key_to_remove );
 			}
@@ -464,11 +811,11 @@ class TGB_Cart {
 			);
 		}
 
-		// 8. Construct Safe Success Response (Requirement 34).
+		// 9. Construct Safe Success Response (Requirement 34).
 		$response_data = array(
 			'build_reference' => $build_reference,
 			'build_id'        => $build_id,
-			'item_count'      => 1 + count( $resolved_parts ),
+			'item_count'      => 1 + count( $resolved_rails ) + count( $resolved_parts ),
 			'cart_count'      => WC()->cart->get_cart_contents_count(),
 			'cart_url'        => wc_get_cart_url(),
 			'message'         => __( 'Build added to cart.', 'part-selector' ),
@@ -518,23 +865,36 @@ class TGB_Cart {
 	 * @return array Modified item data.
 	 */
 	public static function display_cart_item_data( $item_data, $cart_item ) {
-		if ( empty( $cart_item['_tgb_build_reference'] ) ) {
+		$ref = $cart_item['_tgb_build_reference'] ?? $cart_item['_tgb_build_ref'] ?? '';
+		if ( empty( $ref ) ) {
 			return $item_data;
 		}
 
 		$item_data[] = array(
 			'key'   => __( 'Gun Builder', 'part-selector' ),
-			'value' => esc_html( $cart_item['_tgb_build_reference'] ),
+			'value' => esc_html( $ref ),
 		);
 
-		$role_label = ( 'base_gun' === ( $cart_item['_tgb_build_role'] ?? '' ) )
-			? __( 'Base Platform', 'part-selector' )
-			: __( 'Component', 'part-selector' );
+		$build_role = $cart_item['_tgb_build_role'] ?? $cart_item['_tgb_role'] ?? '';
+		if ( 'base_gun' === $build_role ) {
+			$role_label = __( 'Base Platform', 'part-selector' );
+		} elseif ( 'rail' === $build_role ) {
+			$role_label = __( 'Rail / Adapter', 'part-selector' );
+		} else {
+			$role_label = __( 'Component', 'part-selector' );
+		}
 
 		$item_data[] = array(
-			'key'   => __( 'Build Role', 'part-selector' ),
+			'key'   => 'Role',
 			'value' => esc_html( $role_label ),
 		);
+
+		if ( ! empty( $cart_item['_tgb_rail_position'] ) ) {
+			$item_data[] = array(
+				'key'   => 'Position',
+				'value' => esc_html( ucfirst( (string) $cart_item['_tgb_rail_position'] ) ),
+			);
+		}
 
 		return $item_data;
 	}
@@ -551,22 +911,42 @@ class TGB_Cart {
 	 * @param WC_Order              $order         Order object.
 	 */
 	public static function add_order_line_item_data( $item, $cart_item_key, $values, $order ) {
-		if ( empty( $values['_tgb_build_id'] ) ) {
+		if ( empty( $values['_tgb_build_id'] ) && empty( $values['_tgb_build_ref'] ) && empty( $values['_tgb_build_reference'] ) ) {
 			return;
 		}
 
-		// Visible metadata on customer invoices and order emails.
-		$item->add_meta_data( __( 'Gun Builder', 'part-selector' ), $values['_tgb_build_reference'], false );
+		$ref = $values['_tgb_build_reference'] ?? $values['_tgb_build_ref'] ?? '';
+		if ( $ref ) {
+			$item->add_meta_data( __( 'Gun Builder', 'part-selector' ), $ref, false );
+			$item->add_meta_data( '_tgb_build_reference', $ref, true );
+			$item->add_meta_data( '_tgb_build_ref', $ref, true );
+		}
 
-		$role_label = ( 'base_gun' === ( $values['_tgb_build_role'] ?? '' ) )
-			? __( 'Base Platform', 'part-selector' )
-			: __( 'Component', 'part-selector' );
+		$build_role = $values['_tgb_build_role'] ?? $values['_tgb_role'] ?? '';
+		if ( 'base_gun' === $build_role ) {
+			$role_label = __( 'Base Platform', 'part-selector' );
+		} elseif ( 'rail' === $build_role ) {
+			$role_label = __( 'Rail / Adapter', 'part-selector' );
+		} else {
+			$role_label = __( 'Component', 'part-selector' );
+		}
 
-		$item->add_meta_data( __( 'Build Role', 'part-selector' ), $role_label, false );
+		$item->add_meta_data( __( 'Role', 'part-selector' ), $role_label, false );
+		$item->add_meta_data( '_tgb_role', $build_role, true );
+		$item->add_meta_data( '_tgb_build_role', $build_role, true );
+
+		if ( ! empty( $values['_tgb_rail_position'] ) ) {
+			$item->add_meta_data( __( 'Position', 'part-selector' ), ucfirst( (string) $values['_tgb_rail_position'] ), false );
+			$item->add_meta_data( '_tgb_rail_position', sanitize_key( $values['_tgb_rail_position'] ), true );
+		}
 
 		// Hidden internal metadata for store administration and audit.
-		$item->add_meta_data( '_tgb_build_id', $values['_tgb_build_id'], true );
-		$item->add_meta_data( '_tgb_line_id', $values['_tgb_line_id'], true );
+		if ( ! empty( $values['_tgb_build_id'] ) ) {
+			$item->add_meta_data( '_tgb_build_id', $values['_tgb_build_id'], true );
+		}
+		if ( ! empty( $values['_tgb_line_id'] ) ) {
+			$item->add_meta_data( '_tgb_line_id', $values['_tgb_line_id'], true );
+		}
 
 		if ( ! empty( $values['_tgb_part_type_id'] ) ) {
 			$item->add_meta_data( '_tgb_part_type_id', (int) $values['_tgb_part_type_id'], true );

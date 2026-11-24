@@ -1,0 +1,253 @@
+# Gun Builder Development Status
+
+## Current Phase
+
+V1.1 PART 1 COMPLETE — LOCAL BUILD PERSISTENCE IMPLEMENTED & LOCALLY ACCEPTED
+
+## Current Branch
+
+`gun-builder`
+
+## Completed
+
+- Development requirements confirmed.
+- Existing Part Selector analyzed and documented (comprehensive architectural audit).
+- Git baseline confirmed clean on `gun-builder`.
+- **Stage 1 Complete: Safe Plugin Foundation & Legacy Isolation**
+  - Refactored `part-selector.php` into modular OOP loader.
+  - Isolated legacy `index.html`, Fabric.js v1, Bootstrap 2, and external HTTP jQuery.
+  - Created `includes/class-tgb-core.php`, `class-tgb-assets.php`, `class-tgb-shortcode.php`, `class-tgb-product-integration.php`.
+  - Built clean semantic shell in `templates/gun-builder.php` scoped to `#taktik-gun-builder`.
+  - Built scoped modern CSS foundation in `assets/css/gun-builder.css`.
+  - Built lightweight JS initialization foundation in `assets/js/gun-builder.js`.
+  - Maintained backward compatibility for shortcode `[part_selector]`.
+- **Stage 2 Complete: Dynamic Builder Types + Admin Product Data**
+  - Registered dedicated, non-public WordPress taxonomy `tgb_part_type` under `Products → Gun Builder Part Types`.
+  - Mapped taxonomy capabilities to WooCommerce product term permissions (`manage_product_terms`, etc.).
+  - Added native "Gun Builder" tab to WooCommerce Product Data panel.
+  - Implemented product metadata keys: `_tgb_enabled`, `_tgb_ready`, `_tgb_role`, and `_tgb_reference_mm`.
+  - Implemented single Part Type assignment dropdown enforcing 1 Part Type per Part product.
+  - Implemented conditional admin behavior: Part Type selector hides when Role is Base Gun or Not configured.
+  - Implemented automatic cleanup: switching Role to Base Gun or empty clears attached `tgb_part_type` terms.
+  - Implemented Builder Ready integrity validation with visible admin notices explaining missing requirements.
+  - Implemented strict positive decimal validation for Visual Reference Length (rejecting unit suffixes and malformed input).
+  - Implemented clean configuration helpers (`is_configuration_valid()`, `is_ready()`, `is_enabled()`) keeping structural validity strictly independent of Enabled and Ready states.
+  - Handled zero-term empty taxonomy state cleanly with informative guidance in the product editor.
+  - Verified safe taxonomy deletion behavior (products remain intact, structural validity becomes false).
+  - Admin assets scoped strictly to WooCommerce product editor screens.
+- **Stage 3 Complete: Product Data Service + WooCommerce Gallery Image Pipeline**
+  - Built centralized, authoritative backend product data layer in `includes/class-tgb-product-data.php`.
+  - Implemented strict builder gallery image resolver (`get_builder_image_data()`): resolves the FIRST valid attachment from the WooCommerce Product Gallery, preserving original dimensions and aspect ratio, with ZERO fallback to featured images.
+  - Established standardized, JSON-serializable product data contract containing product identity, role, dynamic part type, reference length in mm, builder image metadata, WooCommerce storefront pricing, stock status, weight in store unit and normalized grams, and WooCommerce status.
+  - Implemented clean catalog eligibility evaluation (`is_catalog_eligible()`) enforcing 7 strict criteria without mutating database state.
+  - Implemented continuation cursor streaming Base Gun catalog query (`get_base_guns()`) using supported WordPress/WooCommerce `WP_Query` with deterministic ordering and bounded candidate batching.
+  - Implemented continuation cursor streaming Part catalog query by dynamic taxonomy term (`get_parts_by_type()`), verifying seamless term renaming support without hardcoded category names.
+  - Verified safe handling of missing weights (explicit `null`, never `0g`), out-of-stock products, unpurchasable products, and broken gallery attachments.
+- **Stage 4 Complete: Canonical 2D Layered DOM Renderer + Responsive Scale System**
+  - Built generic 2D layered DOM renderer using standard HTML `<img>` elements (explicitly zero Canvas, Fabric.js, Konva, WebGL, or SVG primary engines).
+  - Established canonical coordinate system: 1 mm = 1 logical px (780mm reference length = 780 logical px).
+  - Preserved original Gallery image aspect ratio mathematically: `logical_height = reference_mm * (image_height / image_width)` with zero distortion, stretching, or recoloring.
+  - Implemented server-side initial Base Gun resolver via `?product_id=`, validating existence, catalog eligibility, published status, and `base_gun` role through `TGB_Product_Data`.
+  - Embedded minimal, safe JSON initial render payload into `#tgb-initial-render-data` without leaking internal WooCommerce data.
+  - Calculated dynamic stage geometry based on Base Gun dimensions with generic workspace padding: horizontal `max(200, 20% width)`, vertical `max(120, 40% height)`, and minimum logical stage height of 500 units.
+  - Placed Base Gun centered within logical stage coordinates: `x = (stageWidth - gunWidth) / 2`, `y = (stageHeight - gunHeight) / 2`.
+  - Implemented single whole-stage display scale: `displayScale = min(1, viewportWidth / stageWidth)` applied via CSS `transform: scale(displayScale)` on `.tgb-stage`, while `#tgb-stage-frame` maintains physical dimensions (`logical * displayScale`) to prevent layout collapse.
+  - Integrated `ResizeObserver` on `#tgb-stage-viewport` with window resize fallback to recalculate `displayScale` smoothly without changing logical coordinates or product proportions.
+  - Implemented real logical grid using background gradients matching 10mm (10px minor) and 100mm (100px major) that scale natively with the stage.
+  - Built robust state management for loading, empty (no `product_id`), invalid product, and image failure states without layout jumping or broken icons.
+  - Confirmed universal two-product scaling (195mm optic rendered at exactly 25.0% width of 780mm gun across both desktop and 320px mobile viewports).
+  - Executed customer-facing visual refinements: removed developer badge and implementation subtitle in favor of polished branding ("Build and customize your tactical loadout"), removed future-stage roadmap hints, concealed nonfunctional price/cart presentation until its proper stage, and compacted mobile vertical padding.
+  - Retained internal debug/measurement HUD (toggled via `?tgb_debug=1` or `TGB_Renderer.toggleDebug()`) while keeping it hidden by default from customer presentation.
+  - Documented Gallery asset quality limitation: current test product image (ID 91639) contains a solid white background, watermark branding, and substantial outer padding; final prototype assets require tightly-cropped, side-profile transparent PNGs.
+  - Explicitly preserved boundary: no dragging, pointer events, custom repositioning, coordinate persistence, state store, REST/AJAX endpoints, or cart functionality implemented.
+- **Stage 5 Complete: Unified Build State + Pointer Dragging**
+  - Built centralized in-memory client-side Build State store (`TGB_BuildState`) as single source of truth for all build components.
+  - Implemented generic Part instance representations using unique, collision-resistant instance IDs (`part-...` via `crypto.randomUUID()` with fallback), supporting multiple simultaneous instances of the same WooCommerce product ID.
+  - Represented Base Gun in Build State with canonical logical coordinates and dimensions ($1\text{ mm} = 1\text{ logical px}$); Base Gun remains strictly fixed (non-draggable).
+  - Implemented unified Pointer Events dragging (`pointerdown`, `pointermove`, `pointerup`, `pointercancel`) with pointer capture (`setPointerCapture()`) supporting mouse, touch, and stylus uniformly.
+  - Implemented exact screen-to-logical coordinate delta conversion: `logicalDelta = physicalDelta / displayScale`, ensuring stored positions reflect physical millimeter geometry regardless of screen scale.
+  - Enforced logical stage boundary clamping: $X \in [0, \text{stageWidth} - \text{partWidth}]$, $Y \in [0, \text{stageHeight} - \text{partHeight}]$, preventing parts from being lost outside the builder workspace.
+  - Preserved logical coordinates and visual positioning across viewport resize cycles (desktop $\leftrightarrow$ 390px $\leftrightarrow$ 320px) without coordinate drift.
+  - Scoped `touch-action: none` strictly to `.tgb-layer--part` elements; normal page scrolling outside draggable parts remains unaffected.
+  - Implemented single active pointer policy to ensure multi-touch gestures do not corrupt drag state.
+  - Optimized DOM synchronization using `requestAnimationFrame` queueing on pointer movement, preventing unnecessary style reflows.
+  - Maintained modern visual presentation with subtle elevation styling (`is-dragging`), `cursor: grab`/`grabbing`, without resize handles, rotation controls, or color modifications.
+  - Clean state mutation API: `setBaseGun`, `addPart`, `removePart`, `updatePartPosition`, `getPart`, `getBaseGun`, `getState`, `reset`, `subscribe`.
+  - Memory-only state architecture without database, localStorage, or cookie persistence.
+  - Extended diagnostic HUD (`?tgb_debug=1`) to display active dragging instance ID, logical X/Y coordinates, and live display scale.
+  - Strictly preserved scope boundaries: no Product Selection UI, category tabs, catalog endpoints, mounting points, snap logic, compatibility rules, pricing/weight totals, or cart integration implemented.
+- **Stage 6 Complete: Dynamic Product Selection + Nine-Product Prototype**
+  - Built dedicated public read-only catalog REST API (`tgb/v1`) in `includes/class-tgb-catalog-api.php`:
+    - `GET /wp-json/tgb/v1/base-guns`
+    - `GET /wp-json/tgb/v1/part-types`
+    - `GET /wp-json/tgb/v1/parts?type_id=...`
+  - Validated continuation cursors as untrusted input: base64 + json decode validating integer `offset >= 0`, cleanly returning HTTP 400 on malformed values without PHP warnings or database errors.
+  - Implemented public product serializer using an explicit whitelist returning only safe, normalized product data without leaking internal meta keys or database paths.
+  - Implemented vanilla JavaScript `TGB_CatalogClient` and in-memory `TGB_ProductRegistry` Map separating active build instances from browseable store data.
+  - Built modern dynamic Product Selection UI (`TGB_ProductSelection`) in `templates/gun-builder.php`, `assets/js/gun-builder.js`, and `assets/css/gun-builder.css`:
+    - Base Platform tab + fully dynamic Part Type tabs derived from taxonomy (zero hardcoded category names).
+    - Polished horizontally scrollable category strip with touch momentum scrolling.
+    - Category-specific in-memory caching and request race safety using `AbortController` and request version tokens.
+    - Loading skeleton cards, empty state, customer-safe error state with Retry action, and Load More continuation.
+    - Accessible product cards with safe DOM rendering (`textContent`), contained imagery, price display, and in-build count badges.
+  - Implemented `selectBaseGun(product)`: preloads imagery, sets canonical stage geometry, mounts Base Gun layer, clears invalid/empty stage states, updates sidebar summary, and recovers the builder from empty `/test/` or invalid `?product_id=`.
+  - Implemented Base Gun replacement policy: selecting a different Base Gun cleanly resets existing parts from Build State and DOM layers.
+  - Implemented Part Add behavior: checks Base Gun presence (prompts "Choose a base platform first" if missing), calculates neutral center spawn location ($x = (W-w)/2, y = (H-h)/2$) clamped to boundary, mounts into DOM, and enables immediate pointer dragging.
+  - Supported multiple simultaneous instances of the same product with distinct instance IDs and live "In build: X" badges.
+  - Fully established exact nine-product prototype with defensible reference lengths and clean, transparent, tightly-cropped, side-profile prepared builder assets in Gallery Image #1:
+    - 1 Base Gun: VFC BCM MK2 MCMR 11.5 EVO Deluxe GBBR Gray (ID 91635, 780mm)
+    - 2 Silencers: Taktik MCX Style (ID 77721, 183mm), Taktik HUXWRX Style (ID 80030, 136mm)
+    - 2 Grips: Taktik M-LOK SI Curved HandStop (ID 85057, 120mm), RGW Anchor HandStop (ID 89535, 60mm)
+    - 2 Optics: RHAM EXPS3 Holographic Sight (ID 89499, 97mm), G&P Retro 4x20 Scope (ID 87467, 150mm)
+    - 2 Accessories: SF M600 Flashlight (ID 55097, 140mm), RGW ARI Finger Stop (ID 91093, 35mm)
+  - Verified mobile responsive layouts at 430px, 390px, 375px, and 320px with zero horizontal page overflow.
+  - Documented complete prototype in `GUN-BUILDER-PROTOTYPE.md`.
+  - Maintained strict scope boundaries: zero compatibility rules, mounting points, snapping, price totals, or cart integration implemented.
+- **Stage 7 Complete: Structured Mounting + Compatibility + Default Placement**
+  - Registered dedicated non-public, non-hierarchical taxonomy `tgb_mount_interface` under `Products → Gun Builder Mount Interfaces`.
+  - Mapped taxonomy capabilities to WooCommerce product term permissions (`manage_product_terms`, etc.); default taxonomy metabox suppressed on product edit screen.
+  - Implemented role-specific mounting fields within the WooCommerce "Gun Builder" product tab:
+    - Base Gun: Repeatable-row editor for mount points (`_tgb_mount_points`) with unique IDs (`mount-...`), label, mount interface selector, and base-local X / Y positions in millimeters ($1\text{ mm} = 1\text{ logical px}$).
+    - Part: Accepted Mount Interfaces multi-term selector and Attachment Anchor percentages (`_tgb_mount_anchor_x`, `_tgb_mount_anchor_y`, 0–100%).
+  - Built authoritative mounting service in `includes/class-tgb-mounting.php` handling sanitization, bounds checking, term ID intersection compatibility, and default placement offset calculations.
+  - Extended `TGB_Product_Data` normalized contract and `TGB_Catalog_API` public REST serializer to expose clean, normalized mounting structures without internal meta keys.
+  - Implemented structured compatibility based strictly on taxonomy term ID intersection (`intersection(part.mountInterfaceIds, base.mountPointInterfaceIds).length > 0`); zero product name, category name, or SKU heuristics.
+  - Maintained Part 3 catalog eligibility: unconfigured products remain visible in catalog with `Mount information unavailable` status and disabled Add button.
+  - Built client-side mounting resolver `TGB_Mounting` in `assets/js/gun-builder.js`:
+    - Evaluates compatibility against current Base Gun.
+    - Determines default mount point deterministically (first matching configured mount point in admin order).
+    - Calculates initial placement docking Part visual anchor to Base Gun mount point: $\text{initialX} = \text{baseX} + \text{mountX} - (\text{partW} \times \text{anchorX}\%)$, $\text{initialY} = \text{baseY} + \text{mountY} - (\text{partH} \times \text{anchorY}\%)$ clamped to stage boundaries.
+  - **Preserved 100% Free Pointer Dragging**: Initial mount calculation is strictly an initial placement mechanism; zero snapping, zero magnetic attraction, zero boundary lock, and zero auto-return on `pointerup`. Customer retains full Part 5 dragging freedom anywhere on stage.
+  - Updated Product Selection cards with restrained, customer-friendly status badges (`Compatible`, `Not compatible with selected platform`, `Mount information unavailable`).
+  - Preserved WooCommerce purchase availability priority: interface-compatible but out-of-stock products display `Compatible` badge with disabled `Unavailable` button.
+  - Extended diagnostic debug mode (`?tgb_debug=1`) to render mount point crosshairs and tooltips without interfering with customer-facing presentation.
+  - Configured 4 permanent prototype mount interfaces (`Picatinny`, `M-LOK`, `14mm CCW`, `Carry Handle`).
+  - Calibrated Base Gun (`91635`) with 4 physical mount points and calibrated all 8 prototype Parts with defensible interfaces and anchors.
+  - Verified authentic prototype compatibility: 7 compatible Parts, 1 genuinely incompatible Part (`87467` Retro Scope for Carry Handle), 0 unconfigured.
+  - Documented complete mounting specifications in `GUN-BUILDER-PROTOTYPE.md`.
+  - Strictly preserved scope boundaries: no persistent snapping, magnetic mounting, Current Build full list, pricing/weight totals, cart, checkout, Save/Share, persistence, resizing, or rotation implemented.
+
+- **Stage 8 Complete: Current Build, Live Pricing and Weight**
+  - Built dedicated, focused frontend controller `TGB_CurrentBuild` in `assets/js/gun-builder.js` derived strictly from `TGB_BuildState` and `TGB_ProductRegistry`.
+  - Current Build is a projection of Build State + Product Registry; zero second independently mutable state, zero DOM inspection as source of truth.
+  - Implemented live Base Gun summary row displaying builder thumbnail, product name, effective WooCommerce price, weight, and clear `Base Platform` tag; Base Gun contains no Remove button (swapped via Base Platform selection).
+  - Implemented live component instance list where every Part instance in `BuildState` has its own distinct row with unique `instanceId`; identical duplicate products appear as distinct rows.
+  - Implemented deterministic instance-based removal: clicking Remove calls `TGB_BuildState.removePart(instanceId)`, triggering `part_removed` event, unmounting stage layer, updating Current Build list, reverting subtotal/weight, decrementing "In build" badges, and announcing removal via live screen-reader announcer (`#tgb-live-announcer`).
+  - **Decoupled Pointer Dragging from Pricing/Weight**: `TGB_CurrentBuild` strictly ignores `part_moved` events (`if (!event || event.type === 'part_moved') return;`), guaranteeing zero recalculation, zero DOM rebuilding, and zero network traffic during dragging.
+  - Extended `TGB_Product_Data` normalized contract and `TGB_Catalog_API` serializer with `price.unit_amount` (numeric float derived from `wc_get_price_to_display()`) and `price.regular` without breaking existing fields.
+  - Handled genuine $0 free items (`unit_amount = 0.0`) distinctly from unpriced items (`unit_amount = null`) via `$has_price = ( '' !== $wc_product->get_price() )`.
+  - Built settings-driven client price formatter respecting WooCommerce store currency settings (symbol, position `%1$s%2$s`, decimals, decimal separator, thousand separator); zero hardcoded CAD assumptions.
+  - Canonical weight calculation in grams (`weight.grams`) with customer-friendly formatting: grams (`< 1000 g` e.g., `850 g`) and kilograms (`>= 1000 g` e.g., `2.50 kg`).
+  - Honest missing data handling: independent completeness tracking for price and weight; missing price shows "Known Subtotal: $X" and "Price unavailable for X items"; missing weight shows "Known Weight: X kg" and "Weight unavailable for X items" (tested with prototype product 89535 which naturally lacks weight).
+  - Live Base Gun initial synchronization: deep-linked Base Gun (`?product_id=...`) pre-seeds Product Registry and displays price and weight immediately without requiring catalog opening.
+  - Base Gun replacement policy integration: swapping Base Gun clears components and updates totals to the new platform cleanly.
+  - Responsive dark/tactical design in `assets/css/gun-builder.css` with compact item rows, scrollable component list for 8+ items, contained thumbnails, touch-friendly Remove buttons, and verified zero horizontal overflow at 430px, 390px, 375px, and 320px.
+  - Verified with comprehensive automated Puppeteer suite (11 tests) and PHP unit tests for sale price, zero price, missing price, and missing weight.
+  - Strictly preserved scope boundaries: no Add Build to Cart, cart requests, cart item metadata, grouped cart insertion, checkout integration, Save/Share, localStorage persistence, customer resizing, or rotation implemented.
+
+- **Stage 9 Complete: Secure Add Build to Cart**
+  - Implemented production-quality, secure cart integration service in `includes/class-tgb-cart.php` (`TGB_Cart`).
+  - Strict security boundary: minimal client payload (`base_product_id`, `parts: [{ product_id, instance_id }]`, `request_id`, `nonce`). Client prices, subtotals, weights, availability flags, compatibility booleans, and visual placement coordinates (`x`, `y`, `mountX/Y`, `anchorX/Y`, drag history) are NEVER trusted or written to cart data.
+  - POST-only mutation endpoint: single dedicated WordPress AJAX interface (`wp_ajax_tgb_add_build_to_cart`, `wp_ajax_nopriv_tgb_add_build_to_cart`) supporting both guest and logged-in customers.
+  - Independent server-side revalidation of entire build:
+    - Base Gun: exists, published, Builder Enabled, Builder Ready, role = base_gun, purchasable, stock permits purchase.
+    - Parts: exists, Builder Enabled, Builder Ready, role = part, purchasable, stock permits purchase.
+    - Structured compatibility: re-evaluated server-side via `TGB_Mounting::check_compatibility()` using mount interface taxonomy intersection; incompatible products (e.g. 87467) reject the entire build before insertion.
+    - Stock & purchasability revalidation: aggregates requested quantities for duplicate products and factors in items already present in customer's WooCommerce cart; rejects if total required exceeds available managed stock.
+  - All-or-nothing atomic insertion: validates the entire build before adding any lines; tracks newly created cart item keys and safely rolls back only lines inserted by the current request if an unexpected failure occurs. Unrelated cart items and previous builds remain untouched.
+  - Server-generated unique internal Build ID (`wp_generate_uuid4()`) and human-friendly customer reference (`GB-XXXXXX`).
+  - Distinct cart-line identity: server generates unique `_tgb_line_id` per component instance, preventing WooCommerce from merging identical duplicate products into a single cart line.
+  - Cart item display metadata hook (`woocommerce_get_item_data`): presents clean labels (`Gun Builder: GB-XXXXXX`, `Build Role: Base Platform / Component`) without technical UUID leaks in both WooCommerce Cart Block and classic cart templates.
+  - Checkout / order preservation hook (`woocommerce_checkout_create_order_line_item`): transfers Gun Builder grouping metadata to order items for fulfillment and admin inspection.
+  - Idempotency & double-submission protection: client button disables immediately during in-flight requests; server caches request IDs in WooCommerce session to prevent duplicate build insertion on rapid retry.
+  - Frontend client integration in `assets/js/gun-builder.js`: dedicated `TGB_CartClient` communicating with `TGB_CurrentBuild` to render accessible "Add Build to Cart" button, loading state, success/error feedback banner, and "View Cart" action. Triggers `added_to_cart` and `wc_fragment_refresh` events.
+  - Visual builder state preserved: successful cart addition keeps visual configuration and Build State intact without clearing canvas. Zero cart mutation on drag or canvas interaction.
+  - Comprehensive verification: 23/23 PHP integration tests passed, 6/6 browser E2E tests passed with 5 verified artifacts (Screenshots A, B, C, D, E), clean PHP lint, zero whitespace diff errors.
+
+- **Stage 10 Complete: Mobile + UI/UX Refinement**
+  - Refined layout, mobile usability, responsive behavior, visual hierarchy, touch usability, accessibility, loading/empty/error states, and spacing/typography across all viewports.
+  - Preserved all Part 1–9 architectures: 1mm = 1 logical px, 1180×500 canonical stage geometry, Pointer Events free dragging, boundary clamping, dynamic REST catalog, structured mount interface compatibility, Current Build price/weight projection, and secure atomic Add Build to Cart.
+  - Consolidated breakpoint system: Desktop (>= 960px), Tablet (< 960px / <= 768px), Mobile Standard (<= 480px for 430px, 390px, 375px), and Mobile Small (<= 360px for 320px).
+  - Verified document overflow (`scrollWidth <= clientWidth`) across 320px, 375px, 390px, 430px, 768px, 820px, 1024px, 1280px, 1440px, and 1920px viewports with zero horizontal blowout.
+  - Implemented 1-column product card density at <= 360px (e.g. 320px), preventing text truncation, clipped buttons, or awkward card heights.
+  - Enhanced touch targets: Remove button touch area expanded to 44×44px via `::after` pseudo-element; Add to Cart button expanded to min 44-46px height; category tabs styled with generous pill padding and touch momentum scrolling.
+  - Customer-first page hierarchy: concise header ("Gun Builder", "Build your setup with compatible parts."), stage vignette with subtle depth, checkout-style Current Build summary, and restrained amber compatibility badges.
+  - Full accessibility compliance: `:focus-visible` styling on all interactive controls (tabs, Add buttons, Remove buttons, Add Build to Cart, View Cart), ARIA tablist/tab semantics, screen-reader live announcements, and `@media (prefers-reduced-motion: reduce)` support.
+  - Zero modifications to prototype business data (prices, weights, stock, dimensions, mounting points unchanged).
+  - Successfully captured and visually verified 10 actual browser screenshots (A through J).
+
+- **Stage 11 Complete: Legacy Cleanup + Production Hardening**
+  - Performed full plugin file inventory across `wp-content/plugins/part-selector/` and classified all components (ACTIVE, DOCUMENTATION, DEAD / UNREFERENCED).
+  - Cleaned and removed all dead legacy customizer remnants (Fabric.js, Bootstrap 2 CSS/JS, miniColors, old T-shirt/phone mockups, unreferenced `index.html`, and `_config.yml`) with zero references across active code.
+  - Hardened direct PHP access across all plugin files via `defined('ABSPATH') || exit;`.
+  - Added defensive guards to admin product configuration save flow (`absint($post_id) <= 0`, `DOING_AUTOSAVE`, `wp_is_post_revision()`).
+  - Strengthened strict numeric validation: float reference measurement regex rejecting unit strings (`780mm`, `14cm`, `10 pixels`), negative values, and non-numeric input; anchor percentage range enforcement (`0 <= X, Y <= 100`).
+  - Hardened REST catalog endpoint parameter validation (`limit` strictly bounded between 1 and 100 with negative rejection, strictly validated `cursor` and `type_id`).
+  - Hardened cart AJAX mutation: POST-only request enforcement, strict integer positive-ID checks rejecting negative values, bounded idempotency session storage (120s TTL, max 10 entries), and isolated transaction rollback preserving pre-existing cart lines.
+  - Added defensive `function_exists()` guards for WooCommerce currency and product lookup functions.
+  - Verified taxonomy management capabilities: Administrator and Shop Manager allowed, Subscriber and Customer strictly blocked from term management.
+  - Verified plugin lifecycle: deactivated and reactivated plugin with zero PHP errors/warnings and 100% preservation of prototype configuration, taxonomies, and postmeta.
+  - Passed full automated security verification suite (65/65 tests passed) and end-to-end desktop/mobile customer acceptance flows.
+  - Cleaned 29 legacy temporary test products from Local WooCommerce database; confirmed authoritative catalog consists of exactly 9 products (1 Base Gun, 2 Silencers, 2 Grips, 2 Optics, 2 Accessories).
+  - Preserved all 9 prototype products with 100% authentic Part 10 WooCommerce database values (prices, weights, stock, dimensions, Gallery images, and mounting configurations).
+  - Implemented supervisor lower-left staging spawn rule (`calculateStagingPosition` with base 20px margins, +12px deterministic stagger, modulo 6 wrapping) in `TGB_Mounting` and `TGB_ProductSelection.prototype.addPartToBuild`, preserving Pointer Events free dragging, stage boundary clamping, and mounting interface compatibility rules.
+
+- **Stage 12 Complete: Final V1 Local Acceptance Test + Release Readiness Review**
+  - Conducted full end-to-end acceptance review across all 120 specification criteria.
+  - Resolved final human review visual UX item: replaced diagonal stagger with deterministic, non-overlapping lower-left staging layout arranging parts left-to-right with 20px gaps and wrapping to new rows above when horizontal space is filled, respecting actual physical millimeter dimensions (1mm = 1 logical px), ensuring newly added parts are individually visible and easily grabbable without piling.
+  - Audited authoritative 9-product catalog directly against WooCommerce database (1 Base Gun, 2 Silencers, 2 Grips, 2 Optics, 2 Accessories); verified 100% preservation of live business data (prices, weights, stock, dimensions, Gallery attachments, and mounting points).
+  - Executed backend acceptance suite (26/26 tests passed) verifying dynamic taxonomies, product onboarding, lifecycle rules, order creation via `bacs` offline gateway with build grouping metadata (`GB-XXXXXX`, `Base Platform`, `Component`, hidden `_tgb_build_id`), stock aggregation, and clean plugin deactivation/reactivation.
+  - Executed tamper, security & validation suite (38/38 tests passed) verifying strict rejection of incompatible parts (87467), out-of-stock items (89499, 55097), role spoofing, price tampering ($0.01 ignored), malformed cart payloads, isolated transaction rollback, idempotency with duplicate requests, admin input validation (`reference_mm`, `anchor`, mount points), capability enforcement (`administrator`, `shop_manager`, blocked `subscriber`), REST API whitelist (0 cart POST routes), AJAX mutation authorization, and safe DOM / XSS escaping.
+  - Verified 0 hardcoded prototype IDs, 0 attachment IDs, and 0 local URLs in active runtime PHP/JS code.
+  - Executed browser acceptance suite (16/16 tests passed) across desktop, tablet, and mobile; verified responsive document overflow (`scrollWidth <= clientWidth`) across 9 viewports (320px, 375px, 390px, 430px, 768px, 1024px, 1280px, 1440px, 1920px).
+  - Captured and manually reviewed all required screenshots with 100% rated GOOD (0 blockers, 0 visual defects).
+  - Cleaned all temporary test products, temporary taxonomy terms, test orders, and test carts; confirmed database state is clean.
+  - Completed PHP lint (13/13 files passed) and `git diff --check` (0 issues).
+- **Stage 13 Complete: V1.1 Part 1 — Local Build Persistence (Refresh Restoration)**
+  - Implemented automatic local browser persistence for the working build configuration across page reloads and browser restarts on the same device.
+  - **Storage Architecture:** Uses `localStorage` under the dedicated key `tgb_current_build_state` with schema version `1`.
+  - **What is Persisted:** Minimal client layout hints only:
+    - `version`: Integer schema version (`1`) for future-proof migrations.
+    - `timestamp`: Integer unix timestamp of the save event.
+    - `baseProductId`: WooCommerce product ID of the selected Base Gun.
+    - `parts`: Array of Part instance objects containing:
+      - `instanceId`: Unique instance UUID string (preserves duplicate instances of identical products).
+      - `productId`: WooCommerce product ID.
+      - `x`: Canonical logical X coordinate in millimeters (1mm = 1 logical px).
+      - `y`: Canonical logical Y coordinate in millimeters (1mm = 1 logical px).
+      - `zIndex`: Rendering stack layer index for exact visual depth restoration.
+  - **What is Strictly NOT Persisted (Authoritative Data Rule):**
+    - Product prices, weights, stock states, eligibility flags, compatibility results, titles, image URLs, alt text, gallery attachment metadata, subtotal, total weight, mount interfaces, or raw WooCommerce cart payloads.
+    - All business data is re-resolved fresh from current runtime WooCommerce and Gun Builder services upon restoration.
+  - **Safe Restoration Flow (`TGB_Persistence.restoreBuild`):**
+    - Resolves Base Gun from authoritative catalog REST API (`/wp-json/tgb/v1/base-guns`).
+    - If Base Gun no longer exists, is disabled, or lacks a valid builder image: aborts restoration, clears the invalid localStorage state, resets stage to empty, and displays customer notice: *"Your previous build could not be restored because the base platform is no longer available."*
+    - If Base Gun is valid: preloads image, sets canonical stage geometry, and mounts Base Gun.
+    - Resolves Part catalog data and validates each persisted Part instance against existence, catalog eligibility, builder image availability, and mounting compatibility with the restored Base Gun.
+    - Stock status is strictly informational for catalog eligibility and does NOT block restoration: out-of-stock parts restore cleanly with preserved instance ID, coordinates, live pricing, and live "Unavailable" badges in both catalog cards and Current Build. Genuine ineligibility (product deleted, unpublished, builder disabled/unready, missing gallery image, or mounting incompatibility) is safely skipped with a customer notice.
+    - Fully restores duplicate product instances with distinct `instanceId` and individual custom X/Y coordinates.
+    - Recalculates Current Build subtotal, total weight (preserving honest "Weight unavailable" for unweighted products like ID 89535), and in-build count badges from live WooCommerce data.
+  - **Auto-Persistence Lifecycle & Performance:**
+    - Subscribes to `buildState` mutation events (`base_gun_set`, `part_added`, `part_removed`, `drag_ended`).
+    - Dragging produces **0 network requests**, **0 Current Build DOM recalculations**, and **0 storage write thrashing** (light 250ms debounce during move, immediate definitive write on `drag_ended` / `pointerup`).
+  - **Deep Link Precedence (Section 14 & Test I):**
+    - Explicit `?product_id=...` parameter takes precedence over stored local persistence.
+    - Requested Base Gun loads clean without stale parts; stored persistence is updated to Base-only, and the URL parameter is cleanly replaced via `window.history.replaceState`.
+  - **Customer Reset Action:**
+    - Added clean, minimal Reset button (`#tgb-reset-build-btn`) in `wp-content/plugins/part-selector/templates/gun-builder.php` inside the Current Build panel header (visible when a Base Gun is selected).
+    - Clicking Reset clears in-memory Build State, DOM stage, Current Build panel, and deletes `localStorage` persistence, ensuring page reloads remain clean.
+  - **Automated Verification:**
+    - Passed all 10 required test scenarios (10/10 PASS): Basic restore (Test A), Duplicate restore (Test B), Remove + refresh (Test C), Reset + refresh (Test D), Invalid part simulation (Test E), Invalid base simulation (Test F), Mobile viewports 390px & 320px (Test G), Cart after restore (Test H), Deep link precedence (Test I), and Missing weight regression (Test J).
+
+## Current Task
+
+V1.1 Part 1 — Local Build Persistence complete.
+Ready for human review.
+
+## Known V1 / V1.1 Status & Future Candidates
+
+- **Local Working Build Persistence:** Implemented in V1.1 Part 1 via browser `localStorage` with live WooCommerce re-validation.
+- **Account-Based Saved Builds (Future):** Customer user accounts, server-side build storage, customer build history, and shareable build links remain deferred to future V1.1 stages.
+- **Builder Image Workflow (Option 1):** Uses the FIRST WooCommerce Product Gallery image; requires manual content preparation of transparent, tightly-cropped PNGs (Option 2 deferred).
+- **Physical Controls:** Free 2D dragging with lower-left staging and stage boundary clamping; resizing, rotation, and recoloring controls are intentionally not in scope.
+- **Commerce Architecture:** Standard WooCommerce cart lines grouped by build reference (`GB-XXXXXX`); standard WooCommerce checkout, tax calculation, and gateway payment processing are utilized without custom payment bypass.

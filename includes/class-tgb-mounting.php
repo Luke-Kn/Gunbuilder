@@ -73,6 +73,9 @@ class TGB_Mounting {
 			$x        = isset( $point['x'] ) && is_numeric( $point['x'] ) ? (float) $point['x'] : 0.0;
 			$y        = isset( $point['y'] ) && is_numeric( $point['y'] ) ? (float) $point['y'] : 0.0;
 
+			$raw_pos  = isset( $point['position'] ) ? sanitize_key( $point['position'] ) : 'unspecified';
+			$position = in_array( $raw_pos, array( 'top', 'bottom', 'muzzle' ), true ) ? $raw_pos : 'unspecified';
+
 			$normalized[] = array(
 				'id'        => $point_id,
 				'label'     => $label,
@@ -81,6 +84,7 @@ class TGB_Mounting {
 					'name' => (string) $term->name,
 					'slug' => (string) $term->slug,
 				),
+				'position'  => $position,
 				'x'         => $x,
 				'y'         => $y,
 			);
@@ -228,10 +232,14 @@ class TGB_Mounting {
 				? sanitize_key( $row['id'] )
 				: self::generate_mount_id();
 
+			$raw_pos  = isset( $row['position'] ) ? sanitize_key( $row['position'] ) : 'unspecified';
+			$position = in_array( $raw_pos, array( 'top', 'bottom', 'muzzle' ), true ) ? $raw_pos : 'unspecified';
+
 			$sanitized[] = array(
 				'id'           => $point_id,
 				'label'        => $label,
 				'interface_id' => $interface_id,
+				'position'     => $position,
 				'x'            => $x,
 				'y'            => $y,
 			);
@@ -264,24 +272,36 @@ class TGB_Mounting {
 			return self::STATUS_UNCONFIGURED;
 		}
 
-		$base_interface_ids = array_map( function( $pt ) {
-			return (int) $pt['interface']['id'];
-		}, $base_points );
+		$part_positions = TGB_Product_Config::get_part_mount_positions( $part_id );
 
 		$part_interface_ids = array_map( function( $iface ) {
 			return (int) $iface['id'];
 		}, $part_interfaces );
 
-		$intersection = array_intersect( $part_interface_ids, $base_interface_ids );
+		// If the part has specific position requirements, at least one matching mount point must be at an accepted position.
+		// If the part has no position requirements (empty array), any mount point matching the interface is compatible (legacy).
+		foreach ( $base_points as $pt ) {
+			$pt_iface_id = (int) $pt['interface']['id'];
+			$pt_pos      = (string) ( $pt['position'] ?? 'unspecified' );
 
-		return ! empty( $intersection ) ? self::STATUS_COMPATIBLE : self::STATUS_INCOMPATIBLE;
+			if ( in_array( $pt_iface_id, $part_interface_ids, true ) ) {
+				if ( empty( $part_positions ) ) {
+					return self::STATUS_COMPATIBLE;
+				}
+				if ( in_array( $pt_pos, $part_positions, true ) ) {
+					return self::STATUS_COMPATIBLE;
+				}
+			}
+		}
+
+		return self::STATUS_INCOMPATIBLE;
 	}
 
 	/**
 	 * Finds the deterministic default mount point on a Base Gun for a Part.
 	 *
 	 * Iterates Base Gun mount points in their configured admin order and selects
-	 * the FIRST mount point whose interface ID is accepted by the Part.
+	 * the FIRST mount point whose interface ID and position are accepted by the Part.
 	 *
 	 * @param int $base_gun_id Base Gun product ID.
 	 * @param int $part_id     Part product ID.
@@ -295,13 +315,17 @@ class TGB_Mounting {
 			return null;
 		}
 
+		$part_positions = TGB_Product_Config::get_part_mount_positions( $part_id );
+
 		$accepted_ids = array_map( function( $iface ) {
 			return (int) $iface['id'];
 		}, $part_interfaces );
 
 		foreach ( $base_points as $point ) {
 			if ( in_array( (int) $point['interface']['id'], $accepted_ids, true ) ) {
-				return $point;
+				if ( empty( $part_positions ) || in_array( (string) ( $point['position'] ?? 'unspecified' ), $part_positions, true ) ) {
+					return $point;
+				}
 			}
 		}
 

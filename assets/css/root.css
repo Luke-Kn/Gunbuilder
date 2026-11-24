@@ -1,0 +1,57 @@
+
+#taktik-gun-builder {
+  /* Design Tokens */
+  --tgb-bg-canvas: #0a0d14;
+  --tgb-bg-surface: #111622;
+  --tgb-bg-surface-elevated: #171f2e;
+  --tgb-bg-stage: #07090e;
+  --tgb-border: #222b3d;
+  --tgb-border-subtle: #171e2c;
+  --tgb-border-focus: #3a4866;
+
+  --tgb-text-main: #f0f4fa;
+  --tgb-text-muted: #9aa8be;
+  --tgb-text-dim: #63738c;
+
+  --tgb-accent: #e67e22;
+  --tgb-accent-hover: #f39c12;
+  --tgb-accent-active: #d35400;
+  --tgb-accent-soft: rgba(230, 126, 34, 0.12);
+
+  --tgb-radius-sm: 6px;
+  --tgb-radius-md: 10px;
+  --tgb-radius-lg: 14px;
+
+  --tgb-space-2xs: 4px;
+  --tgb-space-xs: 8px;
+  --tgb-space-sm: 12px;
+  --tgb-space-md: 16px;
+  --tgb-space-lg: 20px;
+  --tgb-space-xl: 24px;
+  --tgb-space-2xl: 32px;
+
+  --tgb-font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu,
+    Cantarell, "Helvetica Neue", sans-serif;
+
+  /* Shell Container */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 16px;
+  box-sizing: border-box;
+  background-color: var(--tgb-bg-canvas);
+  color: var(--tgb-text-main);
+  font-family: var(--tgb-font-family);
+  border-radius: var(--tgb-radius-lg);
+  border: 1px solid var(--tgb-border);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  overflow-x: hidden;
+}
+
+#taktik-gun-builder * {
+  box-sizing: border-box;
+}

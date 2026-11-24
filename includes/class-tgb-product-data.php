@@ -32,10 +32,64 @@ class TGB_Product_Data {
 	const MAX_LIMIT = 100;
 
 	/**
-	 * Initialize data service hooks if required.
+	 * Runtime in-memory category cache for current request lifecycle.
+	 *
+	 * @var array
+	 */
+	private static $runtime_categories_cache = array();
+
+	/**
+	 * Initialize data service hooks and cache invalidation listeners.
 	 */
 	public static function init() {
-		// Pure data service for Stage 3; hooks reserved for future stage integrations.
+		// Invalidate catalog category caches on relevant product and taxonomy mutations.
+		add_action( 'save_post_product', array( __CLASS__, 'bump_catalog_version' ) );
+		add_action( 'wp_trash_post', array( __CLASS__, 'on_post_status_change' ) );
+		add_action( 'untrash_post', array( __CLASS__, 'on_post_status_change' ) );
+		add_action( 'delete_post', array( __CLASS__, 'on_post_status_change' ) );
+
+		// WooCommerce categories invalidation.
+		add_action( 'created_product_cat', array( __CLASS__, 'bump_catalog_version' ) );
+		add_action( 'edited_product_cat', array( __CLASS__, 'bump_catalog_version' ) );
+		add_action( 'delete_product_cat', array( __CLASS__, 'bump_catalog_version' ) );
+
+		// Mount interfaces invalidation.
+		add_action( 'created_' . TGB_Mount_Interfaces::TAXONOMY, array( __CLASS__, 'bump_catalog_version' ) );
+		add_action( 'edited_' . TGB_Mount_Interfaces::TAXONOMY, array( __CLASS__, 'bump_catalog_version' ) );
+		add_action( 'delete_' . TGB_Mount_Interfaces::TAXONOMY, array( __CLASS__, 'bump_catalog_version' ) );
+	}
+
+	/**
+	 * Handles post status changes (e.g. trash/delete) to invalidate caches if the post is a product.
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public static function on_post_status_change( $post_id ) {
+		if ( 'product' === get_post_type( $post_id ) ) {
+			self::bump_catalog_version();
+		}
+	}
+
+	/**
+	 * Returns current catalog cache version token.
+	 *
+	 * @return string Version string.
+	 */
+	public static function get_catalog_version() {
+		$version = get_option( 'tgb_catalog_version' );
+		if ( empty( $version ) ) {
+			$version = (string) time();
+			update_option( 'tgb_catalog_version', $version );
+		}
+		return (string) $version;
+	}
+
+	/**
+	 * Bumps catalog cache version token, invalidating all category transients instantly.
+	 */
+	public static function bump_catalog_version() {
+		self::$runtime_categories_cache = array();
+		update_option( 'tgb_catalog_version', time() . '_' . wp_rand( 1000, 9999 ) );
 	}
 
 	// =========================================================================
@@ -165,9 +219,9 @@ class TGB_Product_Data {
 			return false;
 		}
 
-		// 7. Role is either Base Gun or Part.
+		// 7. Role is Base Gun, Part, or Rail.
 		$role = TGB_Product_Config::get_role( $product_id );
-		if ( ! in_array( $role, array( TGB_Product_Config::ROLE_BASE_GUN, TGB_Product_Config::ROLE_PART ), true ) ) {
+		if ( ! in_array( $role, array( TGB_Product_Config::ROLE_BASE_GUN, TGB_Product_Config::ROLE_PART, TGB_Product_Config::ROLE_RAIL ), true ) ) {
 			return false;
 		}
 
@@ -191,6 +245,7 @@ class TGB_Product_Data {
 	 */
 	public static function get_product_data( $product ) {
 		$wc_product = self::resolve_wc_product( $product );
+		//wp_send_json_success( $wc_product->get_children());
 		if ( ! $wc_product ) {
 			return null;
 		}
@@ -209,6 +264,16 @@ class TGB_Product_Data {
 					'name' => (string) $term->name,
 				);
 			}
+		}
+
+		// Rail structure.
+		$rail_data = null;
+		if ( TGB_Product_Config::ROLE_RAIL === $role ) {
+			$rail_data = array(
+				'input_interfaces'    => TGB_Product_Config::get_rail_input_interfaces( $product_id ),
+				'output_interfaces'   => TGB_Product_Config::get_rail_output_interfaces( $product_id ),
+				'supported_positions' => TGB_Product_Config::get_rail_supported_positions( $product_id ),
+			);
 		}
 
 		// Builder Gallery image.
@@ -275,24 +340,55 @@ class TGB_Product_Data {
 			$mounting_data = array(
 				'interfaces' => TGB_Mounting::get_part_mount_interfaces( $product_id ),
 				'anchor'     => TGB_Mounting::get_part_anchor( $product_id ),
+				'positions'  => TGB_Product_Config::get_part_mount_positions( $product_id ),
 			);
 		}
 
+		// WooCommerce categories.
+		$categories_data = array();
+		$cat_terms       = get_the_terms( $product_id, 'product_cat' );
+		if ( ! empty( $cat_terms ) && ! is_wp_error( $cat_terms ) ) {
+			foreach ( $cat_terms as $cat_term ) {
+				$categories_data[] = array(
+					'id'     => (int) $cat_term->term_id,
+					'slug'   => (string) $cat_term->slug,
+					'name'   => (string) $cat_term->name,
+					'parent' => (int) $cat_term->parent,
+				);
+			}
+		}
+
+		$variants =  [];
+		
+		$main_product = wc_get_product( $product_id );
+
+			if( $main_product->is_type('variable') ) { // checking if a product has variations
+				$variants = $main_product->get_available_variations();
+		}
+		
+
 		return array(
-			'id'               => $product_id,
-			'name'             => (string) $wc_product->get_name(),
-			'slug'             => (string) $wc_product->get_slug(),
-			'permalink'        => (string) $wc_product->get_permalink(),
-			'role'             => $role,
-			'part_type'        => $part_type_data,
-			'reference_mm'     => (float) TGB_Product_Config::get_reference_mm( $product_id ),
-			'builder_image'    => $builder_image,
-			'price'            => $price_data,
-			'stock'            => $stock_data,
-			'weight'           => $weight_data,
-			'woo'              => $woo_data,
-			'mounting'         => $mounting_data,
-			'catalog_eligible' => $is_eligible,
+			'id'                     => $product_id,
+			'sku'                    => (string) $wc_product->get_sku(),
+			'name'                   => (string) $wc_product->get_name(),
+			'slug'                   => (string) $wc_product->get_slug(),
+			'permalink'              => (string) $wc_product->get_permalink(),
+			'role'                   => $role,
+			'category_policy'        => ( TGB_Product_Config::ROLE_BASE_GUN === $role ) ? TGB_Product_Config::get_category_policy( $product_id ) : null,
+			'allowed_categories'     => ( TGB_Product_Config::ROLE_BASE_GUN === $role ) ? TGB_Product_Config::get_allowed_categories( $product_id ) : array(),
+			'allowed_rail_positions' => ( TGB_Product_Config::ROLE_BASE_GUN === $role ) ? TGB_Product_Config::get_allowed_rail_positions( $product_id ) : array(),
+			'rail'                   => $rail_data,
+			'part_type'              => $part_type_data,
+			'categories'             => $categories_data,
+			'reference_mm'           => (float) TGB_Product_Config::get_reference_mm( $product_id ),
+			'builder_image'          => $builder_image,
+			'price'                  => $price_data,
+			'stock'                  => $stock_data,
+			'weight'                 => $weight_data,
+			'woo'                    => $woo_data,
+			'mounting'               => $mounting_data,
+			'catalog_eligible'       => $is_eligible,
+			'variants'               => $variants,
 		);
 	}
 
@@ -323,6 +419,35 @@ class TGB_Product_Data {
 					'key'   => TGB_Product_Config::META_ROLE,
 					'value' => TGB_Product_Config::ROLE_BASE_GUN,
 				),
+				array(
+					'key'   => TGB_Product_Config::META_ENABLED,
+					'value' => 'yes',
+				),
+				array(
+					'key'   => TGB_Product_Config::META_READY,
+					'value' => 'yes',
+				),
+				array(
+					'key'     => '_product_image_gallery',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		return self::query_catalog_products( $base_query_args, $normalized_args );
+	}
+
+
+		public static function search( string $query ,array $args = array() ) {
+
+		$normalized_args = self::normalize_query_args( $args );
+
+		$base_query_args = array(
+			's' 		  => $query,
+			'post_type'   => 'product',
+			'post_status' => 'publish',
+			'meta_query'  => array(
 				array(
 					'key'   => TGB_Product_Config::META_ENABLED,
 					'value' => 'yes',
@@ -403,64 +528,362 @@ class TGB_Product_Data {
 		return self::query_catalog_products( $base_query_args, $normalized_args );
 	}
 
-	public static function search_parts( $query = '', $term_id = 0, array $args = array() ) {
-	$query           = trim( sanitize_text_field( (string) $query ) );
-	$term_id         = absint( $term_id );
-	$normalized_args = self::normalize_query_args( $args );
+	/**
+	 * Queries eligible Parts for a specific WooCommerce product_cat term.
+	 *
+	 * Filters by published status, Builder Enabled = yes, Builder Ready = yes,
+	 * Role = part, assignment to the specified product_cat term (including children),
+	 * and valid first Gallery image.
+	 *
+	 * If base_gun_id is provided in $args, only compatible Parts are returned.
+	 *
+	 * Uses bounded continuation cursor streaming to ensure pagination applies strictly
+	 * to the final catalog-eligible product set without arbitrary catalog ceilings.
+	 *
+	 * @param int   $category_id WooCommerce product_cat term ID.
+	 * @param array $args        Query cursor, limit, base_gun_id, and sorting arguments.
+	 * @return array Standard query response array { items, limit, has_more, next_cursor }.
+	 */
+	public static function get_parts_by_category( $category_id, array $args = array() ) {
+		$category_id     = absint( $category_id );
+		$normalized_args = self::normalize_query_args( $args );
 
-	// If a type was requested, it must exist in the part type taxonomy.
-	if ( $term_id > 0 && ! term_exists( $term_id, TGB_Part_Types::TAXONOMY ) ) {
-		return array(
-			'items'       => array(),
-			'limit'       => $normalized_args['limit'],
-			'has_more'    => false,
-			'next_cursor' => null,
-		);
-	}
+		$taxonomy = ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) ? TGB_Part_Types::TAXONOMY : 'product_cat';
 
-	$base_query_args = array(
-		's'           => $query,
-		'post_type'   => 'product',
-		'post_status' => 'publish',
-		'meta_query'  => array(
-			array(
-				'key'   => TGB_Product_Config::META_ROLE,
-				'value' => TGB_Product_Config::ROLE_PART,
-			),
-			array(
-				'key'   => TGB_Product_Config::META_ENABLED,
-				'value' => 'yes',
-			),
-			array(
-				'key'   => TGB_Product_Config::META_READY,
-				'value' => 'yes',
-			),
-			array(
-				'key'     => '_product_image_gallery',
-				'value'   => '',
-				'compare' => '!=',
-			),
-		),
-	);
+		// Validate term exists and belongs to active taxonomy.
+		if ( $category_id <= 0 || ! term_exists( $category_id, $taxonomy ) ) {
+			return array(
+				'items'       => array(),
+				'limit'       => $normalized_args['limit'],
+				'has_more'    => false,
+				'next_cursor' => null,
+			);
+		}
 
-	// Optional keyword filter.
-	if ( '' !== $query ) {
-		$base_query_args['s'] = $query;
-	}
-
-	// Optional part type filter.
-	if ( $term_id > 0 ) {
-		$base_query_args['tax_query'] = array(
+		$tax_query = array(
 			array(
-				'taxonomy' => TGB_Part_Types::TAXONOMY,
-				'field'    => 'term_id',
-				'terms'    => $term_id,
+				'taxonomy'         => $taxonomy,
+				'field'            => 'term_id',
+				'terms'            => $category_id,
+				'include_children' => true,
 			),
 		);
+
+		// If Base Gun ID is provided, enforce category policy and narrow candidate stream to mount interfaces matching the Base Gun and installed Rails.
+		if ( ! empty( $normalized_args['base_gun_id'] ) ) {
+			if ( ! TGB_Product_Config::is_category_allowed_for_gun( $normalized_args['base_gun_id'], $category_id ) ) {
+				return array(
+					'items'       => array(),
+					'limit'       => $normalized_args['limit'],
+					'has_more'    => false,
+					'next_cursor' => null,
+				);
+			}
+
+			$interface_ids = array();
+			if ( ! empty( $normalized_args['installed_rails'] ) ) {
+				$capability_pool = TGB_Rail_Compatibility::build_active_capability_pool( $normalized_args['base_gun_id'], $normalized_args['installed_rails'] );
+				$interface_ids   = array_unique( array_map( function( $cap ) {
+					return (int) $cap['interface_id'];
+				}, (array) ( $capability_pool['capabilities'] ?? array() ) ) );
+			} else {
+				$base_points = TGB_Mounting::get_base_mount_points( $normalized_args['base_gun_id'] );
+				if ( empty( $base_points ) ) {
+					// Base Gun has no mount points, so no parts can be compatible.
+					return array(
+						'items'       => array(),
+						'limit'       => $normalized_args['limit'],
+						'has_more'    => false,
+						'next_cursor' => null,
+					);
+				}
+
+				$interface_ids = array_unique( array_map( function( $pt ) {
+					return (int) $pt['interface']['id'];
+				}, $base_points ) );
+			}
+
+			if ( ! empty( $interface_ids ) ) {
+				$tax_query[] = array(
+					'taxonomy' => TGB_Mount_Interfaces::TAXONOMY,
+					'field'    => 'term_id',
+					'terms'    => $interface_ids,
+					'operator' => 'IN',
+				);
+			} elseif ( ! empty( $normalized_args['installed_rails'] ) ) {
+				// Base gun + installed rails have 0 capabilities
+				return array(
+					'items'       => array(),
+					'limit'       => $normalized_args['limit'],
+					'has_more'    => false,
+					'next_cursor' => null,
+				);
+			}
+		}
+
+		$base_query_args = array(
+			'post_type'   => 'product',
+			'post_status' => 'publish',
+			'tax_query'   => $tax_query,
+			'meta_query'  => array(
+				array(
+					'key'   => TGB_Product_Config::META_ROLE,
+					'value' => TGB_Product_Config::ROLE_PART,
+				),
+				array(
+					'key'   => TGB_Product_Config::META_ENABLED,
+					'value' => 'yes',
+				),
+				array(
+					'key'   => TGB_Product_Config::META_READY,
+					'value' => 'yes',
+				),
+				array(
+					'key'     => '_product_image_gallery',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		return self::query_catalog_products( $base_query_args, $normalized_args );
 	}
 
-	return self::query_catalog_products( $base_query_args, $normalized_args );
-}
+	/**
+	 * Retrieves hierarchical WooCommerce product categories containing eligible (and compatible) Parts.
+	 *
+	 * Filters out any category branches that contain 0 eligible Builder Parts.
+	 * If $base_gun_id is provided, further restricts categories and counts to Parts that are
+	 * strictly mount-compatible with the specified Base Gun and any active installed Rails.
+	 *
+	 * Preserves parent-child hierarchy and sorts categories logically.
+	 *
+	 * @param int   $base_gun_id     Optional Base Gun product ID for compatibility filtering.
+	 * @param array $installed_rails Optional array of installed rail instances.
+	 * @return array Array of top-level category nodes with nested children and item counts.
+	 */
+	/**
+	 * Computes an 8-character normalized rail fingerprint for cache isolation.
+	 *
+	 * @param array $installed_rails Installed rail instances.
+	 * @return string
+	 */
+	public static function get_rail_fingerprint( array $installed_rails = array() ) {
+		if ( empty( $installed_rails ) ) {
+			return '0';
+		}
+		$norm_pairs = array();
+		foreach ( $installed_rails as $r ) {
+			if ( is_array( $r ) && isset( $r['product_id'], $r['position'] ) ) {
+				$norm_pairs[] = (int) $r['product_id'] . ':' . (string) $r['position'];
+			}
+		}
+		if ( empty( $norm_pairs ) ) {
+			return '0';
+		}
+		sort( $norm_pairs );
+		return substr( md5( implode( '|', $norm_pairs ) ), 0, 8 );
+	}
+
+	/**
+	 * Generates the transient cache key for compatible categories.
+	 *
+	 * @param int   $base_gun_id     Base Gun product ID.
+	 * @param array $installed_rails Array of rail instances.
+	 * @return string Transient cache key.
+	 */
+	public static function get_category_cache_key( $base_gun_id = 0, array $installed_rails = array() ) {
+		$source  = class_exists( 'TGB_Settings' ) ? TGB_Settings::get_category_source() : 'woocommerce';
+		$rfp     = self::get_rail_fingerprint( $installed_rails );
+		$version = self::get_catalog_version();
+		return 'tgb_ccat_' . $source . '_' . absint( $base_gun_id ) . '_r' . $rfp . '_' . md5( $version );
+	}
+
+	public static function get_compatible_categories( $base_gun_id = 0, array $installed_rails = array() ) {
+		$base_gun_id = absint( $base_gun_id );
+		$source      = class_exists( 'TGB_Settings' ) ? TGB_Settings::get_category_source() : 'woocommerce';
+		$taxonomy    = ( class_exists( 'TGB_Settings' ) && TGB_Settings::is_custom_source() ) ? TGB_Part_Types::TAXONOMY : 'product_cat';
+		$rfp         = self::get_rail_fingerprint( $installed_rails );
+		$runtime_key = $source . '_' . $base_gun_id . '_r' . $rfp;
+
+		// 1. In-memory runtime cache check.
+		if ( isset( self::$runtime_categories_cache[ $runtime_key ] ) ) {
+			return self::$runtime_categories_cache[ $runtime_key ];
+		}
+
+		// 2. Persistent transient cache check (versioned to guarantee instant invalidation).
+		$cache_key  = self::get_category_cache_key( $base_gun_id, $installed_rails );
+		$cached_res = get_transient( $cache_key );
+		if ( false !== $cached_res && is_array( $cached_res ) ) {
+			self::$runtime_categories_cache[ $runtime_key ] = $cached_res;
+			return $cached_res;
+		}
+
+		$query_args = array(
+			'post_type'      => 'product',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_query'     => array(
+				array(
+					'key'   => TGB_Product_Config::META_ROLE,
+					'value' => TGB_Product_Config::ROLE_PART,
+				),
+				array(
+					'key'   => TGB_Product_Config::META_ENABLED,
+					'value' => 'yes',
+				),
+				array(
+					'key'   => TGB_Product_Config::META_READY,
+					'value' => 'yes',
+				),
+				array(
+					'key'     => '_product_image_gallery',
+					'value'   => '',
+					'compare' => '!=',
+				),
+			),
+		);
+
+		$part_ids         = get_posts( $query_args );
+		$qualifying_parts = array();
+
+		// Build capability pool if rails are present
+		$capability_pool = null;
+		if ( $base_gun_id > 0 && ! empty( $installed_rails ) ) {
+			$capability_pool = TGB_Rail_Compatibility::build_active_capability_pool( $base_gun_id, $installed_rails );
+		}
+
+		foreach ( $part_ids as $part_id ) {
+			if ( ! self::is_catalog_eligible( $part_id ) ) {
+				continue;
+			}
+			if ( $base_gun_id > 0 ) {
+				if ( null !== $capability_pool ) {
+					$eval = TGB_Rail_Compatibility::check_part_compatibility_with_pool( $part_id, $capability_pool );
+					if ( TGB_Rail_Compatibility::STATUS_COMPATIBLE !== $eval['status'] ) {
+						continue;
+					}
+				} else {
+					$status = TGB_Mounting::check_compatibility( $base_gun_id, $part_id );
+					if ( TGB_Mounting::STATUS_COMPATIBLE !== $status ) {
+						continue;
+					}
+				}
+				// Part 2 Feature A: Base Gun Category Policy check
+				if ( ! TGB_Product_Config::is_part_category_allowed_for_gun( $base_gun_id, $part_id ) ) {
+					continue;
+				}
+			}
+			$qualifying_parts[] = $part_id;
+		}
+
+		if ( empty( $qualifying_parts ) ) {
+			set_transient( $cache_key, array(), 12 * HOUR_IN_SECONDS );
+			self::$runtime_categories_cache[ $runtime_key ] = array();
+			return array();
+		}
+
+		// Map qualifying parts to categories and resolve all ancestor terms.
+		$term_parts         = array(); // term_id => array of part_ids
+		$all_terms          = array(); // term_id => WP_Term
+		$ancestor_cache     = array(); // term_id => array of ancestor term IDs
+		$is_selected_policy = ( $base_gun_id > 0 && TGB_Product_Config::POLICY_SELECTED === TGB_Product_Config::get_category_policy( $base_gun_id ) );
+
+		foreach ( $qualifying_parts as $part_id ) {
+			$terms = wp_get_post_terms( $part_id, $taxonomy );
+			if ( empty( $terms ) || is_wp_error( $terms ) ) {
+				continue;
+			}
+
+			foreach ( $terms as $term ) {
+				// If Base Gun has Selected policy, omit terms outside the permitted category tree.
+				if ( $is_selected_policy && ! TGB_Product_Config::is_category_allowed_for_gun( $base_gun_id, $term->term_id ) ) {
+					continue;
+				}
+
+				if ( ! isset( $all_terms[ $term->term_id ] ) ) {
+					$all_terms[ $term->term_id ] = $term;
+				}
+				if ( ! isset( $term_parts[ $term->term_id ] ) ) {
+					$term_parts[ $term->term_id ] = array();
+				}
+				$term_parts[ $term->term_id ][ $part_id ] = true;
+
+				// Include all parent ancestors so the full branch is connected.
+				if ( ! isset( $ancestor_cache[ $term->term_id ] ) ) {
+					$ancestor_cache[ $term->term_id ] = get_ancestors( $term->term_id, $taxonomy, 'taxonomy' );
+				}
+				$ancestor_ids = $ancestor_cache[ $term->term_id ];
+
+				foreach ( $ancestor_ids as $ancestor_id ) {
+					if ( ! isset( $all_terms[ $ancestor_id ] ) ) {
+						$anc_term = get_term( $ancestor_id, $taxonomy );
+						if ( $anc_term && ! is_wp_error( $anc_term ) ) {
+							$all_terms[ $ancestor_id ] = $anc_term;
+						}
+					}
+					if ( ! isset( $term_parts[ $ancestor_id ] ) ) {
+						$term_parts[ $ancestor_id ] = array();
+					}
+					$term_parts[ $ancestor_id ][ $part_id ] = true;
+				}
+			}
+		}
+
+		// Group terms by parent ID.
+		$terms_by_parent = array();
+		foreach ( $all_terms as $term_id => $term ) {
+			$parent = (int) $term->parent;
+			if ( ! isset( $terms_by_parent[ $parent ] ) ) {
+				$terms_by_parent[ $parent ] = array();
+			}
+			$terms_by_parent[ $parent ][] = $term;
+		}
+
+		// Recursive tree builder.
+		$build_branch = function( $parent_id ) use ( &$build_branch, &$terms_by_parent, &$term_parts ) {
+			if ( empty( $terms_by_parent[ $parent_id ] ) ) {
+				return array();
+			}
+
+			// Sort by menu_order (if available) then name alphabetically.
+			usort( $terms_by_parent[ $parent_id ], function( $a, $b ) {
+				$order_a = isset( $a->term_group ) ? (int) $a->term_group : 0;
+				$order_b = isset( $b->term_group ) ? (int) $b->term_group : 0;
+				if ( $order_a !== $order_b ) {
+					return $order_a - $order_b;
+				}
+				return strcasecmp( $a->name, $b->name );
+			} );
+
+			$branch = array();
+			foreach ( $terms_by_parent[ $parent_id ] as $term ) {
+				$count    = isset( $term_parts[ $term->term_id ] ) ? count( $term_parts[ $term->term_id ] ) : 0;
+				$children = $build_branch( $term->term_id );
+
+				$branch[] = array(
+					'id'       => (int) $term->term_id,
+					'name'     => (string) $term->name,
+					'slug'     => (string) $term->slug,
+					'parent'   => (int) $term->parent,
+					'count'    => $count,
+					'children' => $children,
+				);
+			}
+
+			return $branch;
+		};
+
+		$tree = $build_branch( 0 );
+
+		// Save to transient cache and in-memory runtime cache.
+		set_transient( $cache_key, $tree, 12 * HOUR_IN_SECONDS );
+		self::$runtime_categories_cache[ $runtime_key ] = $tree;
+
+		return $tree;
+	}
 
 	// =========================================================================
 	// 5. Internal Helper Utilities
@@ -488,41 +911,80 @@ class TGB_Product_Data {
 	/**
 	 * Encodes a candidate database offset into an opaque cursor token.
 	 *
-	 * @param int $offset 0-based candidate database offset.
+	 * Accepts either ($offset, $rfp) or ($date, $post_id, $rfp).
+	 *
+	 * @param mixed  $date_or_offset Date string or integer offset.
+	 * @param mixed  $post_id_or_rfp Integer post_id or string rail fingerprint.
+	 * @param string $rfp            Optional rail fingerprint when 3 args passed.
 	 * @return string Opaque base64-encoded cursor token.
 	 */
-	public static function encode_cursor( $offset ) {
-		$offset = max( 0, (int) $offset );
-		return base64_encode( (string) wp_json_encode( array( 'offset' => $offset ) ) );
+	public static function encode_cursor( $date_or_offset, $post_id_or_rfp = 0, $rfp = '' ) {
+		if ( func_num_args() >= 3 || ( is_numeric( $post_id_or_rfp ) && $post_id_or_rfp > 0 ) ) {
+			$data = array(
+				'date'    => (string) $date_or_offset,
+				'post_id' => absint( $post_id_or_rfp ),
+				'offset'  => absint( $post_id_or_rfp ),
+				'rfp'     => (string) $rfp,
+			);
+		} else {
+			$offset  = max( 0, (int) $date_or_offset );
+			$rfp_val = is_string( $post_id_or_rfp ) ? $post_id_or_rfp : (string) $rfp;
+			$data    = array(
+				'offset'  => $offset,
+				'post_id' => $offset,
+			);
+			if ( '' !== $rfp_val ) {
+				$data['rfp'] = $rfp_val;
+			}
+		}
+		return base64_encode( (string) wp_json_encode( $data ) );
 	}
 
 	/**
-	 * Decodes an input cursor into a candidate database offset integer.
+	 * Decodes an input cursor into a candidate database offset integer or structured token.
 	 *
 	 * Accepts opaque base64 cursor strings, raw numeric strings, or integers.
-	 * Returns 0 if cursor is missing, empty, or invalid.
+	 * Returns 0 if cursor is missing, empty, invalid, or if rfp context changed.
 	 *
-	 * @param mixed $cursor Raw input cursor.
-	 * @return int 0-based candidate offset.
+	 * @param mixed  $cursor       Raw input cursor.
+	 * @param string $expected_rfp Optional expected rail fingerprint.
+	 * @return array|int 0-based candidate offset or structured array.
 	 */
-	public static function decode_cursor( $cursor ) {
+	public static function decode_cursor( $cursor, $expected_rfp = '' ) {
 		if ( empty( $cursor ) ) {
 			return 0;
 		}
 
 		if ( is_int( $cursor ) || ( is_string( $cursor ) && ctype_digit( $cursor ) ) ) {
-			return max( 0, (int) $cursor );
+			$val = max( 0, (int) $cursor );
+			return array(
+				'offset'  => $val,
+				'post_id' => $val,
+			);
 		}
 
 		if ( is_string( $cursor ) ) {
 			$decoded = base64_decode( $cursor, true );
 			if ( false !== $decoded ) {
 				$data = json_decode( $decoded, true );
-				if ( is_array( $data ) && isset( $data['offset'] ) && is_numeric( $data['offset'] ) ) {
-					return max( 0, (int) $data['offset'] );
+				if ( is_array( $data ) && ( isset( $data['offset'] ) || isset( $data['post_id'] ) ) ) {
+					if ( '' !== $expected_rfp && isset( $data['rfp'] ) && (string) $data['rfp'] !== (string) $expected_rfp ) {
+						return null; // Context changed: reset cursor
+					}
+					if ( ! isset( $data['offset'] ) && isset( $data['post_id'] ) ) {
+						$data['offset'] = (int) $data['post_id'];
+					}
+					if ( ! isset( $data['post_id'] ) && isset( $data['offset'] ) ) {
+						$data['post_id'] = (int) $data['offset'];
+					}
+					return $data;
 				}
 				if ( is_numeric( $decoded ) ) {
-					return max( 0, (int) $decoded );
+					$val = max( 0, (int) $decoded );
+					return array(
+						'offset'  => $val,
+						'post_id' => $val,
+					);
 				}
 			}
 		}
@@ -534,7 +996,7 @@ class TGB_Product_Data {
 	 * Normalizes and bounds query arguments for cursor pagination.
 	 *
 	 * @param array $args Input arguments.
-	 * @return array Normalized arguments { limit, cursor, orderby, order, _batch_size }.
+	 * @return array Normalized arguments { limit, cursor, orderby, order, _batch_size, installed_rails }.
 	 */
 	private static function normalize_query_args( array $args ) {
 		$limit = isset( $args['limit'] ) ? absint( $args['limit'] ) : self::DEFAULT_LIMIT;
@@ -556,6 +1018,14 @@ class TGB_Product_Data {
 			'orderby' => $orderby,
 			'order'   => $order,
 		);
+
+		if ( isset( $args['base_gun_id'] ) && absint( $args['base_gun_id'] ) > 0 ) {
+			$normalized['base_gun_id'] = absint( $args['base_gun_id'] );
+		}
+
+		if ( isset( $args['installed_rails'] ) && is_array( $args['installed_rails'] ) ) {
+			$normalized['installed_rails'] = $args['installed_rails'];
+		}
 
 		if ( isset( $args['_batch_size'] ) && absint( $args['_batch_size'] ) > 0 ) {
 			$normalized['_batch_size'] = absint( $args['_batch_size'] );
@@ -579,97 +1049,111 @@ class TGB_Product_Data {
 	 * @return array Response matching pagination contract { items, limit, has_more, next_cursor }.
 	 */
 	private static function query_catalog_products( array $base_query_args, array $normalized_args ) {
-	$limit        = $normalized_args['limit'];
-	$start_offset = self::decode_cursor( $normalized_args['cursor'] );
+		$limit = $normalized_args['limit'];
 
-	$items       = array();
-	$has_more    = false;
-	$next_cursor = null;
+		// Calculate rail context fingerprint for cursor safety
+		$rfp          = self::get_rail_fingerprint( $normalized_args['installed_rails'] ?? array() );
+		$cursor_data  = self::decode_cursor( $normalized_args['cursor'], $rfp );
+		$start_offset = is_array( $cursor_data ) ? (int) ( $cursor_data['offset'] ?? 0 ) : (int) $cursor_data;
 
-	$candidate_offset = $start_offset;
+		$items       = array();
+		$has_more    = false;
+		$next_cursor = null;
 
-	// Bounded database batch size: at least 20, at most 100 candidate IDs per query.
-	$batch_size = ( isset( $normalized_args['_batch_size'] ) && $normalized_args['_batch_size'] > 0 )
-		? absint( $normalized_args['_batch_size'] )
-		: max( 20, min( 100, $limit * 2 ) );
+		$candidate_offset = $start_offset;
 
-	// Search mode: rank by relevance. Otherwise use the requested ordering.
-	// Either way, add ID as a tiebreaker so offset pagination stays stable.
-	$is_search = ! empty( $base_query_args['s'] );
+		// Bounded database batch size: at least 20, at most 100 candidate IDs per query.
+		$batch_size = ( isset( $normalized_args['_batch_size'] ) && $normalized_args['_batch_size'] > 0 )
+			? absint( $normalized_args['_batch_size'] )
+			: max( 20, min( 100, $limit * 2 ) );
 
-	if ( $is_search ) {
-		$orderby = array(
-			'relevance' => 'DESC',
-			'ID'        => 'DESC',
-		);
-	} else {
-		$order   = ( isset( $normalized_args['order'] ) && 'ASC' === strtoupper( $normalized_args['order'] ) ) ? 'ASC' : 'DESC';
-		$orderby = array(
-			$normalized_args['orderby'] => $order,
-			'ID'                        => $order,
-		);
-	}
-
-	while ( true ) {
-		$query_args = array_merge(
-			$base_query_args,
-			array(
-				'posts_per_page' => $batch_size,
-				'offset'         => $candidate_offset,
-				'fields'         => 'ids',
-				'no_found_rows'  => true,
-				'orderby'        => $orderby,
-			)
-		);
-
-		$candidate_query = new WP_Query( $query_args );
-
-		if ( ! ( $candidate_query instanceof WP_Query ) || empty( $candidate_query->posts ) || ! is_array( $candidate_query->posts ) ) {
-			// No more candidates in database; candidate stream genuinely exhausted.
-			break;
+		// Pre-compute capability pool if rails are provided
+		$capability_pool = null;
+		if ( ! empty( $normalized_args['base_gun_id'] ) && ! empty( $normalized_args['installed_rails'] ) ) {
+			$capability_pool = TGB_Rail_Compatibility::build_active_capability_pool( $normalized_args['base_gun_id'], $normalized_args['installed_rails'] );
 		}
 
-		$batch_candidate_ids = $candidate_query->posts;
+		while ( true ) {
+			$query_args = array_merge(
+				$base_query_args,
+				array(
+					'posts_per_page' => $batch_size,
+					'offset'         => $candidate_offset,
+					'fields'         => 'ids',
+					'no_found_rows'  => true,
+					'orderby'        => $normalized_args['orderby'],
+					'order'          => $normalized_args['order'],
+				)
+			);
 
-		foreach ( $batch_candidate_ids as $candidate_id ) {
-			$current_scan_offset = $candidate_offset;
-			$candidate_offset++;
+			$candidate_query = new WP_Query( $query_args );
 
-			$product = wc_get_product( $candidate_id );
-			if ( ! $product ) {
-				continue;
+			if ( ! ( $candidate_query instanceof WP_Query ) || empty( $candidate_query->posts ) || ! is_array( $candidate_query->posts ) ) {
+				// No more candidates in database; candidate stream genuinely exhausted.
+				break;
 			}
 
-			if ( ! self::is_catalog_eligible( $product ) ) {
-				continue;
-			}
+			$batch_candidate_ids = $candidate_query->posts;
 
-			if ( count( $items ) < $limit ) {
-				$product_data = self::get_product_data( $product );
-				if ( $product_data ) {
-					$items[] = $product_data;
+			foreach ( $batch_candidate_ids as $candidate_id ) {
+				$current_scan_offset = $candidate_offset;
+				$candidate_offset++;
+
+				$product = wc_get_product( $candidate_id );
+				if ( ! $product ) {
+					continue;
 				}
-			} else {
-				// We already collected $limit items and just found 1 additional eligible product.
-				// This product begins the next continuation result set.
-				$has_more    = true;
-				$next_cursor = self::encode_cursor( $current_scan_offset );
-				break 2;
+
+				if ( ! self::is_catalog_eligible( $product ) ) {
+					continue;
+				}
+
+				if ( ! empty( $normalized_args['base_gun_id'] ) ) {
+					if ( null !== $capability_pool ) {
+						$eval = TGB_Rail_Compatibility::check_part_compatibility_with_pool( $candidate_id, $capability_pool );
+						if ( TGB_Rail_Compatibility::STATUS_COMPATIBLE !== $eval['status'] ) {
+							continue;
+						}
+					} else {
+						$compat = TGB_Mounting::check_compatibility( $normalized_args['base_gun_id'], $candidate_id );
+						if ( TGB_Mounting::STATUS_COMPATIBLE !== $compat ) {
+							continue;
+						}
+					}
+
+					// Part 2 Feature A: Enforce Base Gun Category Policy.
+					if ( ! TGB_Product_Config::is_part_category_allowed_for_gun( $normalized_args['base_gun_id'], $candidate_id ) ) {
+						continue;
+					}
+				}
+
+				if ( count( $items ) < $limit ) {
+					$product_data = self::get_product_data( $product );
+					if ( $product_data ) {
+						$items[] = $product_data;
+					}
+				} else {
+					// We already collected $limit items and just found 1 additional eligible product.
+					// This product begins the next continuation result set.
+					$has_more    = true;
+					$next_cursor = self::encode_cursor( $current_scan_offset, $rfp );
+					break 2;
+				}
+			}
+
+			// If fewer candidates were returned than requested in this batch,
+			// the database candidate stream is genuinely exhausted.
+			if ( count( $batch_candidate_ids ) < $batch_size ) {
+				break;
 			}
 		}
 
-		// If fewer candidates were returned than requested in this batch,
-		// the database candidate stream is genuinely exhausted.
-		if ( count( $batch_candidate_ids ) < $batch_size ) {
-			break;
-		}
+		
+		return array(
+			'items'       => array_values( $items ),
+			'limit'       => $limit,
+			'has_more'    => $has_more,
+			'next_cursor' => $next_cursor,
+		);
 	}
-
-	return array(
-		'items'       => array_values( $items ),
-		'limit'       => $limit,
-		'has_more'    => $has_more,
-		'next_cursor' => $next_cursor,
-	);
-}
 }
