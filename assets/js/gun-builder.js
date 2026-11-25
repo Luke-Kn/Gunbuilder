@@ -515,8 +515,8 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
         });
         persistence.guestBuildManager = guestBuildManager;
 
-        let export_manager = new TGB_ExportManager();
-        export_manager.init();
+
+            
         // Wire up global references
         // window.TGB_BuildState.instance = buildState;
         // window.TGB_Renderer.instance = renderer;
@@ -581,6 +581,21 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
             persistence,
         });
 
+
+                let export_manager = new TGB_ExportManager({
+            root,
+            catalogClient,
+            productSelection,
+            buildState,
+            renderer,
+            productRegistry,
+            currentBuild,
+            persistence,
+            accountBuildManager,
+            guestBuildManager
+
+        });
+        export_manager.init();
         // Initialize Account Build Manager (Part 5)
         accountBuildManager.init();
         // Initialize Share Manager (Part 6)

@@ -527,6 +527,244 @@ export class TGB_Utility {
         },
     };
 
+	static  TGB_Dialog = {
+		_el: null,
+		_resolve: null,
+		_mode: null,
+
+		_ensureDOM() {
+			if (this._el) return this._el;
+
+			let existing = document.getElementById('tgb-custom-dialog');
+			if (existing) {
+				this._el = existing;
+				return existing;
+			}
+
+			const backdrop = document.createElement('div');
+			backdrop.id = 'tgb-custom-dialog';
+			backdrop.className = 'tgb-modal-backdrop tgb-dialog-backdrop';
+			backdrop.style.display = 'none';
+			backdrop.setAttribute('role', 'dialog');
+			backdrop.setAttribute('aria-modal', 'true');
+			backdrop.innerHTML = `
+				<div class="tgb-modal-panel tgb-dialog-panel">
+					<div class="tgb-modal-header tgb-dialog-header">
+						<h3 class="tgb-modal-title tgb-dialog-title" id="tgb-dialog-title"></h3>
+						<button type="button" class="tgb-modal-close tgb-dialog-close" id="tgb-dialog-close" aria-label="Close">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+						</button>
+					</div>
+					<div class="tgb-modal-body tgb-dialog-body">
+						<p class="tgb-dialog-message" id="tgb-dialog-message"></p>
+						<div class="tgb-dialog-input-group" id="tgb-dialog-input-group" style="display: none;">
+							<input type="text" class="tgb-dialog-input" id="tgb-dialog-input" maxlength="40" autocomplete="off" spellcheck="false" />
+							<div class="tgb-dialog-input-meta">
+								<span class="tgb-dialog-char-counter" id="tgb-dialog-char-counter">0/40</span>
+							</div>
+						</div>
+						<div class="tgb-dialog-error" id="tgb-dialog-error" style="display: none;"></div>
+					</div>
+					<div class="tgb-dialog-actions" id="tgb-dialog-actions">
+						<button type="button" class="tgb-btn tgb-btn--secondary tgb-dialog-btn-cancel" id="tgb-dialog-btn-cancel">Cancel</button>
+						<button type="button" class="tgb-btn tgb-btn--primary tgb-dialog-btn-confirm" id="tgb-dialog-btn-confirm">Save</button>
+					</div>
+				</div>
+			`;
+
+			document.body.appendChild(backdrop);
+			this._el = backdrop;
+
+			// Attach event handlers
+			const closeBtn = backdrop.querySelector('#tgb-dialog-close');
+			const cancelBtn = backdrop.querySelector('#tgb-dialog-btn-cancel');
+			const confirmBtn = backdrop.querySelector('#tgb-dialog-btn-confirm');
+			const input = backdrop.querySelector('#tgb-dialog-input');
+
+			const closeDialog = (val) => {
+				if (this._resolve) {
+					const r = this._resolve;
+					this._resolve = null;
+					backdrop.style.display = 'none';
+					r(val);
+				}
+			};
+
+			closeBtn.addEventListener('click', () => closeDialog(this._mode === 'prompt' ? null : false));
+			cancelBtn.addEventListener('click', () => closeDialog(this._mode === 'prompt' ? null : false));
+
+			backdrop.addEventListener('click', (e) => {
+				if (e.target === backdrop) {
+					closeDialog(this._mode === 'prompt' ? null : false);
+				}
+			});
+
+			document.addEventListener('keydown', (e) => {
+				if (backdrop.style.display !== 'none' && e.key === 'Escape') {
+					closeDialog(this._mode === 'prompt' ? null : false);
+				}
+			});
+
+			confirmBtn.addEventListener('click', () => {
+				if (this._mode === 'prompt') {
+					const val = (input.value || '').trim();
+					if (!val) {
+						const errEl = backdrop.querySelector('#tgb-dialog-error');
+						if (errEl) {
+							errEl.textContent = 'Build name cannot be empty.';
+							errEl.style.display = 'block';
+						}
+						input.focus();
+						return;
+					}
+					closeDialog(val);
+				} else if (this._mode === 'confirm') {
+					closeDialog(true);
+				} else {
+					closeDialog(true);
+				}
+			});
+
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					confirmBtn.click();
+				}
+			});
+
+			input.addEventListener('input', () => {
+				const counter = backdrop.querySelector('#tgb-dialog-char-counter');
+				const errEl = backdrop.querySelector('#tgb-dialog-error');
+				if (counter) counter.textContent = `${input.value.length}/${input.maxLength || 40}`;
+				if (errEl) errEl.style.display = 'none';
+			});
+
+			return backdrop;
+		},
+
+		prompt(options = {}) {
+			return new Promise((resolve) => {
+				if (this._resolve) {
+					this._resolve(this._mode === 'prompt' ? null : false);
+					this._resolve = null;
+				}
+				const backdrop = this._ensureDOM();
+				this._mode = 'prompt';
+				this._resolve = resolve;
+
+				const titleEl = backdrop.querySelector('#tgb-dialog-title');
+				const msgEl = backdrop.querySelector('#tgb-dialog-message');
+				const inputWrap = backdrop.querySelector('#tgb-dialog-input-group');
+				const input = backdrop.querySelector('#tgb-dialog-input');
+				const counter = backdrop.querySelector('#tgb-dialog-char-counter');
+				const errEl = backdrop.querySelector('#tgb-dialog-error');
+				const cancelBtn = backdrop.querySelector('#tgb-dialog-btn-cancel');
+				const confirmBtn = backdrop.querySelector('#tgb-dialog-btn-confirm');
+
+				titleEl.textContent = options.title || 'Save Your Gun Build';
+				msgEl.textContent = options.message || 'Enter a name for this build (maximum 40 characters):';
+				msgEl.style.display = options.message ? 'block' : 'none';
+
+				inputWrap.style.display = 'block';
+				input.value = options.defaultValue || '';
+				input.maxLength = options.maxLength || 40;
+				counter.textContent = `${input.value.length}/${input.maxLength}`;
+
+				errEl.style.display = 'none';
+				errEl.textContent = '';
+
+				cancelBtn.style.display = 'inline-flex';
+				cancelBtn.textContent = options.cancelText || 'Cancel';
+
+				confirmBtn.textContent = options.confirmText || 'Save';
+				confirmBtn.className = 'tgb-btn tgb-btn--primary tgb-dialog-btn-confirm';
+
+				backdrop.style.display = 'flex';
+				setTimeout(() => {
+					input.focus();
+					input.select();
+				}, 50);
+			});
+		},
+
+		confirm(options = {}) {
+			return new Promise((resolve) => {
+				if (this._resolve) {
+					this._resolve(this._mode === 'prompt' ? null : false);
+					this._resolve = null;
+				}
+				const backdrop = this._ensureDOM();
+				this._mode = 'confirm';
+				this._resolve = resolve;
+
+				const titleEl = backdrop.querySelector('#tgb-dialog-title');
+				const msgEl = backdrop.querySelector('#tgb-dialog-message');
+				const inputWrap = backdrop.querySelector('#tgb-dialog-input-group');
+				const errEl = backdrop.querySelector('#tgb-dialog-error');
+				const cancelBtn = backdrop.querySelector('#tgb-dialog-btn-cancel');
+				const confirmBtn = backdrop.querySelector('#tgb-dialog-btn-confirm');
+
+				titleEl.textContent = options.title || 'Confirm';
+				msgEl.textContent = options.message || 'Are you sure?';
+				msgEl.style.display = 'block';
+
+				inputWrap.style.display = 'none';
+				errEl.style.display = 'none';
+
+				cancelBtn.style.display = 'inline-flex';
+				cancelBtn.textContent = options.cancelText || 'Cancel';
+
+				confirmBtn.textContent = options.confirmText || 'Confirm';
+				if (options.isDanger) {
+					confirmBtn.className = 'tgb-btn tgb-dialog-btn-confirm tgb-dialog-btn--danger';
+				} else {
+					confirmBtn.className = 'tgb-btn tgb-btn--primary tgb-dialog-btn-confirm';
+				}
+
+				backdrop.style.display = 'flex';
+				setTimeout(() => {
+					confirmBtn.focus();
+				}, 50);
+			});
+		},
+
+		alert(options = {}) {
+			return new Promise((resolve) => {
+				if (this._resolve) {
+					this._resolve(this._mode === 'prompt' ? null : false);
+					this._resolve = null;
+				}
+				const backdrop = this._ensureDOM();
+				this._mode = 'alert';
+				this._resolve = resolve;
+
+				const titleEl = backdrop.querySelector('#tgb-dialog-title');
+				const msgEl = backdrop.querySelector('#tgb-dialog-message');
+				const inputWrap = backdrop.querySelector('#tgb-dialog-input-group');
+				const errEl = backdrop.querySelector('#tgb-dialog-error');
+				const cancelBtn = backdrop.querySelector('#tgb-dialog-btn-cancel');
+				const confirmBtn = backdrop.querySelector('#tgb-dialog-btn-confirm');
+
+				titleEl.textContent = typeof options === 'string' ? 'Notice' : (options.title || 'Notice');
+				msgEl.textContent = typeof options === 'string' ? options : (options.message || '');
+				msgEl.style.display = 'block';
+
+				inputWrap.style.display = 'none';
+				errEl.style.display = 'none';
+
+				cancelBtn.style.display = 'none';
+
+				confirmBtn.textContent = options.confirmText || 'OK';
+				confirmBtn.className = 'tgb-btn tgb-btn--primary tgb-dialog-btn-confirm';
+
+				backdrop.style.display = 'flex';
+				setTimeout(() => {
+					confirmBtn.focus();
+				}, 50);
+			});
+		}
+	};
+
     static productRegistry = new Map();
 
     static root = document.getElementById("taktik-gun-builder");

@@ -1,3 +1,5 @@
+import { TGB_ProductSelection } from "./TGB-ProductSelection.js";
+
 /**
  * Taktik Gun Builder - Part 7 High-Quality PNG Export & Specification Sheet
  *
@@ -38,7 +40,7 @@ export class TGB_ExportManager {
      * @param {Object} options Configuration dependencies.
      */
 
-    constructor(options = {}) {
+    constructor( options = {}) {
         this.root = options.root || document.getElementById("taktik-gun-builder");
         this.buildState = options.buildState || null;
         this.renderer = options.renderer || null;
@@ -46,7 +48,7 @@ export class TGB_ExportManager {
         this.accountBuildManager = options.accountBuildManager || null;
         this.shareManager = options.shareManager || null;
         this.currentBuild = options.currentBuild || null;
-
+        this.productSelection  = options.productSelection;
         // Dialog DOM Elements
         this.modalEl = null;
         this.triggerBtn = null;
@@ -71,6 +73,7 @@ export class TGB_ExportManager {
      * Initializes export manager and attaches DOM listeners.
      */
     init() {
+       
         if (!this.root) {
             return;
         }
@@ -89,6 +92,7 @@ export class TGB_ExportManager {
         this.dimsHighEl = document.getElementById("tgb-export-dims-high");
         this.dimsMaxEl = document.getElementById("tgb-export-dims-max");
 
+        
         if (this.triggerBtn) {
             this.triggerBtn.addEventListener("click", e => {
                 e.preventDefault();
@@ -409,8 +413,8 @@ export class TGB_ExportManager {
     openDialog() {
         const snapshot = this.captureBuildSnapshot();
         if (!snapshot || !snapshot.baseGun) {
-            if (window.TGB && window.TGB.selection && typeof window.TGB.selection.showNotice === "function") {
-                window.TGB.selection.showNotice("Please choose a base weapon before exporting a PNG image.", "info");
+            if ( this.tgb_selection && typeof(this.tgb_selection.showNotice) === "function") {
+                this.tgb_selection.showNotice("Please choose a base weapon before exporting a PNG image.", "info");
             }
             return;
         }
