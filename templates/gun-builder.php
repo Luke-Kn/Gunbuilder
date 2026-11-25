@@ -94,12 +94,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 				</p>
 			</div>
 			<div class="tgb-build-manager__controls">
-				<div class="tgb-build-manager__select-wrap">
-					<label for="tgb-build-select" class="screen-reader-text"><?php esc_html_e( 'Select Active Build', 'part-selector' ); ?></label>
-					<select class="tgb-build-select" id="tgb-build-select" aria-label="<?php esc_attr_e( 'Select Active Build', 'part-selector' ); ?>">
-						<option value="build-1"><?php esc_html_e( 'Build 1', 'part-selector' ); ?></option>
-					</select>
-				</div>
+
 <div class="tgb-build-manager__actions">
 					<?php if ( is_user_logged_in() ) : ?>
 						<button type="button" class="tgb-btn-build tgb-btn-build--save" id="tgb-btn-save-build" title="<?php esc_attr_e( 'Save build permanently to your account', 'part-selector' ); ?>">
