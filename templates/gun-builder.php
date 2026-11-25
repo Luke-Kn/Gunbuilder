@@ -12,18 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$raw_product_id      = ! empty( $atts['product_id']) ? absint( $atts['product_id'] ) : 0;
+$raw_product_id      = ! empty( $atts['product_id'] ) ? absint( $atts['product_id'] ) : 0;
 $initial_render_data = isset( $initial_render_data ) && is_array( $initial_render_data )
 	? $initial_render_data
 	: TGB_Shortcode::resolve_initial_render_data( $raw_product_id );
 ?>
 
-<a href="<?=get_permalink( $_GET['product_id'] ?? '4' )?>" class="tk-return-btn">
-  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-    <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"/>
-  </svg>
-  <span>Return</span>
-</a>
 <div id="taktik-gun-builder" class="tgb-root" data-version="<?php echo esc_attr( TGB_VERSION ); ?>" data-product-id="<?php echo esc_attr( $raw_product_id ); ?>" data-render-status="<?php echo esc_attr( $initial_render_data['status'] ); ?>">
 
 	<!-- Scoped Initial Render Data (Section 11) -->
@@ -143,9 +137,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 			</div>
 		</div>
 	</section>
-			<div class="tgb-workspace" id="notifications">
 
-			</div>			
 	<!-- Main Builder Workspace -->
 	<div class="tgb-workspace">
 
@@ -206,11 +198,10 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 						</div>
 					</div>
 
-<!-- Measurement HUD (Internal / Debug mode only) -->
-							<div class="tgb-stage-hud" id="tgb-stage-hud">
-								<span class="tgb-stage-hud__scale" id="tgb-stage-hud-scale"></span>
-								<input type="range" id="sizeSlider" min="0.8" max="1.5" value="1" step="0.1">
-							</div>
+					<!-- Measurement HUD (Internal / Debug mode only) -->
+					<div class="tgb-stage-hud" id="tgb-stage-hud" aria-hidden="true">
+						<span class="tgb-stage-hud__scale" id="tgb-stage-hud-scale"></span>
+					</div>
 
 				</div>
 			</div>
@@ -270,10 +261,6 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 					<!-- Dynamically populated with child categories -->
 				</nav>
 
-				<div>
-					<input type="text" id="tgb-search-bar" placeholder="Search">
-				</div>
-
 				<!-- Tray Status Notification (e.g. empty or error) -->
 				<div class="tgb-tray-status" id="tgb-tray-status" style="display: none;"></div>
 
@@ -324,13 +311,18 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 	<?php if ( is_user_logged_in() ) : ?>
 		<!-- In-Builder Saved Builds Modal (Part 5) -->
 		<div class="tgb-modal-backdrop" id="tgb-saved-builds-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tgb-modal-title">
-			<div class="tgb-modal-panel">
+			<div class="tgb-modal-panel tgb-modal-panel--saved-builds">
 				<div class="tgb-modal-header">
-					<h3 class="tgb-modal-title" id="tgb-modal-title"><?php esc_html_e( 'My Saved Builds', 'part-selector' ); ?></h3>
-					<button type="button" class="tgb-modal-close" id="tgb-modal-close-btn" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">&times;</button>
+					<div class="tgb-modal-header-meta">
+						<h3 class="tgb-modal-title" id="tgb-modal-title"><?php esc_html_e( 'My Saved Builds', 'part-selector' ); ?></h3>
+						<span class="tgb-modal-build-limit-badge" id="tgb-modal-build-limit-badge"></span>
+					</div>
+					<button type="button" class="tgb-modal-close" id="tgb-modal-close-btn" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+					</button>
 				</div>
-				<div class="tgb-modal-body" id="tgb-modal-saved-builds-body">
-					<!-- Dynamically injected saved builds list -->
+				<div class="tgb-modal-body tgb-modal-body--saved-builds" id="tgb-modal-saved-builds-body">
+					<!-- Dynamically injected saved builds card grid -->
 				</div>
 			</div>
 		</div>
@@ -340,12 +332,14 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 	<div class="tgb-modal-backdrop" id="tgb-share-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tgb-share-modal-title">
 		<div class="tgb-modal-panel tgb-modal-panel--share">
 			<div class="tgb-modal-header">
-				<h3 class="tgb-modal-title" id="tgb-share-modal-title"><?php esc_html_e( 'Share This Gun Build', 'part-selector' ); ?></h3>
-				<button type="button" class="tgb-modal-close" id="tgb-share-modal-close" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">&times;</button>
+				<h3 class="tgb-modal-title" id="tgb-share-modal-title"><?php esc_html_e( 'Share Your Gun Build', 'part-selector' ); ?></h3>
+				<button type="button" class="tgb-modal-close" id="tgb-share-modal-close" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+				</button>
 			</div>
 			<div class="tgb-modal-body" id="tgb-share-modal-body">
 				<p class="tgb-share-modal-desc">
-					<?php esc_html_e( 'Anyone with this secure link can view your gun configuration, review components, and customize their own copy.', 'part-selector' ); ?>
+					<?php esc_html_e( 'Share your configuration with someone else. They can view your setup and customize their own copy.', 'part-selector' ); ?>
 				</p>
 				<div class="tgb-share-input-group">
 					<input type="text" class="tgb-share-url-input" id="tgb-share-url-input" readonly aria-label="<?php esc_attr_e( 'Shareable Link', 'part-selector' ); ?>" />
@@ -354,8 +348,11 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 						<span id="tgb-btn-copy-label"><?php esc_html_e( 'Copy Link', 'part-selector' ); ?></span>
 					</button>
 				</div>
-				<p class="tgb-share-expiration-note" id="tgb-share-expiration-note"></p>
 				<div class="tgb-share-feedback" id="tgb-share-feedback" style="display: none;" role="alert"></div>
+				<div class="tgb-share-expiration-wrap">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+					<p class="tgb-share-expiration-note" id="tgb-share-expiration-note"></p>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -364,8 +361,10 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 	<div class="tgb-modal-backdrop" id="tgb-export-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tgb-export-modal-title">
 		<div class="tgb-modal-panel tgb-modal-panel--export">
 			<div class="tgb-modal-header">
-				<h3 class="tgb-modal-title" id="tgb-export-modal-title"><?php esc_html_e( 'Download PNG Build Image', 'part-selector' ); ?></h3>
-				<button type="button" class="tgb-modal-close" id="tgb-export-modal-close" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">&times;</button>
+				<h3 class="tgb-modal-title" id="tgb-export-modal-title"><?php esc_html_e( 'Export Your Gun Build', 'part-selector' ); ?></h3>
+				<button type="button" class="tgb-modal-close" id="tgb-export-modal-close" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+				</button>
 			</div>
 			<div class="tgb-modal-body" id="tgb-export-modal-body">
 				<!-- Build Summary -->
@@ -374,61 +373,79 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 					<div class="tgb-export-info__meta" id="tgb-export-build-meta"></div>
 				</div>
 
+				<!-- Live Composite Viewport Preview -->
+				<div class="tgb-export-preview" id="tgb-export-preview-container">
+					<div class="tgb-export-preview-stage" id="tgb-export-preview-stage"></div>
+				</div>
+
 				<!-- Export Configuration Options -->
 				<div class="tgb-export-options">
 					<!-- Background Selection -->
-					<fieldset class="tgb-export-fieldset">
-						<legend class="tgb-export-legend"><?php esc_html_e( 'Background', 'part-selector' ); ?></legend>
-						<div class="tgb-export-radio-group">
-							<label class="tgb-export-radio-label">
+					<div class="tgb-export-section">
+						<label class="tgb-export-section-label"><?php esc_html_e( 'Background', 'part-selector' ); ?></label>
+						<div class="tgb-export-cards-grid tgb-export-cards-grid--bg">
+							<label class="tgb-export-option-card is-selected">
 								<input type="radio" name="tgb_export_bg" value="transparent" checked class="tgb-export-radio" id="tgb-export-bg-transparent">
-								<span class="tgb-export-radio-custom"></span>
-								<span class="tgb-export-radio-text">
-									<strong><?php esc_html_e( 'Transparent (Alpha)', 'part-selector' ); ?></strong>
-									<small><?php esc_html_e( 'Clean cutout preserving alpha transparency', 'part-selector' ); ?></small>
-								</span>
+								<span class="tgb-export-card-indicator"></span>
+								<div class="tgb-export-card-content">
+									<div class="tgb-export-card-title-row">
+										<span class="tgb-export-preview-swatch tgb-export-preview-swatch--transparent"></span>
+										<strong><?php esc_html_e( 'Transparent Background', 'part-selector' ); ?></strong>
+									</div>
+									<small><?php esc_html_e( 'Best for graphics and further editing. Preserve alpha transparency.', 'part-selector' ); ?></small>
+								</div>
 							</label>
-							<label class="tgb-export-radio-label">
+							<label class="tgb-export-option-card">
 								<input type="radio" name="tgb_export_bg" value="white" class="tgb-export-radio" id="tgb-export-bg-white">
-								<span class="tgb-export-radio-custom"></span>
-								<span class="tgb-export-radio-text">
-									<strong><?php esc_html_e( 'White Background', 'part-selector' ); ?></strong>
-									<small><?php esc_html_e( 'Solid clean white background for documents & print', 'part-selector' ); ?></small>
-								</span>
+								<span class="tgb-export-card-indicator"></span>
+								<div class="tgb-export-card-content">
+									<div class="tgb-export-card-title-row">
+										<span class="tgb-export-preview-swatch tgb-export-preview-swatch--white"></span>
+										<strong><?php esc_html_e( 'White Background', 'part-selector' ); ?></strong>
+									</div>
+									<small><?php esc_html_e( 'Best for printing and documents. Solid white output.', 'part-selector' ); ?></small>
+								</div>
 							</label>
 						</div>
-					</fieldset>
+					</div>
 
 					<!-- Quality / Resolution Selection -->
-					<fieldset class="tgb-export-fieldset">
-						<legend class="tgb-export-legend"><?php esc_html_e( 'Resolution / Quality', 'part-selector' ); ?></legend>
-						<div class="tgb-export-radio-group tgb-export-quality-group">
-							<label class="tgb-export-radio-label">
+					<div class="tgb-export-section">
+						<label class="tgb-export-section-label"><?php esc_html_e( 'Resolution / Quality', 'part-selector' ); ?></label>
+						<div class="tgb-export-cards-grid tgb-export-cards-grid--quality">
+							<label class="tgb-export-option-card">
 								<input type="radio" name="tgb_export_quality" value="standard" class="tgb-export-radio" id="tgb-export-quality-standard">
-								<span class="tgb-export-radio-custom"></span>
-								<span class="tgb-export-radio-text">
-									<strong><?php esc_html_e( 'Standard (1×)', 'part-selector' ); ?></strong>
+								<span class="tgb-export-card-indicator"></span>
+								<div class="tgb-export-card-content">
+									<div class="tgb-export-card-title-row">
+										<strong><?php esc_html_e( 'Standard — 1×', 'part-selector' ); ?></strong>
+									</div>
 									<small id="tgb-export-dims-standard"><?php esc_html_e( '1:1 canonical resolution', 'part-selector' ); ?></small>
-								</span>
+								</div>
 							</label>
-							<label class="tgb-export-radio-label">
+							<label class="tgb-export-option-card is-selected">
 								<input type="radio" name="tgb_export_quality" value="high" checked class="tgb-export-radio" id="tgb-export-quality-high">
-								<span class="tgb-export-radio-custom"></span>
-								<span class="tgb-export-radio-text">
-									<strong><?php esc_html_e( 'High (2×) — Recommended', 'part-selector' ); ?></strong>
+								<span class="tgb-export-card-indicator"></span>
+								<div class="tgb-export-card-content">
+									<div class="tgb-export-card-title-row">
+										<strong><?php esc_html_e( 'High — 2×', 'part-selector' ); ?></strong>
+										<span class="tgb-export-badge"><?php esc_html_e( 'Recommended', 'part-selector' ); ?></span>
+									</div>
 									<small id="tgb-export-dims-high"><?php esc_html_e( 'Crisp high-definition export', 'part-selector' ); ?></small>
-								</span>
+								</div>
 							</label>
-							<label class="tgb-export-radio-label">
+							<label class="tgb-export-option-card">
 								<input type="radio" name="tgb_export_quality" value="maximum" class="tgb-export-radio" id="tgb-export-quality-max">
-								<span class="tgb-export-radio-custom"></span>
-								<span class="tgb-export-radio-text">
-									<strong><?php esc_html_e( 'Maximum (3×)', 'part-selector' ); ?></strong>
+								<span class="tgb-export-card-indicator"></span>
+								<div class="tgb-export-card-content">
+									<div class="tgb-export-card-title-row">
+										<strong><?php esc_html_e( 'Maximum — 3×', 'part-selector' ); ?></strong>
+									</div>
 									<small id="tgb-export-dims-max"><?php esc_html_e( 'Ultra high-definition master export', 'part-selector' ); ?></small>
-								</span>
+								</div>
 							</label>
 						</div>
-					</fieldset>
+					</div>
 				</div>
 
 				<!-- Specification Sheet Option (Section 12) -->

@@ -63,39 +63,6 @@ class TGB_Catalog_API {
 				),
 			)
 		);
-		// 1. GET /wp-json/tgb/v1/base-guns
-		register_rest_route(
-			self::NAMESPACE,
-			'parts/search',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( __CLASS__, 'search' ),
-				'permission_callback' => '__return_true', // Public storefront data.
-				'args'                => array(
-					'q'         => array(
-						'type'              => 'string',
-						'required'          => true,
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-					'limit'  => array(
-						'description'       => __( 'Maximum number of items to return.', 'part-selector' ),
-						'type'              => 'integer',
-						'default'           => 20,
-						'minimum'           => 1,
-						'maximum'           => 100,
-						'sanitize_callback' => 'absint',
-						'validate_callback' => array( __CLASS__, 'validate_limit' ),
-					),
-					'cursor' => array(
-						'description'       => __( 'Continuation cursor for pagination.', 'part-selector' ),
-						'type'              => 'string',
-						'required'          => false,
-						'sanitize_callback' => 'sanitize_text_field',
-						'validate_callback' => array( __CLASS__, 'validate_cursor' ),
-					),
-				),
-			)
-		);
 
 		// 2. GET /wp-json/tgb/v1/categories (V2 Native WooCommerce Categories)
 		register_rest_route(
@@ -649,36 +616,6 @@ class TGB_Catalog_API {
 		);
 	}
 
-
-		public static function search( $request ) {
-		$limit  = $request->get_param( 'limit' ) ? absint( $request->get_param( 'limit' ) ) : 20;
-		$cursor = $request->get_param( 'cursor' ) ? sanitize_text_field( $request->get_param( 'cursor' ) ) : null;
-		$query  = $request->get_param( 'q' ) ? sanitize_text_field( $request->get_param( 'q') ) : null;
-		
-
-		$query_args = array(
-			'limit'  => $limit,
-			'cursor' => $cursor,
-		);
-
-		$result = TGB_Product_Data::search( $query, $query_args );
-		$serialized_items = array();
-		if ( ! empty( $result['items'] ) && is_array( $result['items'] ) ) {
-			foreach ( $result['items'] as $item ) {
-				$serialized_items[] = self::serialize_product( $item );
-			}
-		}
-		
-	
-		return rest_ensure_response(
-			array(
-				'items'       => $serialized_items,
-				'limit'       => (int) $result['limit'],
-				'has_more'    => (bool) $result['has_more'],
-				'next_cursor' => $result['next_cursor'],
-			)
-		);
-	}
 	/**
 	 * Retrieves all active Part Types from dynamic taxonomy.
 	 *
@@ -921,77 +858,12 @@ class TGB_Catalog_API {
 	 * @return array Clean public representation.
 	 */
 	public static function serialize_product( array $product ) {
-
-		$variants = array();
-		if (isset($product['variants'])) {
-
-			foreach ($product['variants'] as $variant) {
-				$attributes = implode(' - ', $variant['attributes'] );
-						array_push(
-							$variants, [
-								'id' => $variant['variation_id'], 
-								'image' => $variant['image']['src'], 
-								'name' => $product['name']." (".$attributes.")",
-								'reference_mm' => (float) ( $product['reference_mm'] ?? 0 ),
-								'builder_image'=> ! empty($variant['image']['src']) ? array(
-									'attachment_id' => (int) ( $product['builder_image']['attachment_id'] ?? 0 ),
-									'url'           => (string) ( $variant['image']['src'] ?? '' ),
-									'width'         => (int) ( $product['builder_image']['width'] ?? 0 ),
-									'height'        => (int) ( $product['builder_image']['height'] ?? 0 ),
-									'aspect_ratio'  => (float) ( $product['builder_image']['aspect_ratio'] ?? 1.0 ),
-									'alt'           => (string) ( $product['builder_image']['alt'] ?? '' ),
-								) : null,
-								'price'        => ! empty( $product['price'] ) ? array(
-									'raw'         => (float) ( $product['price']['raw'] ?? 0.0 ),
-									'unit_amount' => isset( $product['price']['unit_amount'] ) && null !== $product['price']['unit_amount']
-										? (float) $product['price']['unit_amount']
-										: null,
-									'display'     => (string) wp_strip_all_tags( html_entity_decode( (string) ( $product['price']['display'] ?? '' ), ENT_QUOTES, 'UTF-8' ) ),
-									'on_sale'     => (bool) ( $product['price']['on_sale'] ?? false ),
-									'regular'     => isset( $product['price']['regular'] ) && null !== $product['price']['regular']
-										? (float) $product['price']['regular']
-										: null,
-								) : null,
-								'weight'       => $product['weight'] ?? null,
-								'woo'          => ! empty( $product['woo'] ) ? array(
-									'purchasable' => (bool) ( $product['woo']['purchasable'] ?? false ),
-									'type'        => (string) ( $product['woo']['type'] ?? 'simple' ),
-								) : null,
-								'category_policy'        => ( 'base_gun' === ( $product['role'] ?? '' ) ) ? (string) ( $product['category_policy'] ?? 'all' ) : null,
-								'allowed_rail_positions' => ( 'base_gun' === ( $product['role'] ?? '' ) && ! empty( $product['allowed_rail_positions'] ) ) ? array_values( (array) $product['allowed_rail_positions'] ) : array(),
-								'rail'                   => ( 'rail' === ( $product['role'] ?? '' ) ) ? self::serialize_rail( $product ) : null,
-								'mounting'               => self::serialize_mounting( $product ),
-											'role'         => (string) ( $product['role'] ?? '' ),
-								'part_type'    => ! empty( $product['part_type'] ) ? array(
-									'id'   => (int) ( $product['part_type']['id'] ?? 0 ),
-									'slug' => (string) ( $product['part_type']['slug'] ?? '' ),
-									'name' => (string) ( $product['part_type']['name'] ?? '' ),
-								) : null,
-								'categories'   => ! empty( $product['categories'] ) && is_array( $product['categories'] ) ? array_values( array_map( function( $cat ) {
-									return array(
-										'id'     => (int) ( $cat['id'] ?? 0 ),
-										'name'   => (string) ( $cat['name'] ?? '' ),
-										'slug'   => (string) ( $cat['slug'] ?? '' ),
-										'parent' => (int) ( $cat['parent'] ?? 0 ),
-									);
-								}, $product['categories'] ) ) : array(),
-								
-								],
-								
-								
-								
-								);
-		
-			}
-			
-		}
 		return array(
 			'id'           => (int) ( $product['id'] ?? 0 ),
 			'sku'          => (string) ( $product['sku'] ?? '' ),
 			'name'         => (string) ( $product['name'] ?? '' ),
 			'slug'         => (string) ( $product['slug'] ?? '' ),
 			'permalink'    => (string) ( $product['permalink'] ?? '' ),
-			'variants'	   => (array) ($variants ?? []),
 			'role'         => (string) ( $product['role'] ?? '' ),
 			'part_type'    => ! empty( $product['part_type'] ) ? array(
 				'id'   => (int) ( $product['part_type']['id'] ?? 0 ),

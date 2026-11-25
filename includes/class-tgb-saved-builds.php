@@ -996,6 +996,50 @@ class TGB_Saved_Builds {
 			}
 		}
 
+		$enriched_rails = array();
+		if ( is_array( $rails ) ) {
+			foreach ( $rails as $r ) {
+				$r_pid   = ! empty( $r['productId'] ) ? absint( $r['productId'] ) : 0;
+				$r_pdata = $r_pid > 0 ? TGB_Product_Data::get_product_data( $r_pid ) : null;
+				$enriched_rails[] = array_merge(
+					$r,
+					array(
+						'name'          => $r_pdata ? $r_pdata['name'] : 'Rail',
+						'reference_mm'  => ( $r_pdata && ! empty( $r_pdata['reference_mm'] ) ) ? (float) $r_pdata['reference_mm'] : 100.0,
+						'builder_image' => $r_pdata ? $r_pdata['builder_image'] : null,
+					)
+				);
+			}
+		}
+
+		$enriched_parts = array();
+		if ( is_array( $parts ) ) {
+			foreach ( $parts as $part ) {
+				$p_pid   = ! empty( $part['productId'] ) ? absint( $part['productId'] ) : 0;
+				$p_pdata = $p_pid > 0 ? TGB_Product_Data::get_product_data( $p_pid ) : null;
+				$enriched_parts[] = array_merge(
+					$part,
+					array(
+						'name'          => $p_pdata ? $p_pdata['name'] : 'Component',
+						'reference_mm'  => ( $p_pdata && ! empty( $p_pdata['reference_mm'] ) ) ? (float) $p_pdata['reference_mm'] : 100.0,
+						'builder_image' => $p_pdata ? $p_pdata['builder_image'] : null,
+					)
+				);
+			}
+		}
+
+		$preview_data = array(
+			'name'    => $post->post_title,
+			'baseGun' => array(
+				'productId'     => $base_pid,
+				'name'          => $base_gun_name,
+				'reference_mm'  => ( isset( $pdata ) && ! empty( $pdata['reference_mm'] ) ) ? (float) $pdata['reference_mm'] : 800.0,
+				'builder_image' => ( isset( $pdata ) && ! empty( $pdata['builder_image'] ) ) ? $pdata['builder_image'] : null,
+			),
+			'rails'   => $enriched_rails,
+			'parts'   => $enriched_parts,
+		);
+
 		return array(
 			'id'             => (int) $post->ID,
 			'name'           => $post->post_title,
@@ -1007,6 +1051,9 @@ class TGB_Saved_Builds {
 			'createdAt'      => get_post_time( 'U', true, $post ) * 1000,
 			'updatedAt'      => get_post_modified_time( 'U', true, $post ) * 1000,
 			'dateFormatted'  => get_the_modified_date( 'M j, Y', $post ),
+			'rails'          => is_array( $rails ) ? $rails : array(),
+			'parts'          => is_array( $parts ) ? $parts : array(),
+			'preview'        => $preview_data,
 		);
 	}
 

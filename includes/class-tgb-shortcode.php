@@ -174,12 +174,11 @@ class TGB_Shortcode {
 			 ORDER BY ID ASC LIMIT 1"
 		);
 
-		if ( $page_id > 0 ) {
-			$cached_url = get_permalink( $page_id );
-		} else {
-			$cached_url = home_url( '/gun-builder-test/' );
-		}
+		$cached_url = $page_id > 0
+			? get_permalink( $page_id )
+			: home_url( '/test/' );
 
 		return $cached_url;
 	}
 }
+
