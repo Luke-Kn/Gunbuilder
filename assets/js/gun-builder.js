@@ -204,7 +204,9 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
       
        
         const productRegistry = new Map(Object.entries(JSON.parse(sessionStorage.getItem('product_registry'))?? new Object())) ?? new Map();
-
+        
+        console.log(productRegistry);
+        
 
     // Restore state on refresh
 
@@ -495,6 +497,7 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
         interactions.init();
         renderer.setInteractions(interactions);
 
+        const persistence = new TGB_Persistence("tgb_current_build_state");
         const catalogClient = new TGB_CatalogClient();
         const productSelection = new TGB_ProductSelection(root, catalogClient, buildState, renderer, productRegistry);
         await productSelection.init();
@@ -502,7 +505,7 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
         const currentBuild = new TGB_CurrentBuild(root, buildState, productRegistry, currencyConfig, weightConfig);
         currentBuild.init();
 
-        const persistence = new TGB_Persistence("tgb_current_build_state");
+
         const guestBuildManager = new TGB_GuestBuildManager({
             root,
             catalogClient,

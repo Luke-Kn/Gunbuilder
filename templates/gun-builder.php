@@ -22,7 +22,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
     <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"/>
   </svg>
-  <span>Return</span>
+  <span>Exit</span>
 </a>
 <div id="taktik-gun-builder" class="tgb-root" data-version="<?php echo esc_attr( TGB_VERSION ); ?>" data-product-id="<?php echo esc_attr( $raw_product_id ); ?>" data-render-status="<?php echo esc_attr( $initial_render_data['status'] ); ?>">
 
@@ -100,7 +100,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 						<option value="build-1"><?php esc_html_e( 'Build 1', 'part-selector' ); ?></option>
 					</select>
 				</div>
-				<div class="tgb-build-manager__actions">
+<div class="tgb-build-manager__actions">
 					<?php if ( is_user_logged_in() ) : ?>
 						<button type="button" class="tgb-btn-build tgb-btn-build--save" id="tgb-btn-save-build" title="<?php esc_attr_e( 'Save build permanently to your account', 'part-selector' ); ?>">
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>

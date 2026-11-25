@@ -1,4 +1,3 @@
-import { TGB_BuildState } from "./TGB-BuildState.js";
 import { TGB_Utility } from "./TGB-Utility.js";
 
 export	class TGB_Persistence {
@@ -307,7 +306,6 @@ export	class TGB_Persistence {
 		 */
 		async restoreBuild(catalogClient, productSelection, buildState, renderer, productRegistry, explicitBuildData = null) {
 			const persisted = explicitBuildData || this.load();
-			
 			if (!persisted) {
 				return { restored: false, reason: 'none' };
 			}
@@ -316,9 +314,10 @@ export	class TGB_Persistence {
 
 			try {
 				// 1. Resolve and validate Base Gun from authoritative catalog
-				let baseProduct = productRegistry.get(persisted.baseProductId.toString());
-				buildState.setBaseGun(baseProduct)
-
+				let baseProduct = productRegistry.get(persisted.baseProductId);
+				if(!baseProduct){         
+				baseProduct =  productRegistry.get(persisted.baseProductId.toString())
+				}
 				if (!baseProduct || baseProduct.role !== 'base_gun' || !baseProduct.builder_image) {
 					try {
 						//const baseGunsRes = await catalogClient.getBaseGuns(100);
@@ -348,6 +347,8 @@ export	class TGB_Persistence {
 				// Preload image and mount Base Gun
 				await renderer.loadAndRenderBaseGun(baseProduct);
 
+				productSelection.renderSizeSlider(baseProduct)
+				
 				// 2. Resolve and validate Rails and Parts
 				const persistedRails = Array.isArray(persisted.rails) ? persisted.rails : [];
 				const persistedParts = Array.isArray(persisted.parts) ? persisted.parts : [];

@@ -89,7 +89,8 @@ export class TGB_ProductSelection {
         this.buildState.subscribe(this.boundStateChange);
 
 
-        this.renderSizeSlider(this.buildState.getBaseGun());
+            
+        this.renderSizeSlider(currentBase);
 
         this.enableSearchBar();
         if (typeof this.navEl.children[0] != "undefined") {
@@ -101,7 +102,7 @@ export class TGB_ProductSelection {
         
         this.switchCategory(64)
        ;
-        console.log( this.fetchCategoryProducts(64));
+this.fetchCategoryProducts(64)
         
     }
 
@@ -180,7 +181,8 @@ export class TGB_ProductSelection {
     }
 
     renderSizeSlider(currentBase) {
-        //console.log(currentBase.mounting.points);
+        console.log(currentBase);
+
         const slider = document.getElementById("sizeSlider");
         let currentBaseGunGeometry = TGB_Utility.calculateProductGeometry(currentBase);
         let currentStageGeometry = TGB_Utility.calculateStageGeometry(currentBaseGunGeometry);
@@ -197,7 +199,8 @@ export class TGB_ProductSelection {
 
                 if (img.classList.contains("tgb-layer--base")) {
                     img.style.marginLeft = (currentStageGeometry.stageWidth - imgWidth) / 2 - 160 + "px";
-                    TGB_Interactions.updateDebugHUD(currentBase.name, imgHeight, imgWidth, slider.value);
+                    
+                    TGB_Interactions.updateDebugHUD("Base", imgHeight, imgWidth, slider.value);
                 }
             });
 
