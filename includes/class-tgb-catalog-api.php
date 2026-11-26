@@ -63,7 +63,7 @@ class TGB_Catalog_API {
 				),
 			)
 		);
-		// 1. GET /wp-json/tgb/v1/base-guns
+				// 1. GET /wp-json/tgb/v1/parts/search
 		register_rest_route(
 			self::NAMESPACE,
 			'parts/search',
@@ -985,13 +985,15 @@ class TGB_Catalog_API {
 			}
 			
 		}
+		
 		return array(
 			'id'           => (int) ( $product['id'] ?? 0 ),
 			'sku'          => (string) ( $product['sku'] ?? '' ),
 			'name'         => (string) ( $product['name'] ?? '' ),
 			'slug'         => (string) ( $product['slug'] ?? '' ),
-			'permalink'    => (string) ( $product['permalink'] ?? '' ),
+			'permalink'    => (string) ( $product['permalink'] ?? '' ),	
 			'variants'	   => (array) ($variants ?? []),
+
 			'role'         => (string) ( $product['role'] ?? '' ),
 			'part_type'    => ! empty( $product['part_type'] ) ? array(
 				'id'   => (int) ( $product['part_type']['id'] ?? 0 ),

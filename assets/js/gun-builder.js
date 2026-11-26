@@ -557,32 +557,32 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
         // window.TGB.guestBuildManager = guestBuildManager;
         // window.TGB.accountBuildManager = accountBuildManager;
 
-        const shareManager = new TGB_ShareManager({
-            root,
-            catalogClient,
-            productSelection,
-            buildState,
-            renderer,
-            productRegistry,
-            currentBuild,
-            guestBuildManager,
-            accountBuildManager,
+		const shareManager = new TGB_ShareManager({
+			root,
+			catalogClient,
+			productSelection,
+			buildState,
+			renderer,
+			productRegistry,
+			currentBuild,
+			guestBuildManager,
+			accountBuildManager,
             persistence,
-        });
+		});
         // window.TGB_ShareManager.instance = shareManager;
         // window.TGB.shareManager = shareManager;
 
-        // Initialize Guest Multi-Build Session Manager (Part 4)
-        guestBuildManager.init({
-            root,
-            catalogClient,
-            productSelection,
-            buildState,
-            renderer,
-            productRegistry,
-            currentBuild,
+		// Initialize Guest Multi-Build Session Manager (Part 4)
+		guestBuildManager.init({
+			root,
+			catalogClient,
+			productSelection,
+			buildState,
+			renderer,
+			productRegistry,
+			currentBuild,
             persistence,
-        });
+		});
 
 
                 let export_manager = new TGB_ExportManager({
@@ -599,13 +599,13 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
 
         });
         export_manager.init();
-        // Initialize Account Build Manager (Part 5)
-        accountBuildManager.init();
-        // Initialize Share Manager (Part 6)
-        shareManager.init();
+		// Initialize Account Build Manager (Part 5)
+		accountBuildManager.init();
+		// Initialize Share Manager (Part 6)
+		shareManager.init();
 
-        // 1. Deep Link vs Share vs Persistence Restoration Precedence (Section 14, Parts 4, 5 & 6)
-        const urlParams = new URLSearchParams(window.location.search);
+		// 1. Deep Link vs Share vs Persistence Restoration Precedence (Section 14, Parts 4, 5 & 6)
+		const urlParams = new URLSearchParams(window.location.search);
         const hasShareDeepLink = urlParams.has("tgb_share") && urlParams.get("tgb_share").trim() !== "";
         const shareToken = hasShareDeepLink ? urlParams.get("tgb_share").trim() : "";
 
@@ -616,41 +616,41 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
         const deepLinkId = hasDeepLink ? parseInt(urlParams.get("product_id"), 10) : 0;
 
         if (hasShareDeepLink && shareToken !== "") {
-            // Shared read-only build takes top precedence for visitors opening a share link
-            try {
-                await shareManager.loadSharedBuild(shareToken);
-            } catch (err) {
+			// Shared read-only build takes top precedence for visitors opening a share link
+			try {
+				await shareManager.loadSharedBuild(shareToken);
+			} catch (err) {
                 console.warn("[TGB ShareManager] Share link load failed safely:", err);
-            }
-        } else if (hasSavedBuildDeepLink && savedBuildId > 0 && accountBuildManager.isLoggedIn) {
-            // Account saved build takes top precedence for logged-in users
-            try {
-                await accountBuildManager.loadSavedBuildById(savedBuildId);
-                try {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                } catch (e) {}
-            } catch (err) {
+			}
+		} else if (hasSavedBuildDeepLink && savedBuildId > 0 && accountBuildManager.isLoggedIn) {
+			// Account saved build takes top precedence for logged-in users
+			try {
+				await accountBuildManager.loadSavedBuildById(savedBuildId);
+				try {
+					window.history.replaceState({}, document.title, window.location.pathname);
+				} catch (e) {}
+			} catch (err) {
                 console.warn("[TGB AccountBuildManager] Deep link load failed safely:", err);
-            }
-        } else if (hasDeepLink && deepLinkId > 0) {
-            // Explicit deep link takes precedence over stored session persistence
+			}
+		} else if (hasDeepLink && deepLinkId > 0) {
+			// Explicit deep link takes precedence over stored session persistence
             if (initialPayload && initialPayload.status === "ready" && initialPayload.product) {
-                const active = guestBuildManager.getActiveBuild();
-                if (active) {
-                    active.baseProductId = deepLinkId;
-                    active.rails = [];
-                    active.parts = [];
-                    guestBuildManager.saveWorkspace();
-                }
-                try {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                } catch (e) {}
-            }
-        } else if (!hasDeepLink) {
-            // Normal builder page load: restore active draft from session workspace
-            try {
-                const active = guestBuildManager.getActiveBuild();
-                if (active && active.baseProductId) {
+				const active = guestBuildManager.getActiveBuild();
+				if (active) {
+					active.baseProductId = deepLinkId;
+					active.rails = [];
+					active.parts = [];
+					guestBuildManager.saveWorkspace();
+				}
+				try {
+					window.history.replaceState({}, document.title, window.location.pathname);
+				} catch (e) {}
+			}
+		} else if (!hasDeepLink) {
+			// Normal builder page load: restore active draft from session workspace
+			try {
+				const active = guestBuildManager.getActiveBuild();
+				if (active && active.baseProductId) {
                     const restoreRes = await persistence.restoreBuild(
                         catalogClient,
                         productSelection,
@@ -659,24 +659,24 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
                         productRegistry,
                         active,
                     );
-                    if (restoreRes && restoreRes.restored) {
-                        if (restoreRes.partial && restoreRes.message) {
+					if (restoreRes && restoreRes.restored) {
+						if (restoreRes.partial && restoreRes.message) {
                             productSelection.showNotice(restoreRes.message, "warning");
-                            currentBuild.announce(restoreRes.message);
-                        } else {
+							currentBuild.announce(restoreRes.message);
+						} else {
                             currentBuild.announce("Your previous build was restored.");
-                        }
-                    } else if (restoreRes && restoreRes.message) {
+						}
+					} else if (restoreRes && restoreRes.message) {
                         productSelection.showNotice(restoreRes.message, "error");
-                        currentBuild.announce(restoreRes.message);
-                    }
-                }
-            } catch (err) {
+						currentBuild.announce(restoreRes.message);
+					}
+				}
+			} catch (err) {
                 console.warn("[TGB GuestBuildManager] Restore failed safely:", err);
-            }
-        }
+			}
+		}
 
-        // 2. Wire Auto-Persistence Subscription (Section 12 & Part 4)
+		// 2. Wire Auto-Persistence Subscription (Section 12 & Part 4)
         buildState.subscribe(event => {
             if (
                 !event ||
@@ -685,36 +685,36 @@ import { TGB_ExportManager } from "./gun-builder-export.js";
                 (shareManager && shareManager.isReadOnly)
             )
                 return;
-            try {
-                switch (event.type) {
+			try {
+				switch (event.type) {
                     case "base_gun_set":
                     case "part_added":
                     case "part_removed":
                     case "rail_added":
                     case "rail_removed":
                     case "drag_ended":
-                        guestBuildManager.updateActiveBuildFromState(buildState);
-                        try {
+						guestBuildManager.updateActiveBuildFromState(buildState);
+						try {
                             if (window.location.search.includes("product_id")) {
-                                window.history.replaceState({}, document.title, window.location.pathname);
-                            }
-                        } catch (e) {}
-                        break;
+								window.history.replaceState({}, document.title, window.location.pathname);
+							}
+						} catch (e) {}
+						break;
                     case "part_moved":
                     case "rail_moved":
-                        guestBuildManager.updateActiveBuildFromStateDebounced(buildState, 250);
-                        break;
-                }
-            } catch (err) {
+						guestBuildManager.updateActiveBuildFromStateDebounced(buildState, 250);
+						break;
+				}
+			} catch (err) {
                 console.warn("[TGB GuestBuildManager] Auto-persist error suppressed:", err);
-            }
-        });
-        
-    }
+			}
+		});
+		
+	}
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", initGunBuilder);
-    } else {
-        initGunBuilder();
-    }
+	} else {
+		initGunBuilder();
+	}
 })(window, document);
