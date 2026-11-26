@@ -1,7 +1,7 @@
 
 #taktik-gun-builder {
     /* Design Tokens */
-    --%b-bg-canvas: #0a0d14;
+    --tgb-bg-canvas: #0a0d14;
     --tgb-bg-surface: #111622;
     --tgb-bg-surface-elevated: #171f2e;
     --tgb-bg-stage: #07090e;
@@ -2259,7 +2259,7 @@
 }
 
 /* -----------------------------------------------------------------------------
- * Feature 5: My Account — My Gun Builds Dashboard
+ * Feature 5: My Account â€” My Gun Builds Dashboard
  * ----------------------------------------------------------------------------- */
 .tgb-my-account-wrap {
 	margin: 24px 0;
@@ -3349,7 +3349,7 @@
 }
 
 /* ==========================================================================
-   Part 7 — High-Quality PNG Export & Specification Sheet Styles
+   Part 7 â€” High-Quality PNG Export & Specification Sheet Styles
    ========================================================================== */
 
 /* Toolbar Export Button */
