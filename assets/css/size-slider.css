@@ -69,3 +69,11 @@
 #sizeSlider:active::-moz-range-thumb {
   transform: scale(1.15);
 }
+
+
+@media (max-width: 767px){
+	#tgb-stage-hud-scale{
+		display: none;
+	} 
+}
+
