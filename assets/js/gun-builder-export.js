@@ -1,5 +1,3 @@
-import { TGB_ProductSelection } from "./TGB-ProductSelection.js";
-
 /**
  * Taktik Gun Builder - Part 7 High-Quality PNG Export & Specification Sheet
  *
@@ -18,22 +16,25 @@ import { TGB_ProductSelection } from "./TGB-ProductSelection.js";
  * @package TaktikGunBuilder
  */
 
-const PADDING_PX = 30; // Logical pixels margin around complete weapon composition
-const MAX_DIMENSION_PX = 8192; // Safe browser canvas dimension limit
-const MAX_AREA_PX = 25000000; // 25 Megapixels (iOS / mobile canvas memory limit)
+(function(window, document) {
+	'use strict';
 
-const QUALITY_SCALES = {
-    standard: 1.0,
-    high: 2.0,
-    maximum: 3.0,
-};
+	const PADDING_PX = 30; // Logical pixels margin around complete weapon composition
+	const MAX_DIMENSION_PX = 8192; // Safe browser canvas dimension limit
+	const MAX_AREA_PX = 25000000; // 25 Megapixels (iOS / mobile canvas memory limit)
 
-/**
- * Class TGB_ExportManager
- *
- * Manages the Download PNG dialog, client-side canvas composition, and file download.
- */
-export class TGB_ExportManager {
+	const QUALITY_SCALES = {
+		standard: 1.0,
+		high: 2.0,
+		maximum: 3.0,
+	};
+
+	/**
+	 * Class TGB_ExportManager
+	 *
+	 * Manages the Download PNG dialog, client-side canvas composition, and file download.
+	 */
+	class TGB_ExportManager {
 		/**
 		 * Constructor.
 		 *
@@ -1433,3 +1434,10 @@ export class TGB_ExportManager {
 		}
 	};
 
+	// Expose globally
+	window.TGB_Dialog = TGB_Dialog;
+
+	// Expose globally
+	window.TGB_ExportManager = TGB_ExportManager;
+
+})(window, document);
