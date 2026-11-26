@@ -5,7 +5,7 @@
  * @package TaktikGunBuilder
  */
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -14,8 +14,7 @@ if (!defined('ABSPATH')) {
  *
  * Handles registration and scoped enqueuing of CSS and JavaScript.
  */
-class TGB_Assets
-{
+class TGB_Assets {
 
 	/**
 	 * Tracks whether builder assets have already been enqueued for this request.
@@ -27,33 +26,23 @@ class TGB_Assets
 	/**
 	 * Initialize asset hooks.
 	 */
-	public static function init()
-	{
-		add_action('wp_enqueue_scripts', array(__CLASS__, 'register_assets'), 10);
-		add_action('wp_enqueue_scripts', array(__CLASS__, 'maybe_enqueue_for_post'), 20);
-
-		add_filter( 'script_module_data_myplugin/admin', function ( $data ) {
-		$data['ajaxUrl'] = admin_url( 'admin-ajax.php' );
-		$data['nonce']   = wp_create_nonce( 'myplugin_nonce' );
-		return $data;
-} );
+	public static function init() {
+		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register_assets' ), 10 );
+		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'maybe_enqueue_for_post' ), 20 );
 	}
 
 	/**
 	 * Register Gun Builder scripts and styles without enqueuing them globally.
 	 */
-	public static function register_assets()
-	{
-	$js_ver = file_exists(TGB_PLUGIN_DIR . 'assets/js/gun-builder.js') ? filemtime(TGB_PLUGIN_DIR . 'assets/js/gun-builder.js') : TGB_VERSION;
-		$css_ver = file_exists(TGB_PLUGIN_DIR . 'assets/css/gun-builder.css') ? filemtime(TGB_PLUGIN_DIR . 'assets/css/gun-builder.css') : TGB_VERSION;
-
+	public static function register_assets() {
+		$js_ver  = file_exists( TGB_PLUGIN_DIR . 'assets/js/gun-builder.js' ) ? filemtime( TGB_PLUGIN_DIR . 'assets/js/gun-builder.js' ) : TGB_VERSION;
+		$css_ver = file_exists( TGB_PLUGIN_DIR . 'assets/css/gun-builder.css' ) ? filemtime( TGB_PLUGIN_DIR . 'assets/css/gun-builder.css' ) : TGB_VERSION;
 
 		// Scoped Gun Builder CSS.
 		wp_register_style(
 			'tgb-gun-builder-css',
 			TGB_PLUGIN_URL . 'assets/css/gun-builder.css',
-			array(),
-			TGB_VERSION,
+			array(),			TGB_VERSION,
 			'all'
 		);
 
@@ -147,7 +136,7 @@ class TGB_Assets
 			'all'
 		);
 
-		$export_ver = file_exists(TGB_PLUGIN_DIR . 'assets/js/gun-builder-export.js') ? filemtime(TGB_PLUGIN_DIR . 'assets/js/gun-builder-export.js') : TGB_VERSION;
+		$export_ver = file_exists( TGB_PLUGIN_DIR . 'assets/js/gun-builder-export.js' ) ? filemtime( TGB_PLUGIN_DIR . 'assets/js/gun-builder-export.js' ) : TGB_VERSION;
 
 		// Part 7 High-Quality PNG Export module.
 		wp_register_script_module(
@@ -158,7 +147,6 @@ class TGB_Assets
 			array()
 		);
 
-		// Lightweight Gun Builder JS foundation.
 
 		wp_register_script_module(
 			'tgb-build-state-js',
@@ -330,25 +318,22 @@ class TGB_Assets
 				),
 			)
 		);
-
 		 wp_enqueue_script('tgb-gun-builder-var' );
-
-
 	}
+
 	/**
 	 * Detects if the current queried post contains [part_selector] and enqueues before wp_head.
 	 */
-	public static function maybe_enqueue_for_post()
-	{
-		if (is_singular()) {
+	public static function maybe_enqueue_for_post() {
+		if ( is_singular() ) {
 			$post = get_post();
-			if ($post && is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'part_selector')) {
+			if ( $post && is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'part_selector' ) ) {
 				self::enqueue();
 			}
 		}
 
 		// Also enqueue on WooCommerce My Account pages for logged-in customers to support My Gun Builds UI and guest transfer.
-		if (function_exists('is_account_page') && is_account_page() && is_user_logged_in()) {
+		if ( function_exists( 'is_account_page' ) && is_account_page() && is_user_logged_in() ) {
 			self::enqueue();
 		}
 	}
@@ -356,9 +341,8 @@ class TGB_Assets
 	/**
 	 * Enqueue assets when the Gun Builder shortcode or template is invoked.
 	 */
-	public static function enqueue()
-	{
-		if (self::$enqueued) {
+	public static function enqueue() {
+		if ( self::$enqueued ) {
 			return;
 		}
 

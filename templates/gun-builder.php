@@ -94,8 +94,13 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 				</p>
 			</div>
 			<div class="tgb-build-manager__controls">
-
-<div class="tgb-build-manager__actions">
+				<div class="tgb-build-manager__select-wrap">
+					<label for="tgb-build-select" class="screen-reader-text"><?php esc_html_e( 'Select Active Build', 'part-selector' ); ?></label>
+					<select class="tgb-build-select" id="tgb-build-select" aria-label="<?php esc_attr_e( 'Select Active Build', 'part-selector' ); ?>">
+						<option value="build-1"><?php esc_html_e( 'Build 1', 'part-selector' ); ?></option>
+					</select>
+				</div>
+				<div class="tgb-build-manager__actions">
 					<?php if ( is_user_logged_in() ) : ?>
 						<button type="button" class="tgb-btn-build tgb-btn-build--save" id="tgb-btn-save-build" title="<?php esc_attr_e( 'Save build permanently to your account', 'part-selector' ); ?>">
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -137,10 +142,11 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 				</div>
 			</div>
 		</div>
-	</section>
+	</section>	
 			<div class="tgb-workspace" id="notifications">
 
-			</div>			
+			</div>	
+
 	<!-- Main Builder Workspace -->
 	<div class="tgb-workspace">
 
@@ -264,8 +270,8 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 				<nav class="tgb-subcategory-nav" id="tgb-subcategory-nav" aria-label="<?php esc_attr_e( 'Subcategories', 'part-selector' ); ?>" style="display: none;">
 					<!-- Dynamically populated with child categories -->
 				</nav>
-
-				<div>
+				
+								<div>
 					<input type="text" id="tgb-search-bar" placeholder="Search">
 				</div>
 
@@ -316,7 +322,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 	<!-- Accessible Screen Reader Live Announcer (Part 8) -->
 	<div class="screen-reader-text" id="tgb-live-announcer" aria-live="polite" aria-atomic="true"></div>
 
-		<?php if ( is_user_logged_in() ) : ?>
+	<?php if ( is_user_logged_in() ) : ?>
 		<!-- In-Builder Saved Builds Modal (Part 5) -->
 		<div class="tgb-modal-backdrop" id="tgb-saved-builds-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tgb-modal-title">
 			<div class="tgb-modal-panel tgb-modal-panel--saved-builds">
@@ -340,7 +346,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 	<div class="tgb-modal-backdrop" id="tgb-share-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="tgb-share-modal-title">
 		<div class="tgb-modal-panel tgb-modal-panel--share">
 			<div class="tgb-modal-header">
-					<h3 class="tgb-modal-title" id="tgb-share-modal-title"><?php esc_html_e( 'Share Your Gun Build', 'part-selector' ); ?></h3>
+				<h3 class="tgb-modal-title" id="tgb-share-modal-title"><?php esc_html_e( 'Share Your Gun Build', 'part-selector' ); ?></h3>
 				<button type="button" class="tgb-modal-close" id="tgb-share-modal-close" aria-label="<?php esc_attr_e( 'Close', 'part-selector' ); ?>">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 				</button>
@@ -348,7 +354,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 			<div class="tgb-modal-body" id="tgb-share-modal-body">
 				<p class="tgb-share-modal-desc">
 					<?php esc_html_e( 'Share your configuration with someone else. They can view your setup and customize their own copy.', 'part-selector' ); ?>
-					</p>
+				</p>
 				<div class="tgb-share-input-group">
 					<input type="text" class="tgb-share-url-input" id="tgb-share-url-input" readonly aria-label="<?php esc_attr_e( 'Shareable Link', 'part-selector' ); ?>" />
 					<button type="button" class="tgb-btn tgb-btn--primary tgb-btn--copy-link" id="tgb-btn-copy-link">
@@ -357,7 +363,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 					</button>
 				</div>
 				<div class="tgb-share-feedback" id="tgb-share-feedback" style="display: none;" role="alert"></div>
-					<div class="tgb-share-expiration-wrap">
+				<div class="tgb-share-expiration-wrap">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
 					<p class="tgb-share-expiration-note" id="tgb-share-expiration-note"></p>
 				</div>
@@ -380,6 +386,7 @@ $initial_render_data = isset( $initial_render_data ) && is_array( $initial_rende
 					<div class="tgb-export-info__name" id="tgb-export-build-name"></div>
 					<div class="tgb-export-info__meta" id="tgb-export-build-meta"></div>
 				</div>
+
 				<!-- Live Composite Viewport Preview -->
 				<div class="tgb-export-preview" id="tgb-export-preview-container">
 					<div class="tgb-export-preview-stage" id="tgb-export-preview-stage"></div>

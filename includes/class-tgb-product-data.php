@@ -245,7 +245,6 @@ class TGB_Product_Data {
 	 */
 	public static function get_product_data( $product ) {
 		$wc_product = self::resolve_wc_product( $product );
-		//wp_send_json_success( $wc_product->get_children());
 		if ( ! $wc_product ) {
 			return null;
 		}
@@ -367,6 +366,7 @@ class TGB_Product_Data {
 		}
 		
 
+
 		return array(
 			'id'                     => $product_id,
 			'sku'                    => (string) $wc_product->get_sku(),
@@ -388,7 +388,8 @@ class TGB_Product_Data {
 			'woo'                    => $woo_data,
 			'mounting'               => $mounting_data,
 			'catalog_eligible'       => $is_eligible,
-			'variants'               => $variants,
+						'variants'               => $variants,
+
 		);
 	}
 
@@ -467,6 +468,7 @@ class TGB_Product_Data {
 		return self::query_catalog_products( $base_query_args, $normalized_args );
 	}
 
+	
 	/**
 	 * Queries eligible Parts for a specific dynamic Builder Part Type term.
 	 *
@@ -1148,7 +1150,6 @@ class TGB_Product_Data {
 			}
 		}
 
-		
 		return array(
 			'items'       => array_values( $items ),
 			'limit'       => $limit,
